@@ -20,7 +20,7 @@ config = {
          # The account id and region will be appended to the cognito domain prefix later,
          # so it won't collide with your other accounts and regions later. The resulting
          # cognito domain must result in a globally unique DNS prefix across all of AWS.
-         "cognito_domain_prefix": "davetbo-bgis",
+         "cognito_domain_prefix": "multi-tenant-rag-demo",
          "auth_provider_py_path": "multi_tenant_full_stack_rag_application.auth_provider.cognito_auth_provider.CognitoAuthProvider",
          "auth_provider_args": [],
          "verification_message_settings": {
