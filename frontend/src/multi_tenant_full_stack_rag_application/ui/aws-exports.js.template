@@ -1,0 +1,39 @@
+/* eslint-disable */
+
+const awsmobile = {
+    "app_name": '<APP_NAME>',
+    "doc_collections_bucket_name": '<DOC_COLLECTIONS_BUCKET_NAME>',
+    "aws_project_region": '<REGION>',
+    "aws_cognito_identity_pool_id": '<IDENTITY_POOL_ID>',
+    "aws_cognito_region": '<REGION>',
+    "aws_user_pools_id": '<USER_POOL_ID>',
+    "aws_user_pools_web_client_id": '<USER_POOL_CLIENT_ID>',
+    "oauth": {},
+    "aws_cognito_username_attributes": [],
+    "aws_cognito_social_providers": [],
+    "aws_cognito_signup_attributes": [
+        "EMAIL"
+    ],
+    "aws_cognito_mfa_configuration": "OFF",
+    "aws_cognito_mfa_types": [
+        "SMS"
+    ],
+    "aws_cognito_password_protection_settings": {
+        "passwordPolicyMinLength": 8,
+        "passwordPolicyCharacters": []
+    },
+    "aws_cognito_verification_mechanisms": [
+        "EMAIL"
+    ],
+    "api_urls": {
+        "document_collections":  '<DOC_COLLECTIONS_API_URL>',
+        "enrichment_pipelines": '<ENRICHMENT_PIPELINES_API_URL>',
+        "generation": '<GENERATION_API_URL>',
+        "initialization": '<INITIALIZATION_API_URL>',
+        "prompt_templates": '<PROMPT_TEMPLATES_API_URL>',
+        "sharing": '<SHARING_HANDLER_API_URL>'
+    }
+};
+
+
+export default awsmobile;

@@ -1,0 +1,6 @@
+boto3
+jq
+pypandoc
+pandas
+pdf2img
+python-poppler

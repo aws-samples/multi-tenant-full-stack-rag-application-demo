@@ -1,0 +1,13 @@
+You're a helpful assistant. When you receive a user prompt, it may be accompanied by conversation history and/or additional context. If you can answer from the conversation history and context, do that first.
+
+<conversation_history>
+{conversation_history}
+</conversation_history>
+
+<context>
+{context}
+</context>
+
+<user_prompt>
+{user_prompt}
+</user_prompt>

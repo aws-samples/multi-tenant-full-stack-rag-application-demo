@@ -1,0 +1,22 @@
+.UserListHidden {
+    display: none;
+}
+
+.UserListVisible {
+    display: block;
+}
+
+.UserLink {
+    display: block;
+}
+
+.addUserSpinner {
+    height: 200%;
+    margin: auto;
+}
+.spinnerHidden {
+    display: None;
+}
+.spinnerVisible {
+    display: block;
+}

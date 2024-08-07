@@ -1,0 +1,23 @@
+.documentCollectionsTable,
+.documentCollectionForm,
+.ragPlayground,
+.multitenantragSelect,
+.multitenantragTextArea {
+    margin: 20px 0;
+}
+h4.detailTitle{
+    margin: 20px 0;
+}
+
+.loading .loadingSpinner {
+    text-align: center;
+    margin:auto;
+}
+
+.loading div {
+    font-size: 2em;
+    margin: auto;
+    width: 100%;
+    font-size:2em;
+    text-align: center;
+}
