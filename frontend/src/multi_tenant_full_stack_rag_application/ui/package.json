@@ -1,0 +1,42 @@
+{
+  "name": "multi-tenant-full-stack-rag-application-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@aws-amplify/ui-react": "^5",
+    "@aws-sdk/client-cognito-identity": "*",
+    "@babel/traverse": "^7.23.2",
+    "@cloudscape-design/components": "*",
+    "@cloudscape-design/global-styles": "*",
+    "@minchat/react-chat-ui": "^0.16.2",
+    "aws-amplify": "^5",
+    "aws-crt": "*",
+    "aws-sdk": "^2.1477.0",
+    "axios": "^0.28.0",
+    "follow-redirects": "^1.15.6",
+    "postcss": "^8.4.31",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "*",
+    "react-slider": "*",
+    "recoil": "^0.7.7",
+    "sanitize-html": "^2.13.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "*",
+    "eslint": "*",
+    "eslint-plugin-react": "*",
+    "eslint-plugin-react-hooks": "*",
+    "eslint-plugin-react-refresh": "*",
+    "vite": "^4.5.3"
+  }
+}

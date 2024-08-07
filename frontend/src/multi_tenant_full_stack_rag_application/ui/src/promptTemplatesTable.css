@@ -1,0 +1,13 @@
+.promptTemplatesTable,
+.promptTemplatesForm,
+.ragPlayground,
+.multitenantragSelect,
+.multitenantragTextArea {
+    margin: 20px 0;
+}
+h4.detailTitle{
+    margin: 20px 0;
+}
+.promptTemplatesTable td {
+    white-space: pre-wrap
+}

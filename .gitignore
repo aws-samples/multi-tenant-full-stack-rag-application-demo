@@ -1,0 +1,15 @@
+frontend/src/multi_tenant_full_stack_rag_application/ui/.vite
+
+frontend/backend_outputs.json
+node_modules
+__pycache__
+.venv
+cdk.out
+aws-exports.js
+aggregated_results.txt
+tests
+env.sh
+tmp
+pipelines
+*.OLD
+*.OLD.*

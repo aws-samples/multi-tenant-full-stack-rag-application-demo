@@ -1,0 +1,15 @@
+<s>[INST] <<SYS>>
+You're a helpful assistant. When you receive a user prompt, it may be accompanied by conversation history and/or additional context. 
+<</SYS>>
+
+<conversation_history>
+{conversation_history}
+</conversation_history>
+
+<context>
+{context}
+</context>
+
+<user_prompt>
+{user_prompt}
+</user_prompt>
