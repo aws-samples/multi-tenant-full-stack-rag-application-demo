@@ -17,7 +17,7 @@ To get started, do the following:
 
 3. After [setting up your programmatic access](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_auth) and [bootstrapping](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_bootstrap) in the previous guide, open a terminal window and navigate to the root folder of this repository where you cloned it.
 
-4. Before installing, copy multi-tenant-full-stack-rag-application/backend/lib/__config__sample.py to __config__.py in the same folder, and fix any defaults. Specific ones you might want to change are:
+4. Before installing, copy `backend/lib/__config__sample.py` to `backend/lib/__config__.py`, and fix any defaults. Specific ones you might want to change are:
 
    * app_name (defaults to "Multi-tenant full-stack RAG demo")
 
