@@ -65,9 +65,7 @@ To get started, do the following:
 
 ## Cost to run this stack
 
-The image below shows the costs I incurred running this in my personal account and developing it. It could be tuned for some of the larger-ticket items (like eliminating NAT gateways, minimizing Kinesis retention time, or using provisioned instead of on-demand throughput). Note that the core costs of OpenSearch Managed and Bedrock Haiku (my model of choice almost exclusively), are $28.04 and $4.26, respectively, for the month.
-
-<img src="./readme_assets/july_2024_costs.png" alt="July 2024 costs" width="400"/>
+Update coming soon after I optimize the first version a bit.
 
 ## Feature status and roadmap
  | Feature | Status | Comments |
