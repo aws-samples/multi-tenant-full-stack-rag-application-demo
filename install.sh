@@ -12,10 +12,10 @@ h=''
 f=1
 while getopts "yhf" opt; do
   case ${opt} in
-    h )
+    y )
       y=' --require-approval never'
       ;;
-    y )
+    h )
       h=' --hotswap-fallback'
       ;;
     nf )
