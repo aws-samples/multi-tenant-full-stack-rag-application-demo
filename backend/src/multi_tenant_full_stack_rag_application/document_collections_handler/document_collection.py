@@ -21,7 +21,7 @@ class DocumentCollection:
         shared_with=[], 
         created_date: str=None, 
         updated_date: str=None, 
-        *, enrichment_pipelines='', graph_schema = '',
+        *, enrichment_pipelines='{}', graph_schema = '{}',
     ):
         self.user_id = user_id
         self.user_email = user_email

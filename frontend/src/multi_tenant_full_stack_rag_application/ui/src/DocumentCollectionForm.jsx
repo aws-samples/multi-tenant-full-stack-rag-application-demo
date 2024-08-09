@@ -4,7 +4,7 @@
 import { useEffect } from 'react';
 import Api from './commons/api';
 import { Button, Container, Form, FormField, Header, Input, SpaceBetween, Spinner, Tabs } from '@cloudscape-design/components';
-import { useParams } from 'react-router-dom';
+import { json, useParams } from 'react-router-dom';
 import DeleteConfirmationModal from './DeleteConfirmationModal'
 import DocumentCollection from './DocumentCollection'
 import DocumentCollectionEnrichmentPipelines from './DocumentCollectionEnrichmentPipelines'
@@ -49,7 +49,7 @@ export const urlCollectionIdState = atom({
 
 export const currentCollectionState = atom({
   key: 'DocumentCollectionForm.currentCollectionState',
-  default: null
+  default: {}
 })
 
 export const addUserModalState = atom({
@@ -314,7 +314,7 @@ function DocumentCollectionForm() {
               <FormField label="Collection Name">
               <Input
                 onChange={({ detail }) => updateCurrentCollection("name", detail.value)}
-                value={currentCollection ? currentCollection.name: ''}
+                value={ currentCollection ? currentCollection.name: ''}
               />
               </FormField>
               : 
@@ -425,8 +425,14 @@ function DocumentCollectionForm() {
   }
 
   async function updateCurrentCollection(key, value) {
-    let tmp = currentCollection.clone()
-    tmp.name = currentCollection.name
+    let tmp = {}
+    if (typeof(currentCollection) == DocumentCollection) {
+      tmp = currentCollection.clone()
+    }
+    else {
+      tmp = JSON.parse(JSON.stringify(currentCollection))
+    }
+    tmp[key] = value
     setCurrentCollection(tmp)
   }
 

@@ -30,7 +30,7 @@ export ESCAPED_URL=$(echo $GENERATION_API_URL | sed 's/\//\\\//g') && \
 echo $ESCAPED_URL && \
 echo "Substituting $ESCAPED_URL for <GENERATION_API_URL> ." && \
 sed -i "s/<GENERATION_API_URL>/$ESCAPED_URL/g" aws-exports.js && \
-echo "Substituting <REGION> for $AWS_REGION." && \
+echo "Substituting $AWS_REGION for <REGION>." && \
 sed -i "s/<REGION>/$AWS_REGION/g" aws-exports.js && \
 
 export ESCAPED_URL=$(echo $INITIALIZATION_API_URL | sed 's/\//\\\//g') && \
@@ -47,7 +47,7 @@ export ESCAPED_URL=$(echo $PROMPT_TEMPLATES_API_URL | sed 's/\//\\\//g') && \
 echo $ESCAPED_URL && \
 echo "Substituting $ESCAPED_URL for <PROMPT_TEMPLATES_API_URL> ." && \
 sed -i "s/<PROMPT_TEMPLATES_API_URL>/$ESCAPED_URL/g" aws-exports.js && \
-echo "Substituting <REGION> for $AWS_REGION." && \
+echo "Substituting $AWS_REGION for <REGION>." && \
 sed -i "s/<REGION>/$AWS_REGION/g" aws-exports.js && \
 
 echo "Substituting <DOC_COLLECTIONS_BUCKET_NAME> for $DOC_COLLECTIONS_BUCKET_NAME." && \
