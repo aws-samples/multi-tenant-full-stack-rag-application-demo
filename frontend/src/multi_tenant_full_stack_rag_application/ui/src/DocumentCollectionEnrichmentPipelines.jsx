@@ -130,22 +130,22 @@ function DocumentCollectionEnrichmentPipelines() {
     // //     }
     // // }, [currentCollection.enrichmentPipelines])
 
-    useEffect(() => {
-        if (currentCollection && currentCollection.enrichmentPipelines) {
-            let tmp = {}
-            Object.keys(currentCollection.enrichmentPipelines).forEach((pipelineId) => {
-                let item = currentCollection.enrichmentPipelines[pipelineId]
-                tmp[item.id] = item.enabled
-            })
-            // setEnabledPipelines(tmp)
-            // // console.log("currentCollection.enrichmentPipelines current value")
-            // console.dir(currentCollection.enrichmentPipelines)
-            // updateTableRows(currentCollection.enrichmentPipelines)
-            setTableLoading(false)
-        }
-    }, [currentCollection])
+    // useEffect(() => {
+    //     if (currentCollection && currentCollection.enrichmentPipelines) {
+    //         let tmp = {}
+    //         Object.keys(currentCollection.enrichmentPipelines).forEach((pipelineId) => {
+    //             let item = currentCollection.enrichmentPipelines[pipelineId]
+    //             tmp[item.id] = item.enabled
+    //         })
+    //         // setEnabledPipelines(tmp)
+    //         // // console.log("currentCollection.enrichmentPipelines current value")
+    //         // console.dir(currentCollection.enrichmentPipelines)
+    //         // updateTableRows(currentCollection.enrichmentPipelines)
+    //         setTableLoading(false)
+    //     }
+    // }, [currentCollection])
 
-    function buildTemplateOptions(pipelineId) {
+    function buildTemplateOptions(pipelineId, itemEnabled) {
         return (
             <Drawer>
                 <ExpandableSection
@@ -158,7 +158,7 @@ function DocumentCollectionEnrichmentPipelines() {
                     onChange={({ detail }) => {
                         // console.log("detail in radio group:")
                         // console.dir(detail)
-                        updatePipelineTemplate(detail.value, pipelineId)
+                        updatePipelineTemplate(detail.value, pipelineId, itemEnabled)
                     }}
                     value={currentCollection.enrichmentPipelines.hasOwnProperty(pipelineId) && 
                         currentCollection.enrichmentPipelines[pipelineId].hasOwnProperty('templateIdSelected') ? 
@@ -198,7 +198,7 @@ function DocumentCollectionEnrichmentPipelines() {
         // updateTableRows(currentCollection.enrichmentPipelines)
     }
 
-    function updatePipelineTemplate(selectedValue, pipelineId) {
+    function updatePipelineTemplate(selectedValue, pipelineId, itemEnabled) {
         console.log(`Updating pipeline ${pipelineId} with template ${selectedValue}`)
         console.dir(currentCollection)
         let tmpCollection = currentCollection.clone()
@@ -213,6 +213,9 @@ function DocumentCollectionEnrichmentPipelines() {
         }      
         tmpCollection['enrichmentPipelines'][pipelineId]['templateIdSelected'] = selectedValue
         tmpCollection['enrichmentPipelines'][pipelineId]['templateNameSelected'] = promptTemplates[selectedValue]['template_name']
+        if (tmpCollection['enrichmentPipelines'][pipelineId]['templateNameSelected'] != 'none') {
+            tmpCollection['enrichmentPipelines'][pipelineId]['enabled'] = true
+        }
         // console.log("Updated pipelines:")
         // console.dir(tmpCollection.enrichmentPipelines)
         // updateDocCollectionEnrichmentPipelines(tmpCollection.enrichmentPipelines)
@@ -298,7 +301,7 @@ function DocumentCollectionEnrichmentPipelines() {
                     {
                       id: 'prompt_template',
                       header: 'Enrichment Prompt Template',
-                      cell: item => buildTemplateOptions(item.pipelineId),
+                      cell: item => buildTemplateOptions(item.pipelineId, item.enabled),
                       isRowHeader: true,
                     }
                 ]}

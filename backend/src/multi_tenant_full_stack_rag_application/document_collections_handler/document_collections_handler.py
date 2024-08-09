@@ -290,13 +290,18 @@ class DocumentCollectionsHandler:
             if not hasattr(handler_evt, 'path_parameters'):
                 return format_response(404, {"Error": "Missing path parameters."}, handler_evt.origin)
             collection_id = handler_evt.path_parameters['collection_id']
+            print(f"Got collection_id {collection_id} from path parameters {handler_evt.path_parameters}")
+
             limit = 20 if not (hasattr(handler_evt, 'path_parameters') and 'limit' in handler_evt.path_parameters) else int(handler_evt.path_parameters['limit'])
             last_eval_key = None if not (hasattr(handler_evt, 'path_parameters') and 'start_item' in handler_evt.path_parameters) else handler_evt.path_parameters['start_item']
             if last_eval_key not in ['', None] and not last_eval_key.startswith(collection_id):
                 last_eval_key = f"{collection_id}/{last_eval_key}"
             collection =  self.get_doc_collection(user_id, collection_id, include_shared=True)
-            print(f"Got collection {collection}")
+            print(f"GET /document_collections {collection.__dict__()}")
             collection_obj = self.collections_to_dict([collection])
+            if not collection_obj or len(list(collection_obj.keys())) == 0:
+                return format_response(404, {"Error": "Collection not found."}, handler_evt.origin)
+            
             ingestion_prefix = f'{collection_obj[list(collection_obj.keys())[0]]["collection_id"]}/'
             file_statuses = self.ingestion_status_provider.get_ingestion_status(user_id, ingestion_prefix, True, limit, last_eval_key)
             print(f"Ingestion_status_provider returned file_statuses {file_statuses}")

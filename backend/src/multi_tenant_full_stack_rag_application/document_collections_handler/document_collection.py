@@ -67,7 +67,7 @@ class DocumentCollection:
                 user, '', collection_name, coll['description']['S'],
                 coll['vector_db_type']['S'], coll['collection_id']['S'], 
                 shared_with, coll['created_date']['S'], coll['updated_date']['S'],
-                enrichment_pipelines=coll['enrichment_pipelines']['S'] if 'enrichment_pipelines' in coll else '',
+                enrichment_pipelines=coll['enrichment_pipelines']['S'] if 'enrichment_pipelines' in coll else '{}',
                 graph_schema=coll['graph_schema']['S'] if 'graph_schema' in coll else '',
             )
         return docs

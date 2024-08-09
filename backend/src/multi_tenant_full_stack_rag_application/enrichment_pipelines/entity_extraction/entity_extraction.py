@@ -214,9 +214,11 @@ class EntityExtraction(Pipeline):
                             "stop_sequences": ["</json>"]
                         }
                     )
-                    print(f"Bedrock response {json.dumps(response)}")
-                    response = json.loads(response.replace('<json>', '').replace('</json>', '').replace("\n", ""))
-                    print(f"Got node and entity results {json.dumps(response)}")
+                    print(f"Bedrock response {response}, type {type(response)}")
+                    response_json_str = response.replace('<JSON>', '').replace('</JSON>', '').replace("\n", "")
+                    print(f"Got response_json_str {response_json_str}")
+                    response = json.loads(response_json_str)
+                    print(f"Got node and entity results {response}")
                     gremlin_statements = ''
                     ids_to_types = {}
                     errors = False
