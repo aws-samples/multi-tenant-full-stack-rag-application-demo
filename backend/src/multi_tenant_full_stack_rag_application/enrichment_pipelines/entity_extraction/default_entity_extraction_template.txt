@@ -16,7 +16,7 @@ if you find them. Make sure to preface all node and edge IDs with the collection
 store collection_id as a property on all nodes and edges.
 
 For example, if the COLLECTION_ID was 'asdf1234' then the example output might be:
-
+<example_only>
 <json>
 {
   "nodes": [
@@ -80,6 +80,7 @@ For example, if the COLLECTION_ID was 'asdf1234' then the example output might b
   ]
 }
 </json>
+</example_only>
 
 Note that there may be many other types of nodes or edges in the documents, not 
 just the examples given above. 
@@ -103,4 +104,5 @@ Here's the document you need to process:
 </DOCUMENT>
 
 You must output only valid JSON. Be concise - do not provide any extra text before or after the JSON.
-<json>
+
+<JSON>
