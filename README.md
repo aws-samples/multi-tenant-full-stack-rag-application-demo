@@ -17,7 +17,7 @@ To get started, do the following:
 
 3. After [setting up your programmatic access](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_auth) and [bootstrapping](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_bootstrap) in the previous guide, open a terminal window and navigate to the root folder of this repository where you cloned it.
 
-4. Before installing, copy multi-tenant-full-stack-rag-application/backend/lib/__config__sample.py to __config__.py in the same folder, and fix any defaults. Specific ones you might want to change are:
+4. Before installing, copy `backend/lib/__config__sample.py` to `backend/lib/__config__.py`, and fix any defaults. Specific ones you might want to change are:
 
    * app_name (defaults to "Multi-tenant full-stack RAG demo")
 
@@ -66,6 +66,8 @@ To get started, do the following:
 ## Cost to run this stack
 
 The image below shows the costs I incurred running this in my personal account and developing it. It could be tuned for some of the larger-ticket items (like eliminating NAT gateways, minimizing Kinesis retention time, or using provisioned instead of on-demand throughput). Note that the core costs of OpenSearch Managed and Bedrock Haiku (my model of choice almost exclusively), are $28.04 and $4.26, respectively, for the month.
+
+Switching from Kinesis Streams to DynamoDB streams (free tier available) is high on the priority list.
 
 <img src="./readme_assets/july_2024_costs.png" alt="July 2024 costs" width="400"/>
 

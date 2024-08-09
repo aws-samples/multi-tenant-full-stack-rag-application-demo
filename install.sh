@@ -23,17 +23,43 @@ while getopts "yhf" opt; do
   esac
 done
 
-cd backend && 
-echo "Installing backend stack. Please wait. It takes a while the first time through." &&
-cdk deploy --all --outputs-file ../frontend/backend_outputs.json $y $h && 
-cd .. && 
-echo "backend installation complete!" && 
+if [ ! -f .venv/bin/activate ]; then
+  python3 -m venv .venv
+fi
+
+source .venv/bin/activate
+pip3 install -r backend/requirements.txt
+pip3 install -r frontend/requirements.txt
+
+cd backend
+echo
+echo
+echo "Installing backend stack. Please wait. It takes a while the first time through."
+echo
+cdk deploy --all --outputs-file ../frontend/backend_outputs.json $y $h 
+if [ $? -ne 0 ]; then
+  echo "cdk deploy failed. Exiting."
+  exit
+fi
+
+cd ..
+echo
+echo "backend installation complete!" 
+echo
 # if -f flag is set, install frontend stack
 if [ $f ]; then
-  cd frontend && 
-  echo "Installing frontend stack. Goes faster, but there's a CloudFront distribution, so that takes a good 15 minutes or so the first time." &&
-  export BUILD_UID=$UID && 
-  echo "BUILD_UID is $BUILD_UID" && 
-  cdk deploy --all $y $h && 
+  cd frontend
+  echo "Installing frontend stack. Goes faster, but there's a CloudFront distribution, so that takes a good 15 minutes or so the first time."
+  export BUILD_UID=$UID 
+  echo "BUILD_UID is $BUILD_UID" 
+  cdk deploy --all $y $h 
+  if [ $? -ne 0 ]; then
+    echo "cdk deploy failed. Exiting."
+    exit
+  fi
+  echo
   echo "frontend installation complete!"
 fi
+echo
+echo Installation complete!
+echo

@@ -43,7 +43,11 @@ class DocumentCollectionsHandlerEvent:
             body = json.loads(event['body'])
             if 'document_collection' in body:
                 self.document_collection=body['document_collection']
-                self.enrichment_pipelines = json.dumps(body['document_collection']['enrichment_pipelines'])
+                if 'enrichment_pipelines' in body:
+                    self.enrichment_pipelines = json.dumps(body['document_collection']['enrichment_pipelines'])
+                else:
+                    self.enrichment_pipelines = {}
+                    
             elif 'collection_id' in body:
                 self.collection_id = body['collection_id']
                 self.document_collection = {

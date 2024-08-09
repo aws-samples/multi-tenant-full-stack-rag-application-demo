@@ -318,3 +318,4 @@ class MultiTenantRagStack(Stack):
             user_pool_id=cognito_stack.user_pool.user_pool_id
         )
 
+        CfnOutput(self, 'StackName', value=self.stack_name)

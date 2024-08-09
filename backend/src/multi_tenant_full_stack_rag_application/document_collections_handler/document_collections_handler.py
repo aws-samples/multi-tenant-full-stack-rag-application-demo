@@ -99,7 +99,9 @@ class DocumentCollectionsHandler:
 
         updated = created
         shared_with = [] if 'shared_with' not in coll_dict else coll_dict['shared_with']
-
+        if not 'enrichment_pipelines' in coll_dict:
+            coll_dict['enrichment_pipelines'] = {}
+            
         return DocumentCollection(
             coll_dict['user_id'],
             handler_evt.user_email,
