@@ -54,7 +54,13 @@ class OpenSearchManagedStack(Stack):
                 )
             ],
         )
-        cognito_dashboards_role.grant_assume_role(iam.ServicePrincipal('es.amazonaws.com'))
+        cognito_dashboards_role.assume_role_policy.add_statements(iam.PolicyStatement(
+            actions=['sts:AssumeRole'],
+            principals=[
+                iam.ServicePrincipal('es.amazonaws.com'),
+            ],
+        ))
+        #cognito_dashboards_role.grant_assume_role(iam.ServicePrincipal('es.amazonaws.com'))
         # slr = iam.CfnServiceLinkedRole(self, "OpenSearchLinkedRole",
         #     aws_service_name="opensearchservice.amazonaws.com"
         # )

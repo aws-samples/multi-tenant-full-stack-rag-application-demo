@@ -134,7 +134,7 @@ class EntityExtraction(Pipeline):
             if 'NewImage' in ddb_rec and \
             rec["eventName"] == 'MODIFY':
                 ing_status = IngestionStatus.from_ddb_record(ddb_rec['NewImage'])
-                if ing_status.progress_status == 'INGESTED':
+                if ing_status.progress_status in ['INGESTED', 'ENRICHMENT_FAILED']:
                     collection_id = ing_status.s3_key.split('/')[0]
                     account_id = record['eventSourceARN'].split(':')[4]
                     user_id = ddb_rec['NewImage']['user_id']['S']

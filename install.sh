@@ -28,8 +28,8 @@ if [ ! -f .venv/bin/activate ]; then
 fi
 
 source .venv/bin/activate
-pip3 install -r backend/requirements.txt
-pip3 install -r frontend/requirements.txt
+pip3 install --no-cache -r backend/requirements.txt
+pip3 install --no-cache -r frontend/requirements.txt
 
 cd backend
 echo

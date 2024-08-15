@@ -60,11 +60,11 @@ export const UPLOADED_DOCUMENTS_COLUMN_DEFINITIONS = [
     key: item => item.key,
     isRowHeader: true,
   },
-  {
-    id: 'last_modified',
-    header: 'Last Modified',
-    cell: item => item.last_modified
-  },
+  // {
+  //   id: 'last_modified',
+  //   header: 'Last Modified',
+  //   cell: item => item.last_modified
+  // },
   {
     id: 'ingestion_status',
     header: 'Ingestion Status',
