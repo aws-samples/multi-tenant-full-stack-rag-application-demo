@@ -110,7 +110,7 @@ with open('backend_outputs.json', 'r') as backend_outputs:
                     config["initialization_api_url"] = config_in[key][subkey].rstrip('/')
 
 
-ReactUiStack(app, "MultiTenantRagUiStack",
+ReactUiStack(app,  app.node.try_get_context('stack_name_frontend') or "MultiTenantRagUiStack",
     app_name=app_name,
     doc_collections_bucket_name=config['doc_collections_bucket_name'],
     doc_collections_api_url=config["document_collections_api_url"],
