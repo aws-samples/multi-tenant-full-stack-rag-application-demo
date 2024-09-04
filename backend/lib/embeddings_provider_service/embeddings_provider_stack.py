@@ -2,26 +2,34 @@
 #  SPDX-License-Identifier: MIT-0
 
 import json
+import os
 
 from aws_cdk import (
     BundlingFileAccess,
     BundlingOptions,
     CfnOutput,
     Duration,
+    RemovalPolicy,
     Stack,
+    aws_apigatewayv2 as apigw,
+    aws_apigatewayv2_authorizers as apigwa,
+    aws_apigatewayv2_integrations as apigwi,
+    aws_ec2 as ec2,
     aws_iam as iam,
     aws_lambda as lambda_,
     aws_ssm as ssm,
 )
-from constructs import Construct
 
-from lib.auth_provider_service.cognito import CognitoStack
+from constructs import Construct
 
 
 class EmbeddingsProviderStack(Stack):
     def __init__(self, scope: Construct, construct_id: str,
         embeddings_model_id: str,
         parent_stack_name: str,
+        user_pool_client_id: str,
+        user_pool_id:str,
+        vpc=ec2.IVpc,
         **kwargs
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -29,7 +37,6 @@ class EmbeddingsProviderStack(Stack):
         build_cmds = []
         embeddings_provider_req_paths =  [
             "embeddings_provider/bedrock_embeddings_provider_requirements.txt",
-            "bedrock_provider/bedrock_provider_requirements.txt"
         ]
         
         for path in embeddings_provider_req_paths:
@@ -39,31 +46,16 @@ class EmbeddingsProviderStack(Stack):
         #     build_cmds.append(f"pip3 install -r /asset-input/{path} -t /asset-output/")
 
         build_cmds += [
-            # "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/auth_provider",
-            "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/bedrock_provider",
-            "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/boto_client_provider",
-            # "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/document_collections_handler",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/embeddings_provider",
-            # "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/ingestion_status_provider",
-            # "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/system_settings_provider",
-            # "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/user_settings_provider",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
-            # "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/vector_store_provider",
-            # "cp /asset-input/auth_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/auth_provider/",
-            # "cp /asset-input/bedrock_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/bedrock_provider/",
-            "cp /asset-input/bedrock_provider/bedrock_model_params.json /asset-output/multi_tenant_full_stack_rag_application/bedrock_provider/",
-            "cp /asset-input/boto_client_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/boto_client_provider/",
-            # "cp /asset-input/document_collections_handler/*.py /asset-output/multi_tenant_full_stack_rag_application/document_collections_handler/",
             "cp /asset-input/embeddings_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/embeddings_provider/",
-            # "cp /asset-input/ingestion_status_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/ingestion_status_provider/",
-            # "cp /asset-input/system_settings_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/system_settings_provider/",
-            # "cp /asset-input/user_settings_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/user_settings_provider/",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
-            # "cp /asset-input/vector_store_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/vector_store_provider/",
         ]
+
         embeddings_provider_args = [
             embeddings_model_id
         ]
+        
         embeddings_provider_py_path = 'multi_tenant_full_stack_rag_application_demo.embeddings_provider.bedrock_embeddings_provider.BedrockEmbeddingsProvider'
         
         self.embeddings_provider_function = lambda_.Function(self, 'EmbeddingsProviderFunction',
@@ -84,7 +76,7 @@ class EmbeddingsProviderStack(Stack):
             environment={
                 # 'IDENTITY_POOL_ID': cognito_identity_pool_id,
                 # 'USER_POOL_ID': cognito_user_pool_id,
-                # 'DOC_COLLECTIONS_BUCKET': doc_collections_bucket.bucket_name,
+                # 'INGESTION_BUCKET': ingestion_bucket.bucket_name,
                 'EMBEDDINGS_MODEL_ID': embeddings_model_id,
                 'EMBEDDINGS_PROVIDER_ARGS': json.dumps(embeddings_provider_args),
                 'EMBEDDINGS_PROVIDER_PY_PATH': embeddings_provider_py_path,
@@ -101,15 +93,73 @@ class EmbeddingsProviderStack(Stack):
         self.embeddings_provider_function.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["bedrock:InvokeModel"],
-                resources=[f"arn:aws:bedrock:{self.region}::foundation-model/{embeddings_model_id}"]
+                resources=[
+                    # only use one of these two and comment out the other.
+                    f"arn:aws:bedrock:{self.region}::foundation-model/*",
+                    # f"arn:aws:bedrock:{self.region}::foundation-model/{embeddings_model_id}",
+                ]
             )
         )
 
-        ssm.StringParameter(
-            self, "EmbeddingsProviderFunctionArnSsmParameter",
-            parameter_name=f"/{parent_stack_name}/embeddings_provider_lambda_arn",
-            string_value=self.embeddings_provider_function.function_arn
+        self.embeddings_provider_function.add_to_role_policy(iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            actions=['ssm:GetParameter'],
+            resources=[
+                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}/*",            
+            ]
+        ))
+
+        embeddings_provider_integration_fn = apigwi.HttpLambdaIntegration(
+            "EmbeddingsProviderLambdaIntegration",
+            self.embeddings_provider_function
         )
+
+        api_name = 'embeddings_provider'
+
+        self.http_api = apigw.HttpApi(self, 'EmbeddingsProviderHttpApi',
+            api_name=api_name,
+            create_default_stage=True
+        )
+
+        authorizer = apigwa.HttpJwtAuthorizer(
+            "EmbeddingsProviderAuthorizer",
+            f"https://cognito-idp.{self.region}.amazonaws.com/{user_pool_id}",
+            identity_source=["$request.header.Authorization"],
+            jwt_audience=[user_pool_client_id]
+        )
+
+        self.http_api.add_routes(
+            path='/embeddings_provider',
+            methods=[
+                apigw.HttpMethod.GET,
+                apigw.HttpMethod.POST,
+            ],
+            authorizer=authorizer,
+            integration=embeddings_provider_integration_fn
+        )
+
+        self.http_api.add_routes(
+            path='/{proxy+}',
+            methods=[
+                apigw.HttpMethod.OPTIONS
+            ],
+            integration=embeddings_provider_integration_fn
+        )
+
+        emb_provider_url_param = ssm.StringParameter(
+            self, "EmbeddingsProviderApiUrlParam",
+            parameter_name=f"/{parent_stack_name}/embeddings_provider_api_url",
+            string_value=self.http_api.url
+        )
+        emb_provider_url_param.apply_removal_policy(RemovalPolicy.DESTROY)
+        
+        CfnOutput(self, "EmbeddingsProviderApiUrl",
+            value=self.http_api.url,
+        )
+
+
+
+        
         
 
 

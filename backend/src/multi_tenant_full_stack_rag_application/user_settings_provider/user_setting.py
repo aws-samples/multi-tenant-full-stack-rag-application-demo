@@ -2,19 +2,20 @@
 #  SPDX-License-Identifier: MIT-0
 
 import json
+from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
+from json import JSONEncoder
+
+def _default(self, obj):
+    return getattr(obj.__class__, "to_json", _default.default)(obj)
+
+_default.default = JSONEncoder.default  # Save unmodified default.
+JSONEncoder.default = _default # Replace it.
 
 class UserSetting:
     def __init__(self, user_id, setting_name, data={}):
         self.user_id = user_id
         self.setting_name = setting_name
         self.data = data
-        if isinstance(data, dict):
-            self.data_type = 'M'
-        # right now the only user settings are maps
-        else:
-            # do this so if/when this breaks due to new types I will find 
-            # this spot.
-            raise Exception('Unexpected non-dict user setting type.')
 
     @staticmethod
     def from_ddb_record(rec):
@@ -92,12 +93,12 @@ class UserSetting:
         result = {
             'user_id': {'S': self.user_id},
             'setting_name': {'S': self.setting_name},
-            'data': {self.data_type: typed_data}
+            'data': { 'M': typed_data}
         }
         print(f"to_ddb_record returning {result}")
         return result
     
-    def __dict__(self):
+    def to_json(self):
         return {
             'user_id': self.user_id,
             'setting_name': self.setting_name,

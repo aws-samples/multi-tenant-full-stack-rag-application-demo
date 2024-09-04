@@ -3,8 +3,8 @@
 
 from abc import ABC, abstractmethod
 
-class AuthProvider(ABC):
-
+class AuthProvider(ABC):   
+   
     @abstractmethod
     def get_userid_from_token(self, auth_token):
         pass

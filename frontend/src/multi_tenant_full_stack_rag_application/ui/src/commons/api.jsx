@@ -7,7 +7,7 @@ import bedrockModelParams from './bedrock_model_params.json';
 import defaultPromptTemplates from './prompt_templates/prompt_templates.json';
 import sanitizeHtml from 'sanitize-html';
 
-const docsBucket = awsExports.doc_collections_bucket_name
+const docsBucket = awsExports.ingestion_bucket_name
 
 Amplify.configure({
   ...awsExports,

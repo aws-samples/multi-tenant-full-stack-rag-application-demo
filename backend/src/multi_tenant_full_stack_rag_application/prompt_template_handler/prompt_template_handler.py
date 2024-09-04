@@ -8,11 +8,9 @@ import boto3
 from datetime import datetime
 from uuid import uuid4
 
-from multi_tenant_full_stack_rag_application.auth_provider import AuthProvider, AuthProviderFactory
-from multi_tenant_full_stack_rag_application.boto_client_provider import BotoClientProvider
+from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
 from .prompt_template_handler_event import PromptTemplateHandlerEvent
 from .prompt_template import PromptTemplate
-from multi_tenant_full_stack_rag_application.user_settings_provider import UserSetting, UserSettingsProvider, UserSettingsProviderFactory
 from multi_tenant_full_stack_rag_application.utils import format_response
 
 """

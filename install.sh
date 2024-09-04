@@ -1,4 +1,6 @@
 #!/bin/bash
+echo Started install at `date`
+export SECONDS=0
 # check if either first or second argument is -y
 # -y means "yes" and will skip the confirmation prompts for 
 # creating IAM roles (same as --require-approval never)
@@ -18,7 +20,7 @@ while getopts "yhf" opt; do
     h )
       h=' --hotswap-fallback'
       ;;
-    nf )
+    f )
       f=0
   esac
 done
@@ -28,15 +30,15 @@ if [ ! -f .venv/bin/activate ]; then
 fi
 
 source .venv/bin/activate
-pip3 install --no-cache -r backend/requirements.txt
-pip3 install --no-cache -r frontend/requirements.txt
+pip3 install --upgrade --no-cache -r backend/requirements.txt
+pip3 install --upgrade --no-cache -r frontend/requirements.txt
 
 cd backend
 echo
 echo
 echo "Installing backend stack. Please wait. It takes a while the first time through."
 echo
-cdk deploy --all --outputs-file ../frontend/backend_outputs.json $y $h 
+cdk deploy --all --asset-parallelism true --concurrency 50 --outputs-file ../frontend/backend_outputs.json $y $h 
 if [ $? -ne 0 ]; then
   echo "cdk deploy failed. Exiting."
   exit
@@ -47,12 +49,13 @@ echo
 echo "backend installation complete!" 
 echo
 # if -f flag is set, install frontend stack
-if [ $f ]; then
+echo "Do frontend? ${f}"
+if [ $f -eq 1 ]; then
   cd frontend
   echo "Installing frontend stack. Goes faster, but there's a CloudFront distribution, so that takes a good 15 minutes or so the first time."
   export BUILD_UID=$UID 
   echo "BUILD_UID is $BUILD_UID" 
-  cdk deploy --all $y $h 
+  cdk deploy --all --asset-parallelism true --concurrency 50 $y $h 
   if [ $? -ne 0 ]; then
     echo "cdk deploy failed. Exiting."
     exit
@@ -62,4 +65,5 @@ if [ $f ]; then
 fi
 echo
 echo Installation complete!
+echo elapsed time: $(($SECONDS / 60)) minutes and $(($SECONDS % 60)) seconds
 echo
