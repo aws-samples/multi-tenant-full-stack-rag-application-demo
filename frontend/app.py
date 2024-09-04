@@ -63,64 +63,70 @@ with open('src/multi_tenant_full_stack_rag_application/ui/src/commons/prompt_tem
 
 app_name = 'AWS Generative AI Accelerator'
 
-with open('../backend/lib/__config__.py', 'r') as f_in:
-    lines = f_in.readlines()
-    for line in lines:
-        if line.strip().startswith('app_name'):
-            app_name = line.split("=")[1].strip().strip("'").strip('"').strip()
-    
+with open('../backend/cdk.context.json', 'r') as f_in:
+    cdk_context = json.loads(f_in.read())
+    # for key in list(cdk_context.keys()):
+    #     if key == 'app_name':
+    #         app_name = cdk_context[key]
+
+# with open('../backend/lib/__config__.py', 'r') as f_in:
+#     lines = f_in.readlines()
+#     for line in lines:
+#         if line.strip().startswith('app_name'):
+#             app_name = line.split("=")[1].strip().strip("'").strip('"').strip()
+
 with open('backend_outputs.json', 'r') as backend_outputs:
     config_in = json.loads(backend_outputs.read())
     for key in list(config_in.keys()):
-        if 'DocumentCollectionsApi' in key:
+        if 'DocumentCollections' in key:
             for subkey in list(config_in[key].keys()):
                 if subkey == 'HttpApiUrl':
                     config['document_collections_api_url'] = config_in[key][subkey].rstrip('/')
                     break
-        elif 'EnrichmentPipelinesApi' in key:
+        elif 'EnrichmentPipelines' in key:
             config['enrichment_pipelines_api_url'] = config_in[key]['EnrichmentPipelinesHttpApiUrl'].rstrip('/')
-        elif 'GenerationHandlerApi' in key:
+        elif 'GenerationHandler' in key:
             for subkey in list(config_in[key].keys()):
                 if subkey == 'GenerationHandlerHttpApiUrl':
                     config['generation_api_url'] = config_in[key][subkey].rstrip('/')
                     break
-        elif 'CognitoStack' in key:
+        elif 'AuthProviderStack' in key:
             for subkey in list(config_in[key].keys()):
                 if subkey == "UserPoolClientId":
                     config["user_pool_client_id"] = config_in[key][subkey]
                 elif subkey == "UserPoolId":
                     config["user_pool_id"] = config_in[key][subkey]
-                elif subkey == 'IdentityPoolId':
+                elif subkey == 'CognitoIdentityPoolId':
                     config["identity_pool_id"] = config_in[key][subkey]
-        elif 'IngestionBucketStack' in key:
+        elif 'IngestionProviderStack' in key:
             for subkey in list(config_in[key].keys()):
-                if subkey == 'IngestionBucketBucketName':
-                    config["doc_collections_bucket_name"] = config_in[key][subkey]
-        elif 'PromptTemplatesStack' in key:
+                if subkey == 'IngestionBucketName':
+                    config["ingestion_bucket_name"] = config_in[key][subkey]
+        elif 'PromptTemplateHandlerStack' in key:
             for subkey in list(config_in[key].keys()):
-                if subkey == 'PromptTemplatesHttpApiUrl':
+                if subkey == 'PromptTemplateHandlerApiUrl':
                     config["prompt_templates_api_url"] = config_in[key][subkey].rstrip('/')
-        elif 'SharingHandler' in key:
-            for subkey in list(config_in[key].keys()):
-                if subkey == 'SharingHandlerHttpApiUrl':
-                    config["sharing_handler_api_url"] = config_in[key][subkey].rstrip('/')
-        elif 'InitializationHandler' in key:
-            for subkey in list(config_in[key].keys()):
-                if subkey == 'InitializationHandlerHttpApiUrl':
-                    config["initialization_api_url"] = config_in[key][subkey].rstrip('/')
+        # elif 'SharingHandler' in key:
+        #     for subkey in list(config_in[key].keys()):
+        #         if subkey == 'SharingHandlerHttpApiUrl':
+        #             config["sharing_handler_api_url"] = config_in[key][subkey].rstrip('/')
+        # elif 'InitializationHandler' in key:
+        #     for subkey in list(config_in[key].keys()):
+        #         if subkey == 'InitializationHandlerHttpApiUrl':
+        #             config["initialization_api_url"] = config_in[key][subkey].rstrip('/')
 
 
 ReactUiStack(app,  app.node.try_get_context('stack_name_frontend') or "MultiTenantRagUiStack",
     app_name=app_name,
-    doc_collections_bucket_name=config['doc_collections_bucket_name'],
     doc_collections_api_url=config["document_collections_api_url"],
     enrichment_pipelines_api_url=config["enrichment_pipelines_api_url"],
     generation_api_url=config["generation_api_url"],
     identity_pool_id=config['identity_pool_id'],
-    initialization_api_url=config['initialization_api_url'],
+    ingestion_bucket_name=config['ingestion_bucket_name'],
+    # initialization_api_url=config['initialization_api_url'],
     prompt_templates_api_url=config['prompt_templates_api_url'],
     region=region,
-    sharing_handler_api_url=config['sharing_handler_api_url'],
+    # sharing_handler_api_url=config['sharing_handler_api_url'],
     user_pool_id=config["user_pool_id"],
     user_pool_client_id=config["user_pool_client_id"],
 )

@@ -2,19 +2,20 @@
 #  SPDX-License-Identifier: MIT-0
 
 import json
+from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
+from json import JSONEncoder
+
+def _default(self, obj):
+    return getattr(obj.__class__, "to_json", _default.default)(obj)
+
+_default.default = JSONEncoder.default  # Save unmodified default.
+JSONEncoder.default = _default # Replace it.
 
 class SystemSetting:
-    def __init__(self, id_key, sort_key, data={}):
+    def __init__(self, id_key='', sort_key='', data={}):
         self.id_key = id_key
         self.sort_key = sort_key
         self.data = data
-        if isinstance(data, dict):
-            self.data_type = 'M'
-        # right now the only system settings are maps
-        else:
-            # do this so if/when this breaks due to new types I will find 
-            # this spot.
-            raise Exception('Unexpected non-dict system setting type.')
 
     @staticmethod
     def from_ddb_record(rec):
@@ -88,15 +89,15 @@ class SystemSetting:
         return {
             'id_key': {'S': self.id_key},
             'sort_key': {'S': self.sort_key},
-            'data': {self.data_type: typed_data}
+            'data': {'M': typed_data}
         }
     
-    def __dict__(self):
-        return {
-            'id_key': self.id_key,
-            'sort_key': self.sort_key,
-            'data': self.data
-        }
+    def to_json(self):
+        return json.dumps({
+            "id_key": self.id_key,
+            "sort_key": self.sort_key,
+            "data": self.data
+        })
 
     def __str__(self):
         return json.dumps({

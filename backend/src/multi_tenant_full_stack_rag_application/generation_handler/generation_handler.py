@@ -9,12 +9,12 @@ from pathlib import Path
 
 from multi_tenant_full_stack_rag_application.auth_provider import AuthProvider, AuthProviderFactory
 from multi_tenant_full_stack_rag_application.bedrock_provider import BedrockProvider
-from multi_tenant_full_stack_rag_application.boto_client_provider import BotoClientProvider
+from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
 from multi_tenant_full_stack_rag_application.document_collections_handler.document_collections_handler import DocumentCollectionsHandler
 from multi_tenant_full_stack_rag_application.document_collections_handler.document_collections_handler_factory import DocumentCollectionsHandlerFactory
 # from multi_tenant_full_stack_rag_application.memory_provider import ChatMessage, ChatConversation, MemoryProvider
 from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider_factory import EmbeddingsProviderFactory
-from multi_tenant_full_stack_rag_application.enrichment_pipelines.entity_extraction import neptune_client as neptune
+from multi_tenant_full_stack_rag_application.enrichment_pipelines_provider.entity_extraction import neptune_client as neptune
 from multi_tenant_full_stack_rag_application.prompt_template_handler import PromptTemplate, PromptTemplateHandler
 from multi_tenant_full_stack_rag_application.user_settings_provider import UserSettingsProvider, UserSettingsProviderFactory
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_search_provider import VectorSearchProvider
@@ -65,8 +65,8 @@ class GenerationHandler:
 
         self.frontend_origins = [
             f'https://{origin_domain_name}',
-            'http://localhost:5173' # for local development
         ]
+        
         with open(f"{self.prompt_template_handler.prompt_template_path}/system_get_search_query.txt", 'r') as f_in:
             self.search_query_template = f_in.read()
             
@@ -84,7 +84,7 @@ class GenerationHandler:
     def get_search_query(self, handler_evt): 
         msg_obj = handler_evt.message_obj
         (hist, curr_prompt) = self.get_conversation(msg_obj)
-        doc_collections = self.document_collections_handler.get_doc_collections(handler_evt.user_id, include_shared=True)
+        doc_collections = self.document_collections_handler.get_doc_collections(handler_evt.user_id, include_shared=True)['response']
         doc_collections_dicts = []
         print(f"get_search_query got event {handler_evt}")
         for collection_id in doc_collections:

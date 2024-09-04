@@ -6,25 +6,48 @@ import json
 import os
 from importlib import import_module
 
-from multi_tenant_full_stack_rag_application.boto_client_provider import BotoClientProvider
+from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
 from .system_settings_provider import SystemSettingsProvider
 
+
+ssm = None
+ddb = None
 
 class SystemSettingsProviderFactory: 
     @staticmethod
     def get_system_settings_provider(
         py_path: str='',
         args: [str]=[],
+        *,
+        ddb_client: boto3.client=None,
+        ssm_client: boto3.client=None
     ) -> SystemSettingsProvider:
-        system_settings_table = os.getenv('SYSTEM_SETTINGS_TABLE', '')
+        global ddb, ssm
+
+        if not ddb_client:
+            ddb = BotoClientProvider.get_client('dynamodb')
+        else:
+            print("Using provided ddb_client")
+            ddb = ddb_client
+
+        if not ssm_client:
+            ssm = BotoClientProvider.get_client('ssm')
+        else:
+            ssm = ssm_client
+
+        ssm_param_name = f'/{os.getenv("STACK_NAME")}/system_settings_table'
+        system_settings_table = ssm.get_parameter(
+            Name=ssm_param_name
+        )['Parameter']['Value']
+
         if system_settings_table == '':
-            raise Exception('You must set the SYSTEM_SETTINGS_TABLE variable. It should be injected into the stack at deployment time. If you\'re seeing this in dev, set that variable.')
+            raise Exception(f'Could not find {ssm_param_name} in parameter store')
         
         if py_path == '': 
             py_path = os.getenv('SYSTEM_SETTINGS_PROVIDER_PY_PATH', 'multi_tenant_full_stack_rag_application.system_settings_provider.SystemSettingsProvider')
         if args == []:
             args = [
-                BotoClientProvider.get_client('dynamodb'),
+                ddb,
                 system_settings_table
             ]
         

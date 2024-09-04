@@ -3,8 +3,31 @@
 
 import boto3 
 from botocore.config import Config
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider, EmbeddingType
-from multi_tenant_full_stack_rag_application.bedrock_provider import BedrockProvider
+from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider, EmbeddingsProviderEvent, EmbeddingType
+from multi_tenant_full_stack_rag_application.utils import invoke_service
+
+"""
+API
+
+GET /embeddings_provider/{operation}/{model_id}...
+        {get_model_dimensions}/{model_id}: fetch list of dimensions for a given model
+        {get_model_max_tokens}/{model_id}: fetch max tokens for a given model
+
+POST /embeddings_provider/{operation}...
+        {encode}: embed the given text and return a vector.
+        post body = {
+            'input_text': 'text to embed',
+            'model_id': 'model_id',
+            'dimensions': 1024
+        }
+
+        {get_token_count}: return the estimated number of tokens in a string
+        post body = {
+            "input_text": "text to count tokens for"
+        }
+            
+"""
+
 
 # create  Config object for 10 max retries in adaptive mode
 config = Config(
@@ -14,6 +37,9 @@ config = Config(
 )
 split_seqs = ['\n\n\n', '\n\n', '\n', '. ', ' ']
 completed_files = []
+
+bedrock_embeddings_provider = None
+
 
 class BedrockEmbeddingsProvider(EmbeddingsProvider):
     def __init__(self, 
@@ -44,7 +70,22 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
     def get_token_count(self, input_text): 
         return self.bedrock.get_token_count(input_text)
 
+    def handler(self, event, context):
+        handler_evt = EmbeddingsProviderEvent.from_lambda_event(event)
+
+        if handler_evt == 'GET':
     
+def handler(event, context):
+    global bedrock_embeddings_provider
+    if not bedrock_embeddings_provider:
+        model_id = event['model_id']
+        dimensions = 1024 if not 'dimensions' \
+            in event \
+            else event['dimensions']
+        
+        bedrock_embeddings_provider = BedrockEmbeddingsProvider(
+            model_id, dimensions
+        )
 
     
 

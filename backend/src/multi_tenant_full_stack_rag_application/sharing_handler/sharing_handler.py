@@ -89,8 +89,8 @@ class SharingHandler:
             doc_collection = self.document_collections_handler.get_doc_collection(user_id, event.collection_id)
             doc_collection.shared_with.append(event.shared_with_email)
             print(f"SharingHandler.lookup updating doc_collection {doc_collection}")
-            collections = self.document_collections_handler.update_doc_collections(doc_collection, event)
-            print(f"got updated doc collections {collections}")
+            collection = self.document_collections_handler.upsert_doc_collection(doc_collection, event)
+            print(f"got updated doc collections {collection}")
             users_result = self.system_settings_provider.get_system_settings('user_by_email', event.shared_with_email)
             if isinstance(users_result, list) and len(users_result) > 0:
                 shared_with_user = users_result[0]
@@ -103,7 +103,7 @@ class SharingHandler:
             doc_collection = self.document_collections_handler.get_doc_collection(user_id, event.collection_id)
             doc_collection.shared_with.remove(event.shared_with_email)
             print(f"SharingHandler.lookup updating doc_collection {doc_collection}")
-            collections = self.document_collections_handler.update_doc_collections(doc_collection, event)
+            collection = self.document_collections_handler.upsert_doc_collection(doc_collection, event)
             users_result = self.system_settings_provider.get_system_settings('user_by_email', event.shared_with_email)
             if isinstance(users_result, list) and len(users_result) > 0:
                 removed_from_user  = users_result[0]

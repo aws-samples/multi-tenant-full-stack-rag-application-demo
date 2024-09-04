@@ -2,7 +2,7 @@
 
 const awsmobile = {
     "app_name": '<APP_NAME>',
-    "doc_collections_bucket_name": '<DOC_COLLECTIONS_BUCKET_NAME>',
+    "ingestion_bucket_name": '<INGESTION_BUCKET_NAME>',
     "aws_project_region": '<REGION>',
     "aws_cognito_identity_pool_id": '<IDENTITY_POOL_ID>',
     "aws_cognito_region": '<REGION>',
@@ -29,7 +29,7 @@ const awsmobile = {
         "document_collections":  '<DOC_COLLECTIONS_API_URL>',
         "enrichment_pipelines": '<ENRICHMENT_PIPELINES_API_URL>',
         "generation": '<GENERATION_API_URL>',
-        "initialization": '<INITIALIZATION_API_URL>',
+        /* "initialization": '<INITIALIZATION_API_URL>',*/ 
         "prompt_templates": '<PROMPT_TEMPLATES_API_URL>',
         "sharing": '<SHARING_HANDLER_API_URL>'
     }

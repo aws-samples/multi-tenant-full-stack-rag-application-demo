@@ -5,7 +5,7 @@ import json
 import os
 from importlib import import_module
 
-from multi_tenant_full_stack_rag_application.boto_client_provider import BotoClientProvider
+from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
 from .auth_provider import AuthProvider
 
 class AuthProviderFactory: 
@@ -13,10 +13,10 @@ class AuthProviderFactory:
     def get_auth_provider() -> AuthProvider:
         ssm = BotoClientProvider.get_client('ssm')
         auth_provider_args =  json.loads(ssm.get_parameter(
-            Name='/multitenantrag/authProviderArgs'
+            Name=f'/{os.getenv("STACK_NAME")}/auth_provider_args'
         )['Parameter']['Value'])  
         auth_provider_py_path = ssm.get_parameter(
-            Name='/multitenantrag/authProviderPyPath'
+            Name=f'/{os.getenv("STACK_NAME")}/auth_provider_py_path'
         )['Parameter']['Value']
         print(f"AuthProviderFactory: auth_provider_args={auth_provider_args}")
         parts = auth_provider_py_path.split('.')

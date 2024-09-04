@@ -6,7 +6,7 @@ import json
 import os
 from importlib import import_module
 
-from multi_tenant_full_stack_rag_application.boto_client_provider import BotoClientProvider
+from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
 from .user_settings_provider import UserSettingsProvider
 
 

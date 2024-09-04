@@ -50,8 +50,8 @@ sed -i "s/<PROMPT_TEMPLATES_API_URL>/$ESCAPED_URL/g" aws-exports.js && \
 echo "Substituting $AWS_REGION for <REGION>." && \
 sed -i "s/<REGION>/$AWS_REGION/g" aws-exports.js && \
 
-echo "Substituting <DOC_COLLECTIONS_BUCKET_NAME> for $DOC_COLLECTIONS_BUCKET_NAME." && \
-sed -i "s/<DOC_COLLECTIONS_BUCKET_NAME>/$DOC_COLLECTIONS_BUCKET_NAME/g" aws-exports.js && \
+echo "Substituting $INGESTION_BUCKET_NAME for <INGESTION_BUCKET_NAME> for ." && \
+sed -i "s/<INGESTION_BUCKET_NAME>/$INGESTION_BUCKET_NAME/g" aws-exports.js && \
 echo "Substituting <IDENTITY_POOL_ID> for $IDENTITY_POOL_ID." && \
 sed -i "s/<IDENTITY_POOL_ID>/$IDENTITY_POOL_ID/g" aws-exports.js && \
 sed -i "s/<USER_POOL_ID>/$USER_POOL_ID/g" aws-exports.js && \

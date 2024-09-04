@@ -24,6 +24,7 @@ class DocumentCollection:
         *, enrichment_pipelines='{}', graph_schema = '{}',
     ):
         self.user_id = user_id
+        self.sort_key = f"collection::{collection_name}"
         self.user_email = user_email
         self.collection_name = collection_name
         self.description = description
@@ -56,33 +57,35 @@ class DocumentCollection:
         return checked_shared_with
             
     @staticmethod
-    def from_ddb_record(user, rec):
-        print(f"document_collection.from_ddb_record received user {user}, and rec {rec}, type {type(rec)}")
-        docs = {}
-        for collection_name in rec:
-            coll = rec[collection_name]['M']
-            print(f"Got collection {coll}")
-            shared_with = [] if 'shared_with' not in coll else coll['shared_with']['SS']
-            docs[collection_name] = DocumentCollection(
-                user, '', collection_name, coll['description']['S'],
-                coll['vector_db_type']['S'], coll['collection_id']['S'], 
-                shared_with, coll['created_date']['S'], coll['updated_date']['S'],
-                enrichment_pipelines=coll['enrichment_pipelines']['S'] if 'enrichment_pipelines' in coll else '{}',
-                graph_schema=coll['graph_schema']['S'] if 'graph_schema' in coll else '',
-            )
-        return docs
+    def from_ddb_record(rec):
+        print(f"document_collection.from_ddb_record received rec {rec}, type {type(rec)}")
+        return DocumentCollection(
+            rec['user_id']['S'],
+            rec['user_email']['S'],
+            rec['collection_name']['S'],
+            rec['description']['S'],
+            rec['vector_db_type']['S'],
+            rec['collection_id']['S'],
+            rec.get('shared_with', {}).get('SS', []),
+            rec['created_date']['S'],
+            rec['updated_date']['S'],
+            enrichment_pipelines=rec['enrichment_pipelines']['S'],
+            graph_schema=rec['graph_schema']['S'],
+        )
 
     def to_ddb_record(self): 
         record = {
-            self.collection_name: { 'M': {
-                'collection_id': {'S': self.collection_id},
-                'description': {'S': self.description},
-                'vector_db_type': {'S': self.vector_db_type},
-                'created_date': {'S': self.created_date},
-                'updated_date': {'S': self.updated_date},
-                'graph_schema': {'S': str(self.graph_schema if self.graph_schema else '{}')},
-                'enrichment_pipelines': {'S': str(self.enrichment_pipelines if self.enrichment_pipelines else '{}')},
-            }}
+            'user_id': {'S': self.user_id},
+            'user_email': {'S': self.user_email},
+            'sort_key': {'S': f"collection::{self.collection_name}"},
+            'collection_name': {'S': self.collection_name},
+            'collection_id': {'S': self.collection_id},
+            'description': {'S': self.description},
+            'vector_db_type': {'S': self.vector_db_type},
+            'created_date': {'S': self.created_date},
+            'updated_date': {'S': self.updated_date},
+            'graph_schema': {'S': str(self.graph_schema if self.graph_schema else '{}')},
+            'enrichment_pipelines': {'S': str(self.enrichment_pipelines if self.enrichment_pipelines else '{}')},
         }
         if len(self.shared_with) > 0:
             record[self.collection_name]['M']['shared_with'] = {'SS': self.shared_with}
@@ -93,6 +96,8 @@ class DocumentCollection:
     def __dict__(self):
         return {
             'user_id': self.user_id,
+            'sort_key': self.sort_key,
+            'user_email': self.user_email,
             'collection_id': self.collection_id,
             'collection_name': self.collection_name,
             'description': self.description,
@@ -107,6 +112,8 @@ class DocumentCollection:
     def __str__(self):
         return json.dumps({
             'user_id': self.user_id,
+            'user_email': {'S': self.user_email},            
+            'sort_key': self.sort_key,
             'collection_id': self.collection_id,
             'collection_name': self.collection_name,
             'description': self.description,
@@ -139,6 +146,7 @@ class DocumentCollection:
             enrichment_pipelines_eq and \
             graph_schema_eq and \
             self.user_id == obj.user_id and \
+            self.user_email == obj.user_email and \
             self.collection_id == obj.collection_id and \
             self.collection_name == obj.collection_name and \
             self.description == obj.description and \

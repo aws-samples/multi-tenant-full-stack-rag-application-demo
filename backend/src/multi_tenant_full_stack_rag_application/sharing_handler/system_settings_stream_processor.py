@@ -22,7 +22,7 @@ import os
 
 from aws_kinesis_agg.deaggregator import deaggregate_records
 
-from multi_tenant_full_stack_rag_application.boto_client_provider import BotoClientProvider
+from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
 from multi_tenant_full_stack_rag_application.system_settings_provider import SystemSetting, SystemSettingsProvider, SystemSettingsProviderFactory
 from multi_tenant_full_stack_rag_application.utils import format_response
 
