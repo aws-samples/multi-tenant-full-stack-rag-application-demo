@@ -17,10 +17,12 @@ from aws_cdk import (
 
 from constructs import Construct
 from lib.graph_store_provider_service.neptune import NeptuneStack
+# from lib.shared.utils_permissions import UtilsPermissions
 
 class GraphStoreProviderStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, 
         app_security_group: ec2.ISecurityGroup,
+        auth_fn: lambda_.IFunction,
         auth_role_arn: str,
         instance_type: str,
         parent_stack_name: str,
@@ -39,7 +41,8 @@ class GraphStoreProviderStack(Stack):
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/graph_store_provider",
             "cp /asset-input/graph_store_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/graph_store_provider/",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
-            "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/"
+            "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
+            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output"
         ]
 
         self.graph_store_provider = lambda_.Function(self, 'GraphStoreProviderFunction',
@@ -61,14 +64,31 @@ class GraphStoreProviderStack(Stack):
                 "STACK_NAME": parent_stack_name,
             }
         )
+
+        gs_fn_name = ssm.StringParameter(self, 'GraphStoreProviderFunctionName',
+            parameter_name=f'/{parent_stack_name}/graph_store_provider_function_name',
+            string_value=self.graph_store_provider.function_name
+        )
+        gs_fn_name.apply_removal_policy(RemovalPolicy.DESTROY)
+
         self.graph_store_provider.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
-            actions=['ssm:GetParameter'],
+            actions=['ssm:GetParameter','ssm:GetParametersByPath'],
             resources=[
-                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}/*"
+                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}*"
             ]
         ))
 
+        self.graph_store_provider.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "lambda:InvokeFunction",
+                ],
+                resources=[auth_fn.function_arn],
+            )
+        )
+
+        # UtilsPermissions(self, 'UtilsPermissions', self.graph_store_provider.role)
         self.graph_store_provider.grant_invoke(cognito_auth_role)
 
         self.neptune_stack = NeptuneStack(self, "NeptuneStack",
@@ -78,57 +98,5 @@ class GraphStoreProviderStack(Stack):
             parent_stack_name=parent_stack_name,
             removal_policy=RemovalPolicy(self.node.get_context('removal_policy')),
             vpc=vpc
-        )
-        enrichment_pipelines_integration_fn = apigwi.HttpLambdaIntegration(
-            "GraphStoreLambdaIntegration", 
-            self.graph_store_provider,
-        )
-
-        api_name = 'graph_store'
-
-        self.http_api = apigw.HttpApi(self, "GraphStoreProviderApi",
-            api_name=api_name,
-            create_default_stage=True
-        )
-        
-        authorizer = apigwa.HttpJwtAuthorizer(
-            "GraphStoreAuthorizer",
-            f"https://cognito-idp.{self.region}.amazonaws.com/{user_pool_id}",
-            identity_source=["$request.header.Authorization"],
-            jwt_audience=[user_pool_client_id],
-        )
-
-        self.http_api.add_routes(
-            path='/enrichment_pipelines',
-            methods=[
-                apigw.HttpMethod.GET,
-                apigw.HttpMethod.DELETE,
-                apigw.HttpMethod.POST,
-            ],
-            authorizer=authorizer,
-            integration=enrichment_pipelines_integration_fn
-        )
-
-        self.http_api.add_routes(
-            path='/{proxy+}',
-            methods=[
-                apigw.HttpMethod.OPTIONS
-            ],
-            integration=enrichment_pipelines_integration_fn
-        )
-        
-        gs_url_param = ssm.StringParameter(self, 'GraphStoreHttpApiUrlParam',
-            parameter_name=f'/{parent_stack_name}/graph_store_api_url',
-            string_value=self.http_api.url
-        )
-        gs_url_param.apply_removal_policy(RemovalPolicy.DESTROY)
-
-        CfnOutput(self, "GraphStoreHttpApiUrl", value=self.http_api.url)
-
-        gs_ep_param = ssm.StringParameter(self, 'GraphStoreProviderEndpointUrl',
-            parameter_name=f'/{parent_stack_name}/graph_provider_endpoint_url',
-            string_value=self.neptune_stack.cluster.cluster_endpoint.socket_address
-        )
-        gs_ep_param.apply_removal_policy(RemovalPolicy.DESTROY)
-        
+        )        
         

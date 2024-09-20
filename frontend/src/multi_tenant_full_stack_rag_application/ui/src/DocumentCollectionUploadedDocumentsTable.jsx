@@ -67,13 +67,20 @@ function DocumentCollectionUploadedDocumentsTable() {
   });
 
   useEffect(() => {
-    if (currentCollection) {
+    //
+    if (currentCollection.hasOwnProperty('collectionId') && 
+        currentCollection.collectionId.length == 32 ) {
       (async () => {
         setIsLoading(true)
         let tmpFiles = await getTableProvider(currentCollection.collectionId, filePageSize, lastEvalKey)
         console.log("Got tmpFiles:")
         if (!tmpFiles || tmpFiles.length == 0) {
-          tmpFiles = []
+          tmpFiles = [{
+            "key": "no-files-uploaded",
+            "file_name": "No files uploaded yet.",
+            "status": "",
+            "disabled": true
+          }]
         }
         else {
           console.dir(tmpFiles)
@@ -107,14 +114,14 @@ function DocumentCollectionUploadedDocumentsTable() {
 
   useEffect(() => {
     (async () => {
-      if (currentCollection) {
+      if (currentCollection && filesVal.length > 0) {
         setIsLoading(true)
-        // // console.log('uploading files')
+        console.log('uploading files')
         let result = await api.uploadFiles(currentCollection.collectionId, filesVal);
-        // console.log("file upload result: ")
-        // console.dir(result)
-        // setFilesVal([])
-        // // console.log('done uploading files.')
+        console.log("file upload result: ")
+        console.dir(result)
+        setFilesVal([])
+        console.log('done uploading files.')
         let tmpFiles = await getTableProvider(currentCollection.collectionId, filePageSize, lastEvalKey)
         console.log("after filesVal, Got tmpFiles:")
         console.dir(tmpFiles)
@@ -122,7 +129,9 @@ function DocumentCollectionUploadedDocumentsTable() {
           setUploadedFiles(tmpFiles)
           setLastEvalKey(tmpFiles[tmpFiles.length - 1]['file_name'])
         }
-        setIsLoading(false)
+        else {
+          setUploadedFiles([])
+        }
       }
     })()
   }, [currentCollection, filesVal])
@@ -168,6 +177,7 @@ function DocumentCollectionUploadedDocumentsTable() {
   }
 
   function updateFilesVal(files) {
+    setIsLoading(true)
     console.log('Update files received:')
     console.dir(files)
     for (let i = 0; i < files.length; i++) {
@@ -219,7 +229,7 @@ function DocumentCollectionUploadedDocumentsTable() {
                   value={filesVal}  
                   visible={useRecoilValue(currentCollectionId)}     
                   i18nStrings={{          
-                    uploadButtonText: e => e ? "Choose files" : "Choose file",          
+                    uploadButtonText: e => e ? "Upload files" : "Upload file",          
                     dropzoneText: e => e ? "Drop files to upload"  : "Drop file to upload",          
                     removeFileAriaLabel: e => `Remove file ${e + 1}`,          
                     limitShowFewer: "Show fewer files",          
@@ -228,16 +238,16 @@ function DocumentCollectionUploadedDocumentsTable() {
                   }}    
                   multiple     
                 /> 
-                <Button 
+                {/* <Button 
                   onClick={uploadFiles}
                   disabled={filesVal.length === 0 || isLoading}
                   variant='primary'
                 >
                   Upload
-                </Button>
+                </Button> */}
                 <Button onClick={confirmDeleteFile} 
                   disabled={selectedFileUpload === ''}>
-                  Delete
+                  Delete file
                 </Button>
               </SpaceBetween>
               

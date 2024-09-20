@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 
 from multi_tenant_full_stack_rag_application.ingestion_provider.splitters.optimized_paragraph_splitter import OptimizedParagraphSplitter
-from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_document import VectorStoreDocument
 
 class Loader(ABC):
     def __init__(self, **kwargs):

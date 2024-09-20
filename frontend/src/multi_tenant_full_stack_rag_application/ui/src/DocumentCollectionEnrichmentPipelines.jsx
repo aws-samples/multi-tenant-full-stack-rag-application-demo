@@ -8,14 +8,11 @@ import { Button, Checkbox, Drawer, ExpandableSection, Form, Header, RadioGroup, 
 import { atom, selector, useRecoilState } from 'recoil'
 import  { currentCollectionState } from './DocumentCollectionForm'
 import './documentCollectionEnrichmentPipelines.css'
+import awsExports from './aws-exports'
 
 
 const api = new Api()
 
-
-async function getAvailableEnrichmentPipelines() {
-    return await api.getAvailableEnrichmentPipelines();
-}
 
 const enrichmentTableState = atom({
     key: 'DocumentCollectionEnrichmentPipelines.enrichmentTableState',
@@ -55,47 +52,64 @@ function DocumentCollectionEnrichmentPipelines() {
     
     useEffect(() => {
         if (currentCollection && promptTemplates != {}) {
-            getAvailableEnrichmentPipelines().then((availableEnrichmentPipelines) => {
-                Object.keys(availableEnrichmentPipelines).forEach(pipelineId => {
-                    // // console.log("Setting up available pipeline")
-                    // // console.dir(availableEnrichmentPipelines[pipelineId])
-                    // // console.log("Collection is now:" )
-                    // // console.dir(currentCollection)
-                    availableEnrichmentPipelines[pipelineId].pipelineId = pipelineId
-                    if (Object.keys(currentCollection.enrichmentPipelines).includes(pipelineId)) {
-                        availableEnrichmentPipelines[pipelineId].enabled = true
-                        availableEnrichmentPipelines[pipelineId].templateIdSelected = currentCollection.enrichmentPipelines.hasOwnProperty('pipelineId') && 
-                            currentCollection.enrichmentPipelines[pipelineId].hasOwnProperty('template_id') ? 
-                            currentCollection.enrichmentPipelines[pipelineId].template_id :
-                            'none'
-                        availableEnrichmentPipelines[pipelineId].templateNameSelected = promptTemplates.hasOwnProperty(availableEnrichmentPipelines[pipelineId].templateIdSelected) ? 
-                            promptTemplates[availableEnrichmentPipelines[pipelineId].templateIdSelected].template_name :
-                            'none'
-                    }
-                    else {
-                        availableEnrichmentPipelines[pipelineId].enabled = false
-                        availableEnrichmentPipelines[pipelineId].pipelineId = pipelineId 
-                        availableEnrichmentPipelines[pipelineId].templateIdSelected = 'none'
-                        availableEnrichmentPipelines[pipelineId].templateNameSelected = 'none'
-                    }
-                })
-
-                updateTableRows(availableEnrichmentPipelines)
-
-                // updateDocCollectionEnrichmentPipelines(availableEnrichmentPipelines)
-            })
-            let tmp = []
-            Object.keys(promptTemplates).forEach((template_id) => {
-                const item = promptTemplates[template_id]
-                if (!item.template_id.startsWith('default_')) {
-                    tmp.push({ label: item.template_name, value: item.template_id })
+            let availableEnrichmentPipelines = JSON.parse(JSON.stringify(awsExports.enabled_enrichment_pipelines))
+            console.log("availableEnrichmentPipelines initial value:")
+            console.dir(availableEnrichmentPipelines)
+            let currEnrichmentPipelines = currentCollection.enrichmentPipelines
+  
+            Object.keys(availableEnrichmentPipelines).forEach(pipelineId => {
+                console.log(`Setting up available pipeline ${pipelineId}`)
+                console.dir(availableEnrichmentPipelines[pipelineId])
+                console.log("Collection is now:" )
+                console.dir(currentCollection)
+                console.log("currentCollection.enrichmentPipelines == ")
+                console.dir(currEnrichmentPipelines)
+                
+                let enabled = false
+                try {
+                    enabled = currEnrichmentPipelines[pipelineId].enabled
                 }
+                catch {
+                    // pass
+                }
+
+                let templateIdSelected = null
+                try {
+                    templateIdSelected = currEnrichmentPipelines[pipelineId].template_id
+                }
+                catch {
+                    templateIdSelected = 'none'
+                }
+
+                let templateNameSelected = null
+                try {
+                    templateNameSelected = currEnrichmentPipelines[pipelineId].template_name
+                }
+                catch {
+                    templateNameSelected = 'none'
+                }
+
+                availableEnrichmentPipelines[pipelineId].enabled = enabled
+                availableEnrichmentPipelines[pipelineId].pipelineId = pipelineId
+                availableEnrichmentPipelines[pipelineId].templateIdSelected = templateIdSelected
+                availableEnrichmentPipelines[pipelineId].templateNameSelected = templateNameSelected  
             })
-            // // console.log("Prompt template options:")
-            // // console.dir(tmp)
-            setPromptTemplateOptions(tmp)
-            setTableLoading(false)
+            console.log("updated availableEnrichmentPipelines:")
+            console.dir(availableEnrichmentPipelines)
+            updateTableRows(availableEnrichmentPipelines)
+            // updateDocCollectionEnrichmentPipelines(availableEnrichmentPipelines)
         }
+        let tmp = []
+        Object.keys(promptTemplates).forEach((template_id) => {
+            const item = promptTemplates[template_id]
+            if (!item.template_id.startsWith('default_')) {
+                tmp.push({ label: item.template_name, value: item.template_id })
+            }
+        })
+        // // console.log("Prompt template options:")
+        // // console.dir(tmp)
+        setPromptTemplateOptions(tmp)
+        setTableLoading(false)
     }, [currentCollection, promptTemplates])
 
     useEffect(() => {
@@ -156,8 +170,8 @@ function DocumentCollectionEnrichmentPipelines() {
                 >
                 <RadioGroup
                     onChange={({ detail }) => {
-                        // console.log("detail in radio group:")
-                        // console.dir(detail)
+                        console.log("detail in radio group:")
+                        console.dir(detail)
                         updatePipelineTemplate(detail.value, pipelineId, itemEnabled)
                     }}
                     value={currentCollection.enrichmentPipelines.hasOwnProperty(pipelineId) && 
@@ -171,10 +185,13 @@ function DocumentCollectionEnrichmentPipelines() {
     }
 
     function updatePipelinesEnabled(pipelineEnabledCheck, pipelineRowItem) {
+        console.dir(`updatePipelinesEnabled got pipelineEnabledCheck ${pipelineEnabledCheck}, pipelineRowItem:`)
+        console.dir(pipelineRowItem)
         let pipelineId = pipelineRowItem.pipelineId
         let tmp = currentCollection.clone()
         console.dir(tmp)
         if (!tmp['enrichmentPipelines']) {
+            console.log("No enrichment pipelines yet. setting it to blank object.")
             tmp['enrichmentPipelines'] = {}
         }
         console.log("Checkbox checked?")
@@ -199,12 +216,19 @@ function DocumentCollectionEnrichmentPipelines() {
     }
 
     function updatePipelineTemplate(selectedValue, pipelineId, itemEnabled) {
-        console.log(`Updating pipeline ${pipelineId} with template ${selectedValue}`)
+        console.log(`Updating pipeline ${pipelineId} with template ${selectedValue}, ${itemEnabled}`)
         console.dir(currentCollection)
         let tmpCollection = currentCollection.clone()
         console.log("updatePipelineTemplate got tmpCollection");
         console.dir(tmpCollection)
-
+        if (typeof tmpCollection['enrichmentPipelines'] == 'string') {
+            console.log("Converting tmpCollection.enrichmentPipelines is a string. Convert it to an object.")
+            let tmpStr = tmpCollection['enrichmentPipelines'].replaceAll("'", "\"").replaceAll(': True,', ': true,')
+            console.log("tmpStr is now:")
+            console.dir(tmpStr)
+            tmpCollection['enrichmentPipelines'] = JSON.parse(tmpStr)
+        }
+        
         if (!tmpCollection.hasOwnProperty('enrichmentPipelines')) {
             tmpCollection['enrichmentPipelines'] = {}
         }
@@ -224,6 +248,9 @@ function DocumentCollectionEnrichmentPipelines() {
     }
 
     function updateTableRows(enrichmentPipelines) {
+        if (!enrichmentPipelines) {
+            return
+        }
         console.log("updateTableRows got enrichment pipelines")
         console.dir(enrichmentPipelines)
         let tableRows = []
@@ -232,6 +259,8 @@ function DocumentCollectionEnrichmentPipelines() {
             // // console.dir(availableEnrichmentPipelines[pipelineId])
             tableRows.push(enrichmentPipelines[pipelineId])
         })
+        console.log("Setting enrichment table to rows: ")
+        console.dir(tableRows)
         setEnrichmentTable(tableRows)
         // let tableRows = []
         // console.log("updateTableRows got enrichment pipelines")

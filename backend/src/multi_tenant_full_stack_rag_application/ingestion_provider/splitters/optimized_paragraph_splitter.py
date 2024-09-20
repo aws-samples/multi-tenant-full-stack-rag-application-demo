@@ -7,28 +7,32 @@
 import os
 from math import ceil
 
-from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
-# from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider
+from multi_tenant_full_stack_rag_application import utils
 from multi_tenant_full_stack_rag_application.ingestion_provider.splitters import Splitter
 
 default_split_seqs = ['\n\n\n', '\n\n', '\n', '. ', ' ']
 
 class OptimizedParagraphSplitter(Splitter):
     def __init__(self, *,
-        max_tokens_per_chunk: int = 0,
-        split_seqs=default_split_seqs,
+        max_tokens_per_chunk: int,
         lambda_client=None,
-        ssm_client=None
+        ssm_client=None,
+        split_seqs=default_split_seqs,
     ):
-        super().__init__(max_tokens_per_chunk, split_seqs)
+        super().__init__(
+            max_tokens_per_chunk=max_tokens_per_chunk, 
+            split_seqs=split_seqs
+        )
+        
+        self.utils = utils
         
         if not lambda_client:
-            self.lambda_ = BotoClientProvider.get_boto_client('lambda')
+            self.lambda_ = self.utils.BotoClientProvider.get_client('lambda')
         else:
             self.lambda_ = lambda_client
 
         if not ssm_client:  
-            self.ssm = BotoClientProvider.get_boto_client('ssm')
+            self.ssm = self.utils.BotoClientProvider.get_client('ssm')
         else:
             self.ssm = ssm_client
 
@@ -36,30 +40,31 @@ class OptimizedParagraphSplitter(Splitter):
         
         stack_name = os.getenv('STACK_NAME')
     
-        self.emb_provider_fn_name = self.ssm.get_parameter(
-            Name=f"/{stack_name}/embeddings_provider_function_name"
-        )
+        self.emb_provider_fn_name = self.utils.get_ssm_params('embeddings_provider_function_name')
     
-        if max_tokens_per_chunk == 0:
-            self.max_tokens_per_chunk = None
-        else:
-            self.max_tokens_per_chunk = max_tokens_per_chunk
+        self.max_tokens_per_chunk = max_tokens_per_chunk
 
-    def get_model_max_tokens(self):
+    def get_model_max_tokens(self, model_id):
         if not self.max_tokens_per_chunk:
             self.max_tokens_per_chunk = invoke_lambda(
                 self.emb_provider_fn_name, 
-                {'operation': 'get_model_max_tokens'}, 
+                {
+                    'operation': 'get_model_max_tokens',
+                    'origin': self.utils.get_ssm_params('ingestion_provider_function_name'),
+                    'args': {
+                        'model_id': model_id
+                    }
+                }, 
                 lambda_client=self.lambda_
             )
         return self.max_tokens_per_chunk
 
-    def get_token_count(self, text):
-        return invoke_lambda(
-            self.emb_provider_fn_name, 
-            {'operation': 'get_token_count', 'text': content}, 
-            lambda_client=self.lambda_
-        )
+    # def get_token_count(self, text):
+    #     return invoke_lambda(
+    #         self.emb_provider_fn_name, 
+    #         {'operation': 'get_token_count', 'text': content}, 
+    #         lambda_client=self.lambda_
+    #     )
 
     def split(self, content, source, *, extra_header_text='', extra_metadata={}, return_dicts=False, split_seq_num=0):
         results = []

@@ -9,16 +9,8 @@ from importlib import import_module
 from math import floor
 from urllib.parse import unquote_plus
 
-from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
-# from multi_tenant_full_stack_rag_application.auth_provider.cognito_auth_provider import CognitoAuthProvider
-#from multi_tenant_full_stack_rag_application.document_collections_handler import (
-#    DocumentCollectionsHandler, DocumentCollectionsHandlerEvent, DocumentCollectionsHandlerFactory
-#)
-# from multi_tenant_full_stack_rag_application.ingestion_provider import (
-#     IngestionStatus, IngestionStatusProvider, IngestionStatusProviderFactory
-# )
-# from multi_tenant_full_stack_rag_application.system_settings_provider import SystemSetting, SystemSettingsProvider, SystemSettingsProviderFactory
-# from .loaders.json_loader import JsonLoader
+from multi_tenant_full_stack_rag_application import utils
+
 from .loaders.pdf_image_loader import PdfImageLoader
 from .loaders.text_loader import TextLoader
 from .splitters.optimized_paragraph_splitter import OptimizedParagraphSplitter
@@ -43,6 +35,7 @@ vector_ingestion_provider = None
 class VectorIngestionProvider:
     def __init__(self,*,
         lambda_client: boto3.client=None,
+        ocr_model_id: str=None,
         s3_client: boto3.client=None,
         sqs_client: boto3.client=None,
         ssm_client: boto3.client=None,
@@ -53,57 +46,45 @@ class VectorIngestionProvider:
         # self.json_id_fields_order = json_id_fields_order
         # self.json_title_fields_order = json_title_fields_order
     ):
+        self.utils = utils
+        if ocr_model_id:
+            self.ocr_model_id = ocr_model_id
+        else:
+            self.ocr_model_id = default_ocr_model
+
         if not lambda_client:
-            self.lambda_ = BotoClientProvider.get_client('lambda')
+            self.lambda_ = self.utils.BotoClientProvider.get_client('lambda')
         else:
             self.lambda_ = lambda_client
 
         if not s3_client:
-            self.s3 = BotoClientProvider.get_client('s3')
+            self.s3 = self.utils.BotoClientProvider.get_client('s3')
         else:
             self.s3 = s3_client
         
         if not sqs_client:
-            self.sqs = BotoClientProvider.get_client('sqs')
+            self.sqs = self.utils.BotoClientProvider.get_client('sqs')
         else:
             self.sqs = sqs_client
         
-        if not ssm_client:
-            self.ssm = BotoClientProvider.get_client('ssm')
-        else:
-            print("\n\nGot passed in ssm_client!!!\n\n")
-            self.ssm = ssm_client
-
+        self.max_tokens_per_chunk = self.utils.invoke_lambda(
+            self.utils.get_ssm_params('embeddings_provider_function_name'),
+            {
+                "operation": "get_model_max_tokens",
+                "origin": self.utils.get_ssm_params('ingestion_provider_function_name'),
+                "args": {
+                    "model_id": default_ocr_model
+                }
+            }
+        )
+        
         self.splitter = OptimizedParagraphSplitter(
-            lambda_client=self.lambda_,
-            ssm_client=self.ssm
+            max_tokens_per_chunk=self.max_tokens_per_chunk
         )
 
-        origin_domain_name = self.ssm.get_parameter(
-            Name=f'/{os.getenv("STACK_NAME")}/frontend_origin'
-        )['Parameter']['Value']
+        self.ingestion_status_provider_fn_name = self.utils.get_ssm_params('ingestion_status_provider_function_name', ssm_client=ssm_client)
+        self.vector_store_provider_fn_name = self.utils.get_ssm_params('vector_store_provider_function_name', ssm_client=ssm_client)
 
-        self.frontend_origins = [
-            f'https://{origin_domain_name}',
-            'http://localhost:5173'
-        ]
-
-        self.ingestion_status_provider_fn_name = self.ssm.get_parameter(
-            Name=f'/{os.getenv("STACK_NAME")}/ingestion_status_provider_function_name'
-        )['Parameter']['Value']
-        
-        self.system_settings_provider_fn_name = self.ssm.get_parameter(
-            Name=f'/{os.getenv("STACK_NAME")}/system_settings_provider_function_name'
-        )['Parameter']['Value']
-
-        self.doc_collections_handler_fn_name = self.ssm.get_parameter(
-            Name=f'/{os.getenv("STACK_NAME")}/document_collections_handler_function_name'
-        )['Parameter']['Value']
-        
-        self.vector_store_provider_fn_name = self.ssm.get_parameter(
-            Name=f'/{os.getenv("STACK_NAME")}/vector_store_provider_function_name'
-        )['Parameter']['Value']
-        
     def delete_message(self, rcpt_handle:str, queue_url: str): 
         try: 
             self.sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=rcpt_handle)
@@ -144,32 +125,6 @@ class VectorIngestionProvider:
         acct = parts[4]
         name = parts[5]
         return f"https://sqs.{region}.amazonaws.com/{acct}/{name}"
-
-    def get_document_collection(self, user_id, collection_id):
-        return self.lambda_.invoke(
-            FunctionName=self.doc_collections_handler_fn_name, 
-            InvocationType='RequestResponse',
-            Payload=json.dumps({
-                "operation": "get_document_collection", 
-                "args": {
-                    "id_key": user_id, 
-                    "sort_key": collection_id
-                }
-            }).encode('utf-8')
-        )
-
-    def get_system_settings(self, id_key, sort_key):
-        return self.lambda_.invoke(
-            FunctionName=self.system_settings_provider_fn_name, 
-            InvocationType='RequestResponse',
-            Payload=json.dumps({
-                "operation": "get_system_settings", 
-                "args": {
-                    "id_key": id_key, 
-                    "sort_key": sort_key
-                }
-            }).encode('utf-8')
-        )
 
     @staticmethod
     def get_tmp_path(collection_id, file_name):
@@ -240,7 +195,7 @@ class VectorIngestionProvider:
                     
     def handler(self, event, context):
         print(f"VectorIngestionProvider received event {event}")
-        handler_evt = VectorIngestionHandlerEvent().from_lambda_event(event)
+        handler_evt = VectorIngestionProviderEvent().from_lambda_event(event)
         print(f"handler_evt is {handler_evt}")
         for file in handler_evt.ingestion_files:
             rcpt_handle = handler_evt.rcpt_handle
@@ -270,9 +225,29 @@ class VectorIngestionProvider:
             elif 'ObjectRemoved' in event_name:
                 print(f"Removing file {filename}")
                 try:
-                    result = invoke_lambda(self.vector_store_provider_fn_name, {'operation': 'delete_record', 'filename': filename})
+                    result = self.utils.invoke_lambda(
+                        self.vector_store_provider_fn_name, 
+                        {
+                            'operation': 'delete_record', 
+                            'origin': self.utils.get_ssm_params('ingestion_provider_function_name'),
+                            'args': {
+                                'filename': filename
+                            }
+
+                        }
+                    )
                     print(f"Result from deleting record from vector store: {result}")
-                    result2 = invoke_lambda(self.ingestion_status_provider_fn_name, {'operation': 'delete_ingestion_status', 'user_id': user_id, 'filename': filename})
+                    result2 = self.utils.invoke_lambda(
+                        self.ingestion_status_provider_fn_name, 
+                        {
+                            'operation': 'delete_ingestion_status', 
+                            'origin': self.utils.get_ssm_params('ingestion_provider_function_name'),
+                            'args': {
+                                'user_id': user_id, 
+                                'filename': filename
+                            }
+                        }
+                    )
                     print(f"Result from deleting ingestion_status: {result2}")
                     # self.vector_store_provider.delete_record(collection_id, filename)
                     # self.ingestion_status_provider.delete_ingestion_status(user_id, filename)
@@ -300,11 +275,12 @@ class VectorIngestionProvider:
             docs = self.ingest_json_file(local_path, file_dict, json_lines=False)
         elif local_path.lower().endswith('.pdf'):
             docs = self.ingest_pdf_file(local_path, file_dict)
+        elif local_path.lower().endswith('.docx'):
+            print(f'.docx not yet supported.')
         else:
             # local_path.endswith('.txt'):
             # assume you can parse it as text for now
             docs = self.ingest_text_file(local_path, file_dict)
-        
         # else:
         #     raise Exception(f'unsupported file type: {local_path}\nMore file types coming soon.')
         return docs
@@ -312,8 +288,6 @@ class VectorIngestionProvider:
     def ingest_json_file(self, local_path, file_dict, *, json_lines=True, extra_meta={}):
         print(f"ingest_json_file got local path {local_path}")
         loader = JsonLoader(
-            # emb_provider=self.emb_provider,
-            # save_vectors_fn=self.vector_store_provider.save,
             splitter=self.splitter,
             # json_content_fields_order = ["page_content", "content", "text"],
             # json_id_fields_order = ['id','url', 'source'],
@@ -332,12 +306,10 @@ class VectorIngestionProvider:
             ocr_model_id = self.ocr_model_id
 
         loader = PdfImageLoader(
-            # save_vectors_fn=self.vector_store_provider.save,
-            # emb_provider=self.emb_provider,
-            # ingestion_status_provider=self.ingestion_status_provider,
-            ocr_model_id=ocr_model_id, 
-            # s3=BotoClientProvider.get_client('s3')
+            max_tokens_per_chunk=self.max_tokens_per_chunk,
+            ocr_model_id=ocr_model_id
         )
+        
         docs = loader.load_and_split(local_path, file_dict['user_id'], f"{file_dict['collection_id']}/{file_dict['filename']}", etag=file_dict['etag'], extra_metadata=extra_meta)
         print(f"ingest_pdf_file returning {docs}")
         return docs
@@ -421,53 +393,30 @@ class VectorIngestionProvider:
     #         self.set_ingestion_status_batch(docs_batch, 'INGESTED')
     #     out_queue.put(None)
 
-    def verify_collection(self, file_dict): 
-        user_id = file_dict['user_id']
-        collection_id = file_dict['collection_id']
-        user_by_id_settings = self.get_sysetm_settings('user_by_id', user_id)
+    def verify_collection(self, collection_dict, *, lambda_client=None): 
+        print(f"Verifying collection for file dict {collection_dict}")
+        user_id = collection_dict['user_id']
+        collection_id = collection_dict['collection_id']
         
-        user_by_id_setting = None
-        verified_doc_collection = False
-        if len(user_by_id_settings) > 0:
-            user_by_id_setting = user_by_id_settings[0]
-        if user_by_id_setting:
-            print(f"Got user_by_id_setting {user_by_id_setting}")
-            dch_evt = {
-                'account_id': file_dict['account_id'],
-                'collection_id': collection_id,
-                'method': 'GET',
-                'path': f'/document_collections/{collection_id}/edit',
-                'user_email': user_by_id_setting.data['user_email'],
-                'user_id': user_id,
-                'origin': self.frontend_origins[0]
-            }
-            print(f"Got dch_evt dict {dch_evt}")
-            verified_doc_collection = self.lambda_.invoke(
-                FunctionName=self.doc_collections_handler_fn_name,
-                InvocationType='RequestResponse',
-                Payload=json.dumps(dch_evt).encode('utf-8')
-            )
-            # dch_evt = DocumentCollectionsHandlerEvent(**dch_evt)
-            # verified_doc_collection = self.doc_collections_handler.get_doc_collection(user_id, collection_id)
-            # args = [
-            #     user_id,
-            #     collection_id
-            # ]
-            #verified_doc_collection = invoke_lambda(self.doc_collections_handler_fn_name, args)
-        print(f"verified_doc_collection = {verified_doc_collection}")
-        
-        if not verified_doc_collection: 
+        verified_collection = self.utils.get_document_collection(
+            collection_id, 
+            user_id,
+            lambda_client=lambda_client
+        )
+
+        print(f"Got verified collection: {verified_collection}")
+
+        if not verified_collection or \
+            verified_collection['collection_id'] != collection_id:
             print(f"Error: Invalid document collection {collection_id} received for user {user_id}")
             return False
         else:
-            return verified_doc_collection
+            return verified_collection
                 
 
 def handler(event, context):
     global vector_ingestion_provider
     if not vector_ingestion_provider:
-        s3 = BotoClientProvider.get_client('s3')
-        sqs = BotoClientProvider.get_client('sqs')
-        ssm = BotoClientProvider.get_client('ssm')
-        vector_ingestion_provider = VectorIngestionProvider(s3, sqs, ssm).handler(event, context)
+        vector_ingestion_provider = VectorIngestionProvider().handler(event, context)
+        print(f"Got vector_ingestion_provider {vector_ingestion_provider}")
     return vector_ingestion_provider.handler(event, context)

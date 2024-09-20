@@ -8,6 +8,7 @@ from aws_cdk import (
     BundlingOptions,
     CfnOutput,
     Duration,
+    RemovalPolicy,
     aws_apigatewayv2 as apigw,
     aws_apigatewayv2_authorizers as apigwa,
     aws_apigatewayv2_integrations as apigwi,
@@ -19,6 +20,7 @@ from aws_cdk import (
     aws_ssm as ssm
 )
 from constructs import Construct
+# from lib.shared.utils_permissions import UtilsPermissions
 
 
 class EntityExtractionProviderFunction(Construct):
@@ -57,6 +59,7 @@ class EntityExtractionProviderFunction(Construct):
             "cp /asset-input/enrichment_pipelines_handler/entity_extraction/*.py /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_handler/entity_extraction/",
             "cp /asset-input/enrichment_pipelines_handler/entity_extraction/*.txt /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_handler/entity_extraction/",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
+            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output"
         ]
 
         self.entity_extraction_function = lambda_.Function(self, 'EntityExtractionFunction',
@@ -88,13 +91,20 @@ class EntityExtractionProviderFunction(Construct):
             security_groups=[app_security_group]
         )
 
+        ent_extraction_origin_param = ssm.StringParameter(self, 'EntityExtractionProviderOrigin',
+            parameter_name=f'/{parent_stack_name}/origin_entity_extraction',
+            string_value=self.entity_extraction_function.function_name
+        )
+        ent_extraction_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
+
         self.entity_extraction_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
-            actions=['ssm:GetParameter'],
+            actions=['ssm:GetParameter','ssm:GetParametersByPath'],
             resources=[
-                f"arn:aws:ssm:{region}:{account}:parameter/{parent_stack_name}/*"
+                f"arn:aws:ssm:{region}:{account}:parameter/{parent_stack_name}*"
             ]
         ))
+        # UtilsPermissions(self, 'UtilsPermissions', self.entity_extraction_function.role)
 
 
         

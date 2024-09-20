@@ -22,80 +22,31 @@ from uuid import uuid4
 
 import multi_tenant_full_stack_rag_application.enrichment_pipelines_provider.entity_extraction.neptune_client as neptune
 
-from multi_tenant_full_stack_rag_application.bedrock_provider import BedrockProvider
 from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
-from multi_tenant_full_stack_rag_application.document_collections_handler import DocumentCollectionsHandler, DocumentCollectionsHandlerEvent, DocumentCollectionsHandlerFactory
 from multi_tenant_full_stack_rag_application.enrichment_pipelines import Pipeline
-from multi_tenant_full_stack_rag_application.ingestion_provider import IngestionStatus, IngestionStatusProvider, IngestionStatusProviderFactory
-# from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider
-# from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider_factory import EmbeddingsProviderFactory
-from multi_tenant_full_stack_rag_application.prompt_template_handler import PromptTemplate, PromptTemplateHandler, PromptTemplateHandlerFactory
-from multi_tenant_full_stack_rag_application.user_settings_provider import UserSettingsProvider, UserSettingsProviderFactory
-from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_provider import VectorStoreProvider
-from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_provider_factory import VectorStoreProviderFactory
-#from multi_tenant_full_stack_rag_application.ingestion_provider.loaders.docx_loader import DocxLoader
-#from multi_tenant_full_stack_rag_application.ingestion_provider.loaders.pdf_image_loader import PdfImageLoader
-#from multi_tenant_full_stack_rag_application.ingestion_provider.loaders.text_loader import TextLoader
-#from multi_tenant_full_stack_rag_application.ingestion_provider.loaders.xlsx_loader import XlsxLoader
-#from multi_tenant_full_stack_rag_application.ingestion_provider.splitters import OptimizedParagraphSplitter, Splitter
 
 
 default_entity_extraction_template_path = 'multi_tenant_full_stack_rag_application/enrichment_pipelines/entity_extraction/default_entity_extraction_template.txt'
 default_extraction_model_id = os.getenv('EXTRACTION_MODEL_ID')
 
+
 class EntityExtraction(Pipeline):
     def __init__(self, 
         pipeline_name: str, 
         *,
-        bedrock_provider: BedrockProvider=None,
-        document_collections_handler: DocumentCollectionsHandler=None,
         extraction_prompt_template_id: str=None,
-        ingestion_status_provider: IngestionStatusProvider=None,
         neptune_endpoint: str=None,
         # pdf_loader: Loader=None,
-        prompt_template_handler: PromptTemplateHandler=None,
-        user_settings_provider: UserSettingsProvider=None,
-        vector_store_provider: VectorStoreProvider=None,
         # s3_client: boto3.client=None,
         # splitter: Splitter=None,
         **kwargs
     ):
         super().__init__(pipeline_name, **kwargs)
-        if not bedrock_provider:
-            self.bedrock = BedrockProvider()
-        else:
-            self.bedrock = bedrock_provider
-
-        if not document_collections_handler:
-            self.document_collections_handler = DocumentCollectionsHandlerFactory.get_document_collections_handler()
-        else:
-            self.document_collections_handler = document_collections_handler
-
-        if not ingestion_status_provider:
-            self.ingestion_status_provider = IngestionStatusProviderFactory.get_ingestion_status_provider()
-
-        else:
-            self.ingestion_status_provider = ingestion_status_provider
 
         if not neptune_endpoint:
             self.neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
         else:
             self.neptune_endpoint = neptune_endpoint
-
-        if not prompt_template_handler:
-            self.prompt_template_handler = PromptTemplateHandlerFactory.get_prompt_template_handler()
-        else:
-            self.prompt_template_handler = prompt_template_handler
-
-        if not user_settings_provider:
-            self.user_settings_provider = UserSettingsProviderFactory.get_user_settings_provider()
-        else:
-            self.user_settings_provider = user_settings_provider
-
-        if not vector_store_provider: 
-            self.vector_store_provider = VectorStoreProviderFactory.get_vector_store_provider()
-        else:
-            self.vector_store_provider = vector_store_provider
 
         # if not extraction_prompt_template_id:
         # with open(default_entity_extraction_template_path, 'r') as f_in:
@@ -135,7 +86,7 @@ class EntityExtraction(Pipeline):
             rec["eventName"] == 'MODIFY':
                 ing_status = IngestionStatus.from_ddb_record(ddb_rec['NewImage'])
                 if ing_status.progress_status in ['INGESTED', 'ENRICHMENT_FAILED']:
-                    collection_id = ing_status.s3_key.split('/')[0]
+                    collection_id = ing_status.doc_id.split('/')[0]
                     account_id = record['eventSourceARN'].split(':')[4]
                     user_id = ddb_rec['NewImage']['user_id']['S']
 
@@ -161,7 +112,7 @@ class EntityExtraction(Pipeline):
                     query = {
                         "query": {
                             "term": {
-                                "metadata.source.keyword":  ing_status.s3_key
+                                "metadata.source.keyword":  ing_status.doc_id
                             }
                         }
                     }
@@ -184,8 +135,8 @@ class EntityExtraction(Pipeline):
                         doc_collection.enrichment_pipelines['entity_extraction']['enabled']) :
                         print(f"Skipping entity extraction for doc collection {doc_collection} because it doesn't have entity extraction enabled.")
                         ing_status.progress_status = 'ENRICHMENT_DISABLED_SKIPPING'
-                        if not ing_status.s3_key.startswith(collection_id):
-                            ing_status.s3_key = f"{collection_id}/{ing_status.s3_key}"
+                        if not ing_status.doc_id.startswith(collection_id):
+                            ing_status.doc_id = f"{collection_id}/{ing_status.doc_id}"
                         self.ingestion_status_provider.set_ingestion_status(ing_status)
                         return True
 
@@ -198,7 +149,7 @@ class EntityExtraction(Pipeline):
                     ee_template_name = entity_extraction_template.template_name  #  ['template_name']
                     ee_template_text = entity_extraction_template.template_text  #  ['template_text']    
                     prompt = ee_template_text.replace('{document_content}', doc_text)
-                    prompt = f"<COLLECTION_ID>\n{collection_id}\n</COLLECTION_ID>\n<FILENAME>{ing_status.s3_key}</FILENAME>\n\n" + prompt
+                    prompt = f"<COLLECTION_ID>\n{collection_id}\n</COLLECTION_ID>\n<FILENAME>{ing_status.doc_id}</FILENAME>\n\n" + prompt
                     response = self.bedrock.invoke_model(
                         default_extraction_model_id,
                         prompt,
@@ -222,12 +173,12 @@ class EntityExtraction(Pipeline):
                     gremlin_statements = ''
                     ids_to_types = {}
                     errors = False
-                    document_id = ing_status.s3_key.replace('/', '::').replace('-', '_')
+                    document_id = ing_status.doc_id.replace('/', '::').replace('-', '_')
                     response['nodes'].append(
                         {
                             "id": document_id,
                             "type": "document",
-                            "source": ing_status.s3_key
+                            "source": ing_status.doc_id
                         }
                     )
                     
@@ -252,7 +203,7 @@ class EntityExtraction(Pipeline):
                             key = key.replace('-', '_').replace(' ', '_').replace("\'", "\\\'")
                             node[key] = node[key].replace("\'", "\\\'")
                             merge_statement += f", '{key}': '{node[key]}'"
-                        merge_statement += f", 'from_file': '{ing_status.s3_key}'"
+                        merge_statement += f", 'from_file': '{ing_status.doc_id}'"
                         merge_statement += f", 'collection_id': '{collection_id}'"
                         merge_statement += '])'
                         merge_statement += '.option(onMatch, ['
@@ -260,7 +211,7 @@ class EntityExtraction(Pipeline):
                             key = key.replace('-', '_').replace(' ', '_').replace("\'", "\\\'")
                             # node[key] = node[key].replace("\'", "\\\'")
                             merge_statement += f"'{key}': '{node[key]}',"
-                        merge_statement += f" 'from_file': '{ing_status.s3_key}'"
+                        merge_statement += f" 'from_file': '{ing_status.doc_id}'"
                         merge_statement += f", 'collection_id': '{collection_id}'"
                         merge_statement = merge_statement.strip(',') + '])' + '\n'
                         gremlin_statements += merge_statement
@@ -274,7 +225,7 @@ class EntityExtraction(Pipeline):
                         edge['source'] = edge['source'].replace('-', '_').replace(' ', '_').replace("\'", "\\\'")
                         edge['target'] = edge['target'].replace('-', '_').replace(' ', '_').replace("\'", "\\\'")
                         edge['type'] = edge['type'].replace('-', '_').replace(' ', '_').replace("\'", "\\\'")
-                        edge_id = f"{ing_status.s3_key}::{edge['source'].split('::')[1]}::{edge['type']}::{edge['target'].split('::')[1]}"
+                        edge_id = f"{ing_status.doc_id}::{edge['source'].split('::')[1]}::{edge['type']}::{edge['target'].split('::')[1]}"
                         edge_id = edge_id.replace('-', '_').replace(' ', '_').replace('/', '_').replace("\'", "\\\'")
                         merge_statement += f"g.mergeE([(id): '{edge_id}'])"
                         merge_statement += f".option(onCreate, [(from): '{edge['source']}', (to): '{edge['target']}', (T.label): '{edge['type']}', weight: 1.0])"
@@ -303,13 +254,13 @@ class EntityExtraction(Pipeline):
                     if errors == False:
                         ing_status.progress_status = 'ENRICHMENT_COMPLETE'
                         print()
-                        if not ing_status.s3_key.startswith(collection_id):
-                            ing_status.s3_key = f"{collection_id}/{ing_status.s3_key}"
+                        if not ing_status.doc_id.startswith(collection_id):
+                            ing_status.doc_id = f"{collection_id}/{ing_status.doc_id}"
                         self.ingestion_status_provider.set_ingestion_status(ing_status)
                     else:
                         ing_status.progress_status = 'ENRICHMENT_FAILED'
                         self.ingestion_status_provider.set_ingestion_status(ing_status)
-                        raise Exception(f"Error processing {ing_status.s3_key}")
+                        raise Exception(f"Error processing {ing_status.doc_id}")
                     
                     schema_query = f"""
                         g.V()

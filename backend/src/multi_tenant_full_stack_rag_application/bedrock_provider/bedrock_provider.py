@@ -1,11 +1,11 @@
 #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #  SPDX-License-Identifier: MIT-0
 
-import boto3
 import jq
 import json
 import numpy as np
 import os
+import sys
 
 from base64 import b64encode
 from math import ceil
@@ -16,70 +16,46 @@ from pathlib import Path
 # from threading import Thread
 
 from multi_tenant_full_stack_rag_application.bedrock_provider.bedrock_provider_event import BedrockProviderEvent
-from multi_tenant_full_stack_rag_application.utils import BotoClientProvider, invoke_service
-# from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingType
+from multi_tenant_full_stack_rag_application import utils  
 
 """
 API
+event {
+    "operation": [embed_text, get_model_dimensions, get_model_max_tokens, get_semantic_similarity, get_token_count, invoke_model, list_models ]
+    "origin": the function name of the calling function, or the frontend_origin.,
+    "args": 
+        for embed_text:
+            "model_id": str,
+            "text": str,
+            "dimensions": int=1024,
+            "input_type": str="search_query",
 
-GET /bedrock_provider/...
-        list_models: fetch list of foundation models available
-        get_model_dimensions/{model_id}: fetch list of dimensions for a given model
-        get_model_max_tokens/{model_id}: fetch max tokens for a given model
+        for get_model_dimensions:
+            "model_id": str
 
-POST /bedrock_provider/...
-        embed_text: embed the given text.
-            body = {
-                "operation": "embed_text",
-                "args": {
-                    # Cohere models only have one default dim, 1024, so this
-                    # is only useful for Titan text embeddings v2, in
-                    # which case it could be 1024 (default), 512, or 256.
-                    'dimensions': int, optional, default 1024
-                    # search_document is for ingestin and search_query is for 
-                    # inference time. Only valid for Cohere models.
-                    'input_type': ['search_document' or 'search_query'], (optional), defaults to search_query
-                    'model_id': str, (required),
-                    'text': str (required)
-                }
-            }
-        invoke_model: send a payload to a bedrock model.
-            body = {
-                "operation": "embed_text",
-                "args": {
-                    'model_id': str (required),
-                    'prompt': str (either prompt or messages are required). Used for non-Claude 3 models.
-                    'model_kwargs': dict (optional), the keyword args to send to the model,
-                    'messages': list of dicts (either prompt or messages are required). Used for Claude 3 models.
-                        [{
-                            "content": "the text or the binary image data you'd get from opening it 'rb' and doing a .read() on it",
-                            "mime_type": "either 'text' or one of 'jpg', 'image/jpeg', 'png', 'image/png', 'png', 'image/webp', 'webp', 'image/gif', 'gif'
-                        }]
-                }
-            }   
-        get_semantic_similarity: given two text chunks, return a 
-            similarity score between 0 and 1.
-            body = {
-                "operation": "embed_text",
-                "args": {
-                    'chunk_text': str, (required)
-                    'dimensions': int, (optional) dimensions of the embedding model to use.
-                    'model_id': str, (required) the embedding model to use.
-                    'search_text': str, (required)
-                }
-            }
-        get_token_count: return an estimated number of tokens in the given
-            input text. Estimates by splitting into words and multiplying
-            by 1.3 tokens per word to arrive at tokens. Fast and conservative
-            estimate to avoid ingestion errors from too many tokens.
-            body = {
-                "operation": "embed_text",
-                "args": {
-                    text': str (required)
-                }
-            }
+        for get_model_max_tokens:
+            "model_id": str
+
+        for get_semantic_similarity:
+            "chunk_text": str,
+            "model_id": str,
+            "search_text": str,
+            "dimensions": int=1024,
+            "input_type": "search_query"
+
+        for invoke_model:
+            "model_id": str,
+            "prompt": str='',
+            "model_kwargs": dict={}
+            "messages": [dict]=[]
+
+        for list_models:
+            none
+
+
+
+}
 """
-
 
 
 bedrock_provider = None
@@ -113,24 +89,58 @@ with open(params_path, 'r') as params_in:
     
 class BedrockProvider():
     def __init__(self,
-        bedrock_client = BotoClientProvider.get_client('bedrock'),
-        bedrock_agent_client  = BotoClientProvider.get_client('bedrock-agent'),
-        bedrock_agent_rt_client = BotoClientProvider.get_client('bedrock-agent-runtime'),
-        bedrock_rt_client = BotoClientProvider.get_client('bedrock-runtime'),
-        s3_client = BotoClientProvider.get_client('s3'),
-        ssm_client = BotoClientProvider.get_client('ssm')
+        bedrock_client = None,
+        bedrock_agent_client  = None,
+        bedrock_agent_rt_client = None,
+        bedrock_rt_client = None,
+        cognito_identity_client = None,
+        ssm_client = None
     ):
-        self.bedrock = bedrock_client
-        self.bedrock_agent = bedrock_agent_client
-        self.bedrock_agent_rt = bedrock_agent_rt_client
-        self.bedrock_rt = bedrock_rt_client
-        self.model_params = bedrock_model_params
-        self.s3 = s3_client
-        self.ssm = ssm_client
-        # frontend origins initialized lazily
-        self.frontend_origins = None
+        self.utils = utils
+        if not bedrock_client:
+            self.bedrock = utils.get_bedrock_client()
+        else:
+            print("Used br client passed in.")
+            self.bedrock = bedrock_client
+        
+        if not bedrock_agent_client:
+            self.bedrock_agent = utils.get_bedrock_agent_client()
+        else:
+            print("Used bra client passed in.")
+            self.bedrock_agent = bedrock_agent_client
+        
+        if not bedrock_agent_rt_client:
+            self.bedrock_agent_rt = utils.get_bedrock_agent_runtime_client()
+        else:
+            print("Used brart client passed in.")
+            self.bedrock_agent_rt = bedrock_agent_rt_client
+        
+        if not bedrock_rt_client:
+            self.bedrock_rt = utils.get_bedrock_runtime_client()
+        else:
+            print("Used brt client passed in.")
+            self.bedrock_rt = bedrock_rt_client
+        
+        if not cognito_identity_client:
+            self.cognito = utils.BotoClientProvider.get_client('cognito-identity')
+        else:
+            print("Used cognito identity client passed in")
+            self.cognito = cognito_identity_client
 
-    def embed_text(self, text, model_id, input_type='search_query', *, dimensions):
+        if not ssm_client:
+            self.ssm = utils.BotoClientProvider.get_client('ssm')
+        else:
+            print("Used ssm client passed in")
+            self.ssm = ssm_client
+
+        self.model_params = bedrock_model_params
+        self.stack_name = os.getenv('STACK_NAME')
+        self.ssm_params = utils.get_ssm_params(ssm_client=ssm_client)
+        print(f"BedrockProvider now initialized with ssm_params {self.ssm_params}")
+        # frontend origins initialized lazily
+        self.allowed_origins = None
+
+    def embed_text(self, text, model_id, input_type='search_query', *, dimensions=1024):
         print(f"Embedding text with model {model_id} and dimensions {dimensions}")
         if model_id.startswith('cohere'):
             kwargs = {'input_type': input_type}
@@ -156,19 +166,12 @@ class BedrockProvider():
     #             text += '\n\n'
     #     return text
 
-    def get_frontend_origins():
-        if not self.frontend_origins:
-        origin_domain_name = self.ssm.get_parameter(
-            Name=f'/{getenv("STACK_NAME")}/frontend_origin'
-        )['Parameter']['Value']
-
-        if not origin_domain_name.startswith('http'):
-            origin_domain_name = 'https://' + origin_domain_name
-        
-        self.frontend_origins = [
-            origin_domain_name
-        ]
-        return self.frontend_origins
+    # def get_allowed_origins(self):
+    #     if not self.allowed_origins:
+    #         self.allowed_origins = [
+    #             self.ssm_params['origin_frontend']
+    #         ]
+    #     return self.allowed_origins
     
     def get_model_dimensions(self, model_id):
         if 'dimensions' in self.model_params[model_id].keys():
@@ -202,109 +205,78 @@ class BedrockProvider():
         
     # only supports cosine similarity currently
     def get_semantic_similarity(
-        self, search_text, chunk_text, model_id, dimensions
+        self, search_text, chunk_text, model_id, dimensions, *, input_type='search_query'
     ):
-        s_emb = self.embed_text(search_text, model_id, dimensions=dimensions)
-        c_emb = self.embed_text(chunk_text, model_id, dimensions=dimensions)
+        s_emb = self.embed_text(search_text, model_id, input_type, dimensions=dimensions)
+        c_emb = self.embed_text(chunk_text, model_id, input_type, dimensions=dimensions)
         return np.dot(s_emb, c_emb) / (norm(s_emb) * norm(c_emb))
 
-    def get_token_count(self, input_text):
-        # this provides a conservative estimate that tends
-        # to overestimate number of tokens, so you'll have a 
-        # buffer to stay under the token limits.
-        return ceil(len(input_text.split()) * 1.3)
+    # def get_token_count(self, input_text):
+    #     # this provides a conservative estimate that tends
+    #     # to overestimate number of tokens, so you'll have a 
+    #     # buffer to stay under the token limits.
+    #     return ceil(len(input_text.split()) * 1.3)
 
     def handler(self, event, context):
         print(f"Got event {event}")
         handler_evt = BedrockProviderEvent().from_lambda_event(event)
         print(f"converted to handler_evt {handler_evt.__dict__}")
-        method = handler_evt.method
-        path = handler_evt.path
-        if handler_evt.origin not in self.frontend_origins:
-            return format_response(403, {}, None)
+        
+        if not self.allowed_origins:
+            self.allowed_origins = self.utils.get_allowed_origins()
         
         status = 200
-        user_id = None
-        user_email = None
-        if method == 'OPTIONS': 
-            result = {}
+        operation = handler_evt.operation
+
+        if handler_evt.origin not in self.allowed_origins.values():
+            status = 403
+            response = "forbidden"
         
-        if hasattr(handler_evt, 'auth_token') and handler_evt.auth_token is not None:
-            result = invoke_service('auth_provider', {}, handler_evt.auth_token)
-            sys.exit()
-            # # TODO change this with a call to the auth provider service
-            # # user_id = self.auth_provider.get_userid_from_token(handler_evt.auth_token)
-            # user_id = self.get_userid_from_token(handler_evt.auth_token)
-            # print(f"Got user_id {user_id} from auth_token {handler_evt.auth_token}")
-            # if not user_id:
-            #     raise Exception("Failed to get user_id from the jwt sent in the event.")
-            # handler_evt.user_id = user_id
+        elif operation == 'embed_text':
+            model_id = handler_evt.body['model_id']
+            text = handler_evt.body['input_text']
+            dimensions = handler_evt.body['dimensions'] 
+            response = self.embed_text(text, model_id, dimensions=dimensions)
         
-        if handler_evt.method == 'GET':
-            operation = handler_evt.operation
+        elif operation == 'get_model_dimensions':
+            model_id = handler_evt.params['model_id']
+            response = self.get_model_dimensions(model_id)
+        
+        elif operation == 'get_model_max_tokens':
+            model_id = handler_evt.params['model_id']
+            response = self.get_model_max_tokens(model_id)
 
-            if operation == 'get_model_dimensions':
-                model_id = handler_evt.params['model_id']
-                response = self.get_model_dimensions(model_id)
-            
-            elif operation == 'get_model_max_tokens':
-                model_id = handler_evt.params['model_id']
-                response = self.get_model_max_tokens(model_id)
-            
-            # elif operation == 'list_bedrock_kbs':
-            #     response = self.list_bedrock_kbs()
-            
-            if operation == 'list_models':
-                response = self.list_models()
-            
-            print(f"GET /bedrock_provider response = {response}")
-            result = {
-                "method": "GET /bedrock_provider",
-                "path": handler_evt.path,
-                "operation": handler_evt.operation,
-                "response": response,
-                "statusCode": 200
-            }
+        elif operation == 'get_semantic_similarity':
+            search_text = handler_evt.body['search_text']
+            chunk_text = handler_evt.body['chunk_text']
+            model_id = handler_evt.body['model_id']
+            dimensions = handler_evt.body['dimensions']
+            response = self.get_semantic_similarity(search_text, chunk_text, model_id, dimensions)
+        
+        elif operation == 'get_token_count':
+            input_text = handler_evt.body['input_text']
+            response = self.get_token_count(input_text)
 
-        elif handler_evt.method == 'POST':
-            operation = handler_evt.operation
-
-            if operation == 'embed_text':
-                model_id = handler_evt.body['model_id']
-                text = handler_evt.body['input_text']
-                dimensions = handler_evt.body['dimensions'] 
-                response = self.embed_text(text, model_id, dimensions=dimensions)
-
-            elif operation == 'get_semantic_similarity':
-                search_text = handler_evt.body['search_text']
-                chunk_text = handler_evt.body['chunk_text']
-                model_id = handler_evt.body['model_id']
-                dimensions = handler_evt.body['dimensions']
-                response = self.get_semantic_similarity(search_text, chunk_text, model_id, dimensions)
+        elif operation == 'invoke_model':
+            model_id = handler_evt.body['model_id']
+            prompt = handler_evt.body['prompt'] if 'prompt' in handler_evt.body else ''
+            model_kwargs = handler_evt.body['model_kwargs'] if 'model_kwargs' in handler_evt.body else {}
+            messages = handler_evt.body['messages'] if 'messages' in handler_evt.body else []
+            response = self.invoke_model(model_id, prompt, model_kwargs, messages=messages)
+            print(f"invoke_model got response {response}")   
             
-            elif operation == 'get_token_count':
-                input_text = handler_evt.body['input_text']
-                response = self.get_token_count(input_text)
-  
-            elif operation == 'invoke_model':
-                model_id = handler_evt.body['model_id']
-                prompt = handler_evt.body['prompt'] if 'prompt' in handler_evt.body else ''
-                model_kwargs = handler_evt.body['model_kwargs'] if 'model_kwargs' in handler_evt.body else {}
-                messages = handler_evt.body['messages'] if 'messages' in handler_evt.body else []
-                response = self.invoke_model(model_id, prompt, model_kwargs, messages=messages)
-                print(f"invoke_model got response {response}")   
-            
-            # print(f"POST /bedrock_provider response = {response}")
-            result = {
-                "method": handler_evt.method,
-                "path": handler_evt.path,
-                "operation": handler_evt.operation,
-                "response": response,
-                "statusCode": 200
-            }
-    
-        else:
-            raise Exception(f'Unexpected method {handler_evt.method}')
+        elif operation == 'list_models':
+            response = self.list_models()
+
+        else: 
+            raise Exception(f"Unknown operation {operation}")
+             
+        result = {
+            "statusCode": status,
+            "operation": handler_evt.operation,
+            "response": response,
+        }
+        
         return result
 
     def invoke_model(self, model_id: str, prompt: str='', model_kwargs={}, *, messages=[]):

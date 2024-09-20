@@ -2,7 +2,6 @@
 #  SPDX-License-Identifier: MIT-0
 
 from multi_tenant_full_stack_rag_application.ingestion_provider.loaders import Loader
-from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_document import VectorStoreDocument
 from datetime import datetime
 
 class TextLoader(Loader):
@@ -42,7 +41,7 @@ class TextLoader(Loader):
         ctr = 0
         id = f"{source}:{ctr}"
         for chunk in text_chunks:
-            vector = self.emb_provider.encode(chunk)
+            vector = self.emb_provider.embed_text(chunk)
             if not return_dicts:
                 docs.append(VectorStoreDocument(
                     id,

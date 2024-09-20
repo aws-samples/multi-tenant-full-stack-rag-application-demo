@@ -6,7 +6,8 @@ import { DOCUMENT_COLLECTIONS_COLUMN_DEFINITIONS } from './commons/details-confi
 import { logsTableAriaLabels } from './commons/commons';
 import Api from './commons/api'
 import { Box, Button, ButtonDropdown, Container, FileUpload, FormField, Header, SpaceBetween, Spinner, Table } from '@cloudscape-design/components';
-import { atom, selector, useRecoilState, useRecoilValue } from 'recoil';
+import { atom, useRecoilState, useResetRecoilState } from 'recoil';
+import { currentCollectionState, deleteModalVisibleState, paramsState, urlCollectionIdState } from './DocumentCollectionForm';
 import "./documentCollectionsTable.css"
 
 
@@ -21,10 +22,14 @@ export const collectionIsLoadingState = atom({
 })
 
 function DocumentCollectionsTable() {
-  const [docCollections, setDocCollections] = useState([]);
+  useResetRecoilState(currentCollectionState)();
+  useResetRecoilState(deleteModalVisibleState)();
+  useResetRecoilState(paramsState)();
+  useResetRecoilState(urlCollectionIdState)();
+  const [docCollections, setDocCollections] = useState();
   const [files, setFiles] = useState([]);
   const [selectedItem, setSelectedItem] = useState({});
-  const [currentCollection, setCurrentCollection] = useState();
+  const [currentCollection, setCurrentCollection] = useRecoilState(currentCollectionState);
   // const [currentCollectionContents, setCurrentCollectionContents] = useState();
   // const atLeastOneSelected = selectedItem ? true :  false;
   const [tableLoadingState, setTableLoadingState] = useState(true)
@@ -34,36 +39,41 @@ function DocumentCollectionsTable() {
       setTableLoadingState(true)
       let collections = await getTableProvider()
       let tableData = []
-      // console.log("Got docCollections:")
-      // console.dir(collections)
+      console.log("Got docCollections:")
+      console.dir(collections)
       collections.forEach(collection => {
-        let disabled = false
-        // console.log("Got collection:")
-        // console.dir(collection)
-        let cn = collection.collection_name
-        // console.log(`vector_db_type = ${collection.vector_db_type}`)
-        if (collection.vector_db_type != 'shared') {
-          cn = <a title={cn} href={`/#/document-collections/${collection.collection_id}/edit`}>{cn}</a>
-          // console.log("vector db != 'shared'. cn is now:")
-          // console.dir(cn)
+        if (collection) {
+          let disabled = false
+          // console.log("Got collection:")
+          // console.dir(collection)
+          let cn = collection.collection_name
+          // console.log(`vector_db_type = ${collection.vector_db_type}`)
+          if (collection.vector_db_type != 'shared') {
+            cn = <a title={cn} href={`/#/document-collections/${collection.collection_id}/edit`}>{cn}</a>
+            // console.log("vector db != 'shared'. cn is now:")
+            // console.dir(cn)
+          }
+          else {
+            // console.log("shared collection...disabling row.")
+            disabled = true
+          }
+          // console.log(`should this row be disabled? ${disabled}`)
+          let newCollection = {
+            collection_id: collection.collection_id,
+            collection_name: cn,
+            description: collection.description,
+            updated_date: collection.updated_date,
+            vector_db_type: collection.vector_db_type,
+            disabled: disabled
+          }
+          // console.log("got newCollection:")
+          // console.dir(newCollection)
+          tableData.push(newCollection)
         }
-        else {
-          // console.log("shared collection...disabling row.")
-          disabled = true
-        }
-        // console.log(`should this row be disabled? ${disabled}`)
-        let newCollection = {
-          collection_id: collection.collection_id,
-          collection_name: cn,
-          description: collection.description,
-          updated_date: collection.updated_date,
-          vector_db_type: collection.vector_db_type,
-          disabled: disabled
-        }
-        // console.log("got newCollection:")
-        // console.dir(newCollection)
-        tableData.push(newCollection)
       })
+        // if (tableData.length > 0) {
+        //   setDocCollections(tableData)
+        // }
       setDocCollections(tableData)
     })()
   }, [])

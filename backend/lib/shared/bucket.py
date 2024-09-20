@@ -39,12 +39,14 @@ class Bucket(Construct):
                 ],
                 allowed_origins=["*"]
             )
-        self.ssm_param_bucket_name = ssm.StringParameter(
-            self, 'SSMBucketName',
-            parameter_name=f"/{parent_stack_name}/{ssm_parameter_name}",
-            string_value=self.bucket.bucket_name
-        )
-        self.ssm_param_bucket_name.apply_removal_policy(RemovalPolicy.DESTROY)
+            
+        if ssm_parameter_name:
+            self.ssm_param_bucket_name = ssm.StringParameter(
+                self, f'{resource_name}-{ssm_parameter_name}',
+                parameter_name=f"/{parent_stack_name}/{ssm_parameter_name}",
+                string_value=self.bucket.bucket_name
+            )
+            self.ssm_param_bucket_name.apply_removal_policy(RemovalPolicy.DESTROY)
         
         CfnOutput(self, resource_name + 'BucketName',
             value=self.bucket.bucket_name

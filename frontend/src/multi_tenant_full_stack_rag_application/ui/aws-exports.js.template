@@ -25,9 +25,9 @@ const awsmobile = {
     "aws_cognito_verification_mechanisms": [
         "EMAIL"
     ],
+    "enabled_enrichment_pipelines": <ENABLED_ENRICHMENT_PIPELINES>,
     "api_urls": {
         "document_collections":  '<DOC_COLLECTIONS_API_URL>',
-        "enrichment_pipelines": '<ENRICHMENT_PIPELINES_API_URL>',
         "generation": '<GENERATION_API_URL>',
         /* "initialization": '<INITIALIZATION_API_URL>',*/ 
         "prompt_templates": '<PROMPT_TEMPLATES_API_URL>',

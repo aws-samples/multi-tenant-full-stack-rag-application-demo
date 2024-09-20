@@ -17,24 +17,27 @@ class IngestionStatusProviderFactory:
         py_path=ingestion_status_provider_py_path,
         args=[],
         ddb_client=None,
-        ssm_client=None
+        s3_client=None
     ) -> IngestionStatusProvider:
         if not ddb_client:
             ddb_client = BotoClientProvider.get_client('dynamodb')
-        if not ssm_client:
-            ssm_client = BotoClientProvider.get_client('ssm')
-        
-        ingestion_status_table = ssm_client.get_parameter(
-            Name=f"/{os.getenv('STACK_NAME')}/ingestion_status_table"
-        )['Parameter']['Value']
+  
+        if not s3_client:
+            s3_client = BotoClientProvider.get_client('s3')
+            
+        ingestion_status_table = os.getenv('INGESTION_STATUS_TABLE')
 
         if ingestion_status_table == '':
             raise Exception("You must set STACK_NAME in the environment variables so it can look up ingestion_status_table from Parameter Store.")
         
+        ingestion_bucket = os.getenv('INGESTION_BUCKET')
+
         if args == []:
             args = [
                 ddb_client,
-                ingestion_status_table
+                ingestion_bucket,
+                ingestion_status_table,
+                s3_client
             ]
 
         parts = py_path.split('.')

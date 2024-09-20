@@ -41,16 +41,20 @@ class MultiTenantRagStack(Stack):
         for email_domain in allowed_email_domains_csv.split(','):
             allowed_email_domains.append(email_domain.strip())
 
+        app_name = self.node.try_get_context('app_name')
+        verification_body = self.node.try_get_context('verification_email_body').replace('{app_name}', app_name)
         auth_provider_stack = AuthProviderStack(self, 'AuthProviderStack', 
             allowed_email_domains=allowed_email_domains,
             app_security_group=vpc_stack.app_security_group,
             parent_stack_name=self.stack_name,
-            verification_message_body=self.node.try_get_context('verification_email_body'),
+            verification_message_body=verification_body,
             verification_message_subject=self.node.try_get_context('verification_email_subject'),
             vpc=vpc_stack.vpc,
         )
         
         bedrock_provider_stack = BedrockProviderStack(self, 'BedrockProviderStack',
+            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
+            auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
             user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
             user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
             parent_stack_name=self.stack_name,
@@ -59,33 +63,30 @@ class MultiTenantRagStack(Stack):
 
         embeddings_provider_stack = EmbeddingsProviderStack(
             self, 'EmbeddingsProviderStack',
+            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,            
+            auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
             embeddings_model_id=self.node.try_get_context('embeddings_model_id'),
             parent_stack_name=self.stack_name,
             user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
             user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
             vpc=vpc_stack.vpc,
         )
-        
-        # system_settings_provider_stack = SystemSettingsProviderStack(self, 'SystemSettingsProviderStack',
-        #     parent_stack_name=self.stack_name,
-        #     vpc=vpc_stack.vpc
-        # )
 
         ingestion_provider_stack = IngestionProviderStack(self, 'IngestionProviderStack',
             app_security_group=vpc_stack.app_security_group,
+            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
+            auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
             parent_stack_name=self.stack_name,
             user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
             user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
-            vpc=vpc_stack.vpc
+            vpc=vpc_stack.vpc,
+            # vpc_endpoint_apigw=vpc_stack.apigw_endpoint
         )
-
-        # user_settings_provider_stack = UserSettingsProviderStack(self, 'UserSettingsProviderStack',
-        #     parent_stack_name=self.stack_name,
-        #     vpc=vpc_stack.vpc
-        # )
 
         vector_store_provider_stack = VectorStoreProviderStack(self, 'VectorStoreProviderStack',
             app_security_group=vpc_stack.app_security_group,
+            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
+            auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
             cognito_identity_pool=auth_provider_stack.cognito_stack.identity_pool,
             cognito_user_pool=auth_provider_stack.cognito_stack.user_pool,
             parent_stack_name=self.stack_name,
@@ -101,6 +102,8 @@ class MultiTenantRagStack(Stack):
         # )
         
         doc_collections_stack = DocumentCollectionsHandlerStack(self, 'DocumentCollectionsHandlerStack',
+            app_security_group=vpc_stack.app_security_group,
+            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
             auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
             cognito_identity_pool_id=auth_provider_stack.cognito_stack.identity_pool.identity_pool_id,
             cognito_user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
@@ -110,6 +113,7 @@ class MultiTenantRagStack(Stack):
         )
 
         prompt_templates_handler_stack = PromptTemplateHandlerStack(self, 'PromptTemplateHandlerStack',
+            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
             auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
             parent_stack_name=self.stack_name,
             user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
@@ -119,6 +123,7 @@ class MultiTenantRagStack(Stack):
 
         graph_store_provider_stack = GraphStoreProviderStack(self, 'GraphStoreProviderStack',
             app_security_group=vpc_stack.app_security_group,
+            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
             auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
             instance_type=self.node.try_get_context('neptune_instance_type'), # graph_provider_params['neptune_instance_type'],
             parent_stack_name=self.stack_name,
@@ -129,7 +134,7 @@ class MultiTenantRagStack(Stack):
 
         enrichment_pipelines_handler_stack = EnrichmentPipelinesHandlerStack(self, "EnrichmentPipelinesHandlerStack",
             app_security_group=vpc_stack.app_security_group,
-            auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
+            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
             parent_stack_name=self.stack_name,
             user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
             user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
@@ -137,6 +142,7 @@ class MultiTenantRagStack(Stack):
         )
         
         generation_handler_stack = GenerationHandlerStack(self, 'GenerationHandlerApiStack',
+            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
             auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
             parent_stack_name=self.stack_name,
             user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
@@ -144,14 +150,19 @@ class MultiTenantRagStack(Stack):
             vpc=vpc_stack.vpc
         )
 
-        # sharing_handler_stack = SharingHandlerStack(self, 
-        #     'SharingHandlerApiStack',
-        #     auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
-        #     parent_stack_name=self.stack_name,
-        #     user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
-        #     user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
-        #     vpc=vpc_stack.vpc
-        # )
+        FinalScriptsStack(self, 'FinalScriptsStack',
+            # auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
+            doc_collections_handler_function=doc_collections_stack.doc_collections_function,
+            domain=vector_store_provider_stack.vector_store_stack.domain,
+            embeddings_provider_function=embeddings_provider_stack.embeddings_provider_function,
+            extraction_principal=enrichment_pipelines_handler_stack.entity_extraction_function.entity_extraction_function.grant_principal,
+            graph_store_provider_function=graph_store_provider_stack.graph_store_provider,
+            inference_principal=generation_handler_stack.generation_handler_function.grant_principal,
+            ingestion_principal=ingestion_provider_stack.ingestion_function.grant_principal,
+            ingestion_status_provider_function=ingestion_provider_stack.ingestion_status_function,
+            prompt_templates_handler_function=prompt_templates_handler_stack.prompt_template_handler_function,
+            vector_store_provider_function=vector_store_provider_stack.vector_store_stack.vector_store_provider,
+        )
 
         # initialization_stack = InitializationHandlerStack(self, 
         #     'InitializationHandlerStack',
@@ -161,46 +172,9 @@ class MultiTenantRagStack(Stack):
         #     user_pool_client_id=cognito_stack.user_pool_client.user_pool_client_id,
         #     user_pool_id=cognito_stack.user_pool.user_pool_id
         # )
-
-        # # # the goal of doing all the final permission assignments at the end is to 
-        # # # decouple the most of the stack to run in parallel.
-        # # final_permissions_assignments = FinalPermissionAssignments(self, 
-        # #     'FinalPermissionsAssignments',
-        # #     cognito_auth_role_arn=cognito_stack.identity_pool.authenticated_role.role_arn,
-        # #     ingestion_bucket=ingestion_bucket_stack.bucket,
-        # #     doc_collections_function=doc_collections_stack.doc_collections_function,
-        # #     embeddings_provider_iam_permissions=config['embeddings_provider_params'][embeddings_provider]['iam_permissions_needed'],
-        # #     enrichment_pipelines_handler=enrichment_pipelines_api_stack.enrichment_pipelines_handler,
-        # #     entity_extraction_function=entity_extraction_stack.entity_extraction_function,
-        # #     generation_handler_function=generation_handler_stack.generation_handler_function,
-        # #     inference_role=rag_execution_roles_stack.inference_role,
-        # #     ingestion_function=vector_ingestion_stack.ingestion_function,
-        # #     ingestion_queue_arn=ingestion_queue_stack.queue.queue_arn,
-        # #     ingestion_role=rag_execution_roles_stack.ingestion_role,
-        # #     ingestion_status_table=ingestion_status_table_stack.table,
-        # #     initialization_handler_function=initialization_stack.initialization_handler_function,
-        # #     neptune_cluster=neptune_stack.cluster,
-        # #     os_managed_domain=vector_store_stack.domain,
-        # #     parent_stack_name=self.stack_name,
-        # #     post_confirmation_trigger_function=cognito_stack.post_confirmation_trigger,
-        # #     prompt_templates_handler_function=prompt_templates_stack.prompt_templates_handler_function,
-        # #     sharing_handler_function=sharing_handler_stack.sharing_function,
-        # #     system_settings_stream_processor=sharing_handler_stack.system_settings_stream_processor,
-        # #     system_settings_table=system_settings_table_stack.table,
-        # #     user_settings_stream_processor=sharing_handler_stack.user_settings_stream_processor,
-        # #     user_settings_table=user_settings_table_stack.table,
-        # #     vector_ingestion_function=vector_ingestion_stack.ingestion_function,
-        # # )
+        CfnOutput(self, 'AppName', value=self.node.get_context('app_name'))
+        CfnOutput(self, 'RemovalPolicy', value=self.node.get_context('removal_policy'))
         CfnOutput(self, 'StackName', value=self.stack_name)
-        # # CfnOutput(self, 'DocumentCollectionsApiUrl', value=doc_collections_api_stack.http_api.url)
-        # # CfnOutput(self, 'DocumentCollectionsBucketName', value=ingestion_bucket_stack.bucket.bucket_name)
-        # # CfnOutput(self, 'EnrichmentPipelinesApiUrl', value=enrichment_pipelines_api_stack.http_api.url)
-        # # CfnOutput(self, 'GenerationApiUrl', value=generation_handler_stack.http_api.url)
-        # # CfnOutput(self, 'IdentityPoolId', value=cognito_stack.identity_pool.identity_pool_id)
-        # # CfnOutput(self, 'InitializationApiUrl', value=initialization_stack.http_api.url)
-        # # CfnOutput(self, 'PromptTemplatesApiUrl', value=prompt_templates_stack.http_api.url)
-        # # CfnOutput(self, 'SharingApiUrl', value=sharing_handler_stack.http_api.url)
-        # # CfnOutput(self, 'UserPoolClientId', value=cognito_stack.user_pool_client.user_pool_client_id)
-        # # CfnOutput(self, 'UserPoolId', value=cognito_stack.user_pool.user_pool_id)
+        CfnOutput(self, 'StackNameFrontend', value=self.node.try_get_context('stack_name_frontend'))
 
 

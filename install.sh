@@ -9,10 +9,14 @@ y=''
 # changes during development. Don't use in prod. Will introduce
 # drift into your stack.
 h=''
-# pass in -nf to skip frontend install. Only use if 
+# pass in -f to skip frontend install. Only use if 
 # doing backend dev work and haven't changed the frontend
 f=1
-while getopts "yhf" opt; do
+# pass in -b to skip backend install. Only use if doing frontend
+# dev work and haven't changed the backend.
+b=1
+
+while getopts "yhfb" opt; do
   case ${opt} in
     y )
       y=' --require-approval never'
@@ -22,6 +26,10 @@ while getopts "yhf" opt; do
       ;;
     f )
       f=0
+      ;;
+    b )
+      b=0
+      ;;
   esac
 done
 
@@ -33,21 +41,22 @@ source .venv/bin/activate
 pip3 install --upgrade --no-cache -r backend/requirements.txt
 pip3 install --upgrade --no-cache -r frontend/requirements.txt
 
-cd backend
-echo
-echo
-echo "Installing backend stack. Please wait. It takes a while the first time through."
-echo
-cdk deploy --all --asset-parallelism true --concurrency 50 --outputs-file ../frontend/backend_outputs.json $y $h 
-if [ $? -ne 0 ]; then
-  echo "cdk deploy failed. Exiting."
-  exit
+if [ $b -eq 1 ]; then
+  cd backend
+  echo
+  echo
+  echo "Installing backend stack. Please wait. It takes a while the first time through."
+  echo
+  cdk deploy --all --asset-parallelism true --concurrency 50 --outputs-file ../frontend/backend_outputs.json $y $h 
+  if [ $? -ne 0 ]; then
+    echo "cdk deploy failed. Exiting."
+    exit
+  fi
+  cd ..
+  echo
+  echo "backend installation complete!" 
+  echo
 fi
-
-cd ..
-echo
-echo "backend installation complete!" 
-echo
 # if -f flag is set, install frontend stack
 echo "Do frontend? ${f}"
 if [ $f -eq 1 ]; then

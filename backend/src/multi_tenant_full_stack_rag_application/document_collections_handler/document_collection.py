@@ -21,7 +21,7 @@ class DocumentCollection:
         shared_with=[], 
         created_date: str=None, 
         updated_date: str=None, 
-        *, enrichment_pipelines='{}', graph_schema = '{}',
+        *, enrichment_pipelines="{}", graph_schema = "{}",
     ):
         self.user_id = user_id
         self.sort_key = f"collection::{collection_name}"
@@ -34,6 +34,7 @@ class DocumentCollection:
         now = datetime.now().isoformat() + 'Z'
         self.created_date = created_date if created_date else now
         self.updated_date = updated_date if updated_date else now
+        print(f"Got enrichment_pipelines {enrichment_pipelines}, type {type(enrichment_pipelines)}")
         self.enrichment_pipelines = json.loads(enrichment_pipelines) if isinstance(enrichment_pipelines, str) else enrichment_pipelines
         self.graph_schema = json.loads(graph_schema) if isinstance(graph_schema, str) else graph_schema
 
@@ -112,7 +113,7 @@ class DocumentCollection:
     def __str__(self):
         return json.dumps({
             'user_id': self.user_id,
-            'user_email': {'S': self.user_email},            
+            'user_email': self.user_email,            
             'sort_key': self.sort_key,
             'collection_id': self.collection_id,
             'collection_name': self.collection_name,

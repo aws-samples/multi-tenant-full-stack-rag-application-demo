@@ -5,8 +5,6 @@ import json
 import os
 from importlib import import_module
 
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider_factory import EmbeddingsProviderFactory
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_provider import VectorStoreProvider
 
 
@@ -16,9 +14,6 @@ class VectorStoreProviderFactory:
         py_path: str='',
         args={}
     ):
-        emb_provider: EmbeddingsProvider = EmbeddingsProviderFactory.get_embeddings_provider()
-        if "embeddings_provider" not in args:
-            args["embeddings_provider"] = emb_provider
         if "vector_store_endpoint" not in args:
             args["vector_store_endpoint"] = os.getenv('VECTOR_STORE_ENDPOINT', '')
         print(f'Vector Store Provider Args: {args}')

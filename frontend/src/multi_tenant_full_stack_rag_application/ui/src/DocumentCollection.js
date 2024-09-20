@@ -1,22 +1,29 @@
 class DocumentCollection {
     constructor(
-        name,
+        collection_name,
         description,
-        collectionId,
-        vectorDbType='opensearch_managed',
-        enrichmentPipelines={},
-        shareList = [],
-        createdDate=null,
-        updatedDate=null,
+        collection_id,
+        vector_db_type='opensearch_managed',
+        enrichment_pipelines={},
+        share_list = [],
+        created_date=null,
+        updated_date=null,
     ) {
-        this.name = name.trim()
+        console.log("Creating DocumentCollection with name ")
+        console.dir(collection_name)
+        this.name = collection_name.trim()
+        console.log("Creating DocumentCollection with description ")
+        console.dir(description)
         this.description = description.trim()
-        this.shareList = shareList;
-        this.collectionId = collectionId.trim();
-        this.enrichmentPipelines = enrichmentPipelines;
-        this.createdDate = createdDate;
-        this.updatedDate = updatedDate;
-        this.vectorDbType = vectorDbType;
+        console.log("Creating DocumentCollection with collection_id ")
+        console.dir(collection_id)
+        this.collectionId = collection_id.trim();
+        
+        this.shareList = share_list;
+        this.enrichmentPipelines = enrichment_pipelines;
+        this.createdDate = created_date;
+        this.updatedDate = updated_date;
+        this.vectorDbType = vector_db_type;
         this.clone = this.clone.bind(this)
     }
 

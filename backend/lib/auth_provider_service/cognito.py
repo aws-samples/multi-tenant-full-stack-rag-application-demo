@@ -10,23 +10,30 @@ from aws_cdk import (
     Duration,
     RemovalPolicy,
     NestedStack,
+    aws_apigatewayv2 as apigw,
+    aws_apigatewayv2_authorizers as apigwa,
+    aws_apigatewayv2_integrations as apigwi,
     aws_cognito as cognito,
     aws_cognito_identitypool_alpha as idp_alpha,
     aws_dynamodb as dynamodb,
+    aws_ec2 as ec2,
     aws_iam as iam,
     aws_lambda as lambda_,
-    aws_s3 as s3,
+    aws_s3 as s3, 
     aws_ssm as ssm,
 )
 from constructs import Construct
+# from lib.shared.utils_permissions import UtilsPermissions
 
 
 class CognitoStack(NestedStack):
     def __init__(self, scope: Construct, construct_id: str,
         allowed_email_domains: [str], 
+        app_security_group: ec2.ISecurityGroup,
         parent_stack_name: str,
         verification_message_body: str,
         verification_message_subject: str,
+        vpc: ec2.IVpc,
         **kwargs
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -70,10 +77,10 @@ class CognitoStack(NestedStack):
 
         # self.post_confirmation_trigger.add_to_role_policy(iam.PolicyStatement(
         #     effect=iam.Effect.ALLOW,
-        #     actions=['ssm:GetParameter'],
+        #     actions=['ssm:GetParameter','ssm:GetParametersByPath'],
         #     resources=[
-        #         f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}/auth_provider_py_path",
-        #         f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}/auth_provider_args"
+        #         f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}*"""
+        #         f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}*"
         #     ]
         # ))
 
@@ -107,10 +114,14 @@ class CognitoStack(NestedStack):
             dead_letter_queue_enabled=True
         )
         
+        removal_policy_str = self.node.get_context('removal_policy')
+        if removal_policy_str:
+            removal_policy = RemovalPolicy(removal_policy_str.upper())
+        
         self.user_pool = cognito.UserPool(
             self,
             'UserPool',
-            removal_policy=RemovalPolicy.DESTROY,
+            removal_policy=removal_policy,
             user_pool_name=f'{parent_stack_name}UserPool',
             self_sign_up_enabled=True,
             user_verification=cognito.UserVerificationConfig(
@@ -148,10 +159,11 @@ class CognitoStack(NestedStack):
             user_pool=self.user_pool
         )
         
-        ssm.StringParameter(self, 'CognitoUserPoolId',
+        user_pool_id_param = ssm.StringParameter(self, 'CognitoUserPoolId',
             parameter_name=f'/{parent_stack_name}/user_pool_id',
             string_value=self.user_pool.user_pool_id
         )
+        user_pool_id_param.apply_removal_policy(RemovalPolicy.DESTROY)
 
         self.identity_pool = idp_alpha.IdentityPool(self, 'CognitoIdentityPool',
             allow_unauthenticated_identities=False,
@@ -163,10 +175,12 @@ class CognitoStack(NestedStack):
             ),
         )
 
-        ssm.StringParameter(self, 'CognitoIdentityPoolId',
+        id_pool_id_param = ssm.StringParameter(self, 'CognitoIdentityPoolId',
             parameter_name=f'/{parent_stack_name}/identity_pool_id',
             string_value=self.identity_pool.identity_pool_id
         )
+
+        id_pool_id_param.apply_removal_policy(RemovalPolicy.DESTROY)
 
         self.identity_pool.authenticated_role.add_to_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
@@ -222,11 +236,11 @@ class CognitoStack(NestedStack):
         # TODO move to sharing handler with post_confirmation_trigger function above
         # self.post_confirmation_trigger.add_to_role_policy(iam.PolicyStatement(
         #     effect=iam.Effect.ALLOW,
-        #     actions=['ssm:GetParameter'],
+        #     actions=['ssm:GetParameter','ssm:GetParametersByPath'],
         #     resources=[
-        #         f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}/frontend_origin",
-        #         f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}/auth_provider_args",
-        #         f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}/auth_provider_py_path",
+        #         f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}*"
+        #         f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}*"
+        #         f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}*"
         #     ]
         # ))
         self.cognito_auth_provider_function = lambda_.Function(self, 'CognitoAuthProviderFunction',
@@ -239,7 +253,8 @@ class CognitoStack(NestedStack):
                             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/auth_provider",
                             "cp /asset-input/auth_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/auth_provider",
                             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
-                            "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils"
+                            "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils",
+                            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output/"
                         ])
                     ]
                 )
@@ -250,33 +265,79 @@ class CognitoStack(NestedStack):
             handler='multi_tenant_full_stack_rag_application.auth_provider.cognito_auth_provider.handler',
             timeout=Duration.seconds(60),
             environment={
-                'AWS_ACCOUNT': self.account,
+                'AWS_ACCOUNT_ID': self.account,
                 'IDENTITY_POOL_ID': self.identity_pool.identity_pool_id,
+                'STACK_NAME': parent_stack_name,
                 'USER_POOL_ID': self.user_pool.user_pool_id
-            }
+            },
+            vpc=vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+            ),
+            security_groups=[app_security_group],
+            dead_letter_queue_enabled=True
         )
+        
+        self.authenticated_role = self.identity_pool.authenticated_role
+        self.authenticated_role_arn = self.authenticated_role.role_arn
 
-        self.authenticated_role_arn = self.identity_pool.authenticated_role.role_arn
+        self.cognito_auth_provider_function.grant_invoke(self.authenticated_role)
 
         self.cognito_auth_provider_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
-            actions=['ssm:GetParameter'],
+            actions=['ssm:GetParameter','ssm:GetParametersByPath'],
             resources=[
-                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}/*",            
+                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}*",            
             ]
         ))
 
-        CfnOutput(self, "IdentityPoolId",
-            value=self.identity_pool.identity_pool_id
+        # UtilsPermissions(self, 'UtilsPermissions', self.cognito_auth_provider_function.role)
+        
+        auth_provider_integration_fn = apigwi.HttpLambdaIntegration(
+            "AuthProviderLambdaIntegration",
+            self.cognito_auth_provider_function
         )
-        CfnOutput(self, "UserPoolId",
-            value=self.user_pool.user_pool_id
+
+        api_name = 'auth'
+
+        self.http_api = apigw.HttpApi(self, 'AuthProviderHttpApi',
+            api_name=api_name,
+            create_default_stage=True
         )
-        CfnOutput(self, "UserPoolClientId",
-            value=self.user_pool_client.user_pool_client_id
+
+        authorizer = apigwa.HttpIamAuthorizer()
+        # authorizer = apigwa.HttpJwtAuthorizer(
+        #     "AuthProviderAuthorizer",
+        #     f"https://cognito-idp.{self.region}.amazonaws.com/{self.user_pool.user_pool_id}",
+        #     identity_source=["$request.header.Authorization"],
+        #     jwt_audience=[self.user_pool_client.user_pool_client_id]
+        # )
+
+        self.http_api.add_routes(
+            path='/auth/{operation}',
+            methods=[
+                apigw.HttpMethod.POST,
+            ],
+            authorizer=authorizer,
+            integration=auth_provider_integration_fn
         )
-        CfnOutput(self, "CognitoAuthenticatedUserRole",
-            value=self.identity_pool.authenticated_role.role_arn
+
+        self.http_api.add_routes(
+            path='/{proxy+}',
+            methods=[
+                apigw.HttpMethod.OPTIONS
+            ],
+            integration=auth_provider_integration_fn
         )
+
+        auth_provider_function_name_param = ssm.StringParameter(
+            self, "AuthProviderFunctionNameParam",
+            parameter_name=f"/{parent_stack_name}/auth_provider_function_name",
+            string_value=self.cognito_auth_provider_function.function_name
+        )
+        
+        auth_provider_function_name_param.apply_removal_policy(RemovalPolicy.DESTROY)
+        
+        
         
     

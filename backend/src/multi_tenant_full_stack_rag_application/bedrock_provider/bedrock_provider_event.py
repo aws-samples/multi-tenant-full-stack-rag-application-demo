@@ -4,45 +4,65 @@
 import json
 
 class BedrockProviderEvent:
-    def __init__(self, 
-        account_id='',
-        auth_token='',
-        method='',
-        path='',
-        origin=''
+    def __init__(self,
+        chunk_text='',
+        dimensions=0,
+        input_type='',
+        messages=[],
+        model_id='',
+        model_kwargs={},
+        operation='',
+        origin='',
+        prompt='',
+        search_text='',
+        text='',
     ):
-        self.account_id = account_id
-        self.auth_token = auth_token
-        self.method = method
-        self.path = path
+        # now assign all variables to self.
+        self.chunk_text = chunk_text
+        self.dimensions = dimensions
+        self.input_type = input_type
+        self.messages = messages
+        self.model_id = model_id
+        self.model_kwargs = model_kwargs
+        self.operation = operation
         self.origin = origin
-        
+        self.prompt = prompt
+        self.search_text = search_text
+        self.text = text
 
     def from_lambda_event(self, event):
-        print(f"bedrock_provider evt received event {event}")
-        self.account_id = event['requestContext']['accountId']
-        [self.method, self.path] = event['routeKey'].split(' ')
-        if 'authorizer' in event['requestContext']:
-            self.user_email = event['requestContext']['authorizer']['jwt']['claims']['email']
-        if 'headers' in event:
-            if 'authorization' in event['headers']:
-                self.auth_token = event['headers']['authorization'].split(' ', 1)[1]
-                # user_id will be inserted later
-                self.user_id = None
-            if 'origin' in event['headers']:
-                self.origin = event['headers']['origin']
-        if 'body' in event:
-            if isinstance(event['body'], str):
-                body = json.loads(event['body'])
+        self.operation = event['operation']
+        self.origin = event['origin']
+        args = event['args']
+        self.model_id = args['model_id']
+        
+        # assign the args without defaults or 
+        # that only exist on one operation
+        # like this, so you'll get an error
+        # on that operation if they're not there.
+        if self.operation == 'embed_text':
+            self.text = args['text']
+        
+        elif self.operation == 'get_semantic_similarity':
+            self.chunk_text = args['chunk_text']
+            self.search_text= args['search_text']
+        
+        elif self.operation == 'invoke_model':
+            if 'model_kwargs' in args:
+                self.model_kwargs = args['model_kwargs']
+            if 'messages' in args:
+                self.messages = args['messages']
+            elif 'prompt' in args:
+                self.prompt = args['prompt']
             else:
-                body = event['body']
-            
-            self.operation = body['operation']
-            self.body = body['args']
+                raise Exception("invoke_model requires either 'prompt' or 'messages'")
+        
+        # now do the ones with defaults like this:        
+        if 'dimensions' in args:
+            self.dimensions = args['dimensions']
+        if 'input_type' in args:
+            self.input_type = args['input_type']
 
-        if 'pathParameters' in event:
-            self.path_parameters = event['pathParameters']
-                
         return self
 
     def __str__(self):

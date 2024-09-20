@@ -2,25 +2,36 @@
 #  SPDX-License-Identifier: MIT-0
 
 import boto3
+import json
 import os
-from multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status import IngestionStatus
-from multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status_provider_event import IngestionStatusProviderEvent
+from .ingestion_status import IngestionStatus
+from .ingestion_status_provider_event import IngestionStatusProviderEvent
+from multi_tenant_full_stack_rag_application import utils
 
 """
-GET /ingestion_status/user_id/doc_id: fetch ingestion status
-POST /ingestion_status: create or update ingestion status
-    body = {
-        'user_id': str,
-        'doc_id': str,
-        'etag': str,
-        'lines_processed': int,
-        'progress_status': str
-    }
-DELETE /ingestion_status/user_id/doc_id :  delete an ingestion_status
+API 
+event {
+    "operation": ["get_ingestion_status" | "create_ingestion_status"],
+    "origin": the function name of the calling function, or the frontend_origin.,
+    "args": 
+        for create_ingestion_status:
+            "user_id": str,
+            "doc_id": str,
+            "etag": str,
+            "lines_processed": int,
+            "progress_status": str
+
+        for delete_ingestion_status:
+            "user_id": str,
+            "doc_id": str,
+            "delete_from_s3": bool=False by default
+        
+        for get_ingestion_status:
+            "user_id": str,
+            "doc_id": str
 """
 
 ddb_client = None
-ssm_client = None
 ingestion_status_provider = None
 ingestion_status_table = None
 
@@ -28,10 +39,15 @@ ingestion_status_table = None
 class IngestionStatusProvider:
     def __init__(self, 
         ddb_client: boto3.client,
-        ingestion_status_table: str
+        ingestion_bucket: str,
+        ingestion_status_table: str,
+        s3_client: boto3.client
     ):
+        self.utils = utils
         self.ddb = ddb_client
         self.table = ingestion_status_table
+        self.s3 = s3_client
+        self.allowed_origins = self.utils.get_allowed_origins()
     
     @staticmethod
     def __strip_userid_prefix__(s3_key) -> str: 
@@ -49,8 +65,8 @@ class IngestionStatusProvider:
             return_val = s3_key
         return return_val
 
-    def delete_ingestion_status(self, user_id, s3_key):
-        doc_id = self.__strip_userid_prefix__(s3_key)
+    def delete_ingestion_status(self, user_id, doc_id, delete_from_s3=False):
+        doc_id = self.__strip_userid_prefix__(doc_id)
         return self.ddb.delete_item(
             TableName=self.table,
             Key={
@@ -58,6 +74,11 @@ class IngestionStatusProvider:
                 'doc_id': {'S': doc_id}
             }
         )
+        if delete_from_s3:
+            self.s3.delete_object(
+                Bucket=os.environ['S3_BUCKET_NAME'],
+                Key=f"private/{user_id}/{doc_id}"
+            )
 
     def get_ingestion_status(self, user_id, doc_id, etag='', lines_processed=0, progress_status='IN_PROGRESS', limit=100, last_eval_key=None)-> IngestionStatus:
         projection_expression = "#user_id, #doc_id, #etag, #lines_processed, #progress_status"
@@ -95,15 +116,6 @@ class IngestionStatusProvider:
         result = self.ddb.query(
             **kwargs
         )
-        
-        item = None
-        status = IngestionStatus(
-            user_id, 
-            doc_id,
-            etag,
-            lines_processed,
-            progress_status
-        )
 
         items = []
         if "Item" in result.keys():
@@ -117,21 +129,27 @@ class IngestionStatusProvider:
 
     def handler(self, event, context):
         print(f"Received event {event}")
+        
         handler_evt = IngestionStatusProviderEvent().from_lambda_event(event)
 
-        if handler_evt.method == 'GET':
+        status = 200
+        result = None
+
+        if handler_evt.origin not in self.allowed_origins:
+            status = 403
+            result = {
+                "message": "Forbidden"
+            }
+
+        elif handler_evt.operation == 'get_ingestion_status':
             response = self.get_ingestion_status(
                 handler_evt.user_id, 
                 handler_evt.doc_id, 
             )
-            print(f"get_ingestion_status response = {response}")
-            result = {
-                "operation": "GET /ingestion_status",
-                "response": self.statuses_to_list(response),
-                "statusCode": 200
-            }
+            result = self.statuses_to_list(response)
+            print(f"get_ingestion_status response = {result}")
 
-        elif handler_evt.method == 'POST':
+        elif handler_evt.operation == 'create_ingestion_status':
             response = self.set_ingestion_status(
                 IngestionStatus(
                     handler_evt.user_id,
@@ -142,26 +160,30 @@ class IngestionStatusProvider:
                 )
             )
             print(f"set_ingestion_status response {response}")
+            status = response["ResponseMetadata"]["HTTPStatusCode"]
             result = {
-                "operation": "POST /ingestion_status",
-                "statusCode": response["ResponseMetadata"]["HTTPStatusCode"]
+                "message": "SUCCESS"
             }
         
-        elif handler_evt.method == 'DELETE':
+        elif handler_evt.operation == 'delete_ingestion_status':
             print(f"delete_ingestion_status received user_id {handler_evt.user_id}, doc_id {handler_evt.doc_id}")
             response = self.delete_ingestion_status(
                 handler_evt.user_id,
-                handler_evt.doc_id
+                handler_evt.doc_id,
+                handler_evt.origin,
+                delete_from_s3=handler_evt.delete_from_s3
             )
             print(f"delete_ingestion_status response {response}")
+            status = response["ResponseMetadata"]["HTTPStatusCode"]
             result = {
-                "operation": "DELETE /ingestion_status",
-                "statusCode": response["ResponseMetadata"]["HTTPStatusCode"],
+                "message": "SUCCESS",
+                "deleted_ingestion_status": handler_evt.doc_id
             }
     
         else:
             raise Exception(f'Unexpected method {handler_evt.method}')
-        return result
+        
+        return self.utils.format_response(status, result, handler_evt.origin)
 
     def set_ingestion_status(self, ingestion_status: IngestionStatus): 
         # ingestion_status.doc_id = self.__strip_userid_prefix__(ingestion_status.doc_id)
@@ -192,11 +214,9 @@ def handler(event, context):
     print(f"initialization handler received event {event}")
     if not ingestion_status_provider:
         ddb_client = boto3.client('dynamodb')
-        ssm_client = boto3.client('ssm')
-        print("About to get ssm parameter for ingestion_status_table")
-        ingestion_status_table = ssm_client.get_parameter(
-            Name=f'/{os.getenv("STACK_NAME")}/ingestion_status_table'
-        )['Parameter']['Value']
-        ingestion_status_provider = IngestionStatusProvider(ddb_client, ingestion_status_table)
+        s3_client = utils.get_s3_client()
+        ingestion_bucket = os.getenv('INGESTION_BUCKET')
+        ingestion_status_table = os.getenv('INGESTION_STATUS_TABLE')
+        ingestion_status_provider = IngestionStatusProvider(ddb_client, ingestion_bucket, ingestion_status_table, s3_client)
     return ingestion_status_provider.handler(event, context)
     

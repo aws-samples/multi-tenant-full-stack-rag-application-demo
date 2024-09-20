@@ -7,20 +7,17 @@ import time
 from datetime import datetime
 
 from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider_factory import EmbeddingsProviderFactory
 from multi_tenant_full_stack_rag_application.ingestion_provider.loaders import Loader
 from multi_tenant_full_stack_rag_application.ingestion_provider.splitters import Splitter
 
 class PdfTextLoader(Loader):
     def __init__(self,*,
-        emb_provider: EmbeddingsProvider,
         s3: boto3.client,
         splitter: Splitter,
         textract: boto3.client,
         **kwargs
     ): 
-        super().__init__(emb_provider, splitter)
+        super().__init__(splitter)
         self.textract = textract
         self.s3 = s3
 

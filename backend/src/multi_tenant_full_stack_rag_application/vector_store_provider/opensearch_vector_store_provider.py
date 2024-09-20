@@ -9,25 +9,28 @@ from queue import Queue
 from requests_aws4auth import AWS4Auth
 from threading import Thread
 
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_document import VectorStoreDocument
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_provider import VectorStoreProvider
+
+# API
+# DELETE /vector_store/{operation}/{resource_id}
+#            .../index/index_id
+#.           .../record/record_id
+# POST /vector_store/{operation}
+#        .../create_index
+#        .../query
+#.       .../save
+#        .../semantic_query
 
 
 class OpenSearchVectorStoreProvider(VectorStoreProvider):
     def __init__(self, 
-        embeddings_provider: EmbeddingsProvider,
         vector_store_endpoint: str,
         port=443,
         proto='https',
-        # next two only used for testing, not prod
-        # and values are passed in at test time anyway.
-        # user='admin',
-        # pwd='admin',
         **kwargs
     ):         
-        super().__init__(embeddings_provider, vector_store_endpoint)
-        self.embeddings = embeddings_provider
+        super().__init__(vector_store_endpoint)
         self.vector_store_endpoint = vector_store_endpoint
         self.port = port
         self.proto = proto
@@ -130,7 +133,7 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
                 id = recommendation['id']
                 search_query = recommendation['vector_database_search_terms']
                 results = {}
-                vector = self.embeddings.encode(search_query)
+                vector = self.embeddings.embed_text(search_query)
         
                 search_query = { 
                     "size": top_k,
@@ -190,7 +193,7 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             if 'id' in list(doc.keys()):
                 del doc['id']
             # delattr(doc, 'id')
-            doc['vector'] = self.embeddings.encode(doc['content'])
+            doc['vector'] = self.embeddings.embed_text(doc['content'])
             payload += '{"index": { "_index": "' + collection_id + '", "_id": "' + doc_id + '"}}\n' + json.dumps(doc) + "\n"
         
         result = os_vector_db.bulk(payload, params={

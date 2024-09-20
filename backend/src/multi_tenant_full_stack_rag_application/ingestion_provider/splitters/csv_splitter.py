@@ -1,8 +1,6 @@
 #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #  SPDX-License-Identifier: MIT-0
 
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider_factory import EmbeddingsProviderFactory
 from multi_tenant_full_stack_rag_application.ingestion_provider.splitters import Splitter
 
 
@@ -14,15 +12,10 @@ default_split_seqs = []
 
 class CsvSplitter(Splitter):
     def __init__(self, 
-        emb_provider: EmbeddingsProvider,
         max_tokens_per_chunk: int = 0,
         split_seqs = default_split_seqs
     ):
-        self.emb_provider = emb_provider
-        if max_tokens_per_chunk == 0:
-            self.max_tokens_per_chunk = self.emb_provider.get_model_max_tokens()
-        else:
-            self.max_tokens_per_chunk = max_tokens_per_chunk
+        self.max_tokens_per_chunk = max_tokens_per_chunk
         self.split_seqs = split_seqs
 
     def convert_dict_to_csv_row(self, row_dict, *, get_header=False):
@@ -59,7 +52,7 @@ class CsvSplitter(Splitter):
                 running_token_total += self.estimate_tokens(header)
             row = self.convert_dict_to_csv_row(record)
             curr_token_ct = self.estimate_tokens(row)
-            if running_token_total + curr_token_ct > self.emb_provider.get_model_max_tokens():
+            if running_token_total + curr_token_ct > self.max_tokens_per_chunk:
                 csv_chunks.append(curr_csv_chunk)
                 print(f"Logged csv_chunk: {curr_csv_chunk}")
                 curr_csv_chunk = header
@@ -71,8 +64,8 @@ class CsvSplitter(Splitter):
                 curr_csv_chunk += row
                 print(f"Logged csv_chunk: {curr_csv_chunk}")
                 running_token_total += curr_token_ct
-            if running_token_total > self.emb_provider.get_model_max_tokens():
-                raise Exception(f'Row is going to need splitting because it\'s over {self.emb_provider.get_model_max_tokens()} tokens long:\n{row}')
+            if running_token_total > self.max_tokens_per_chunk:
+                raise Exception(f'Row is going to need splitting because it\'s over {self.max_tokens_per_chunk} tokens long:\n{row}')
         csv_chunks.append(curr_csv_chunk)
         print(f"Logged csv_chunk: {curr_csv_chunk}")
         return csv_chunks

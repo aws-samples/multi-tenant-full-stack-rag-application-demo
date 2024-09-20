@@ -18,15 +18,15 @@ class EmbeddingsProvider(ABC):
     #         similarity_threshold=similarity_threshold
     #     )
     @abstractmethod
-    def encode(self, input_text, emb_type: EmbeddingType):
+    def embed_text(self, input_text, emb_type: EmbeddingType):
         pass
 
     @abstractmethod
-    def get_model_dimensions(self) -> int:
+    def get_model_dimensions(self, model_id) -> int:
         pass
     
     @abstractmethod
-    def get_model_max_tokens(self) -> int:
+    def get_model_max_tokens(self, model_id) -> int:
         pass
 
     @abstractmethod

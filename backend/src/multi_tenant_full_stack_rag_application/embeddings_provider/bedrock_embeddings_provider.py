@@ -3,38 +3,24 @@
 
 import boto3 
 from botocore.config import Config
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider, EmbeddingsProviderEvent, EmbeddingType
-from multi_tenant_full_stack_rag_application.utils import invoke_service
+from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider, EmbeddingType
+from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider_event import EmbeddingsProviderEvent
+from multi_tenant_full_stack_rag_application import utils
 
 """
 API
-
-GET /embeddings_provider/{operation}/{model_id}...
-        {get_model_dimensions}/{model_id}: fetch list of dimensions for a given model
-        {get_model_max_tokens}/{model_id}: fetch max tokens for a given model
-
-POST /embeddings_provider/{operation}...
-        {encode}: embed the given text and return a vector.
-        post body = {
-            'input_text': 'text to embed',
-            'model_id': 'model_id',
-            'dimensions': 1024
-        }
-
-        {get_token_count}: return the estimated number of tokens in a string
-        post body = {
-            "input_text": "text to count tokens for"
-        }
-            
+ event = {
+    "operation": [get_model_dimensions | get_model_max_tokens | embed_text | get_token_count ]
+    "origin": set to the name of the calling lambda function.
+    "args" { # Dependent on operation. See below }
+ }
+ OPERATION:                 KWARGS
+ get_model_dimensions:      model_id
+ get_model_max_tokens:      model_id
+ embed_text                 input_text, model_id, dimensions
+ get_token_count:           input_text
 """
 
-
-# create  Config object for 10 max retries in adaptive mode
-config = Config(
-    retries=dict(
-        max_attempts=10
-    )
-)
 split_seqs = ['\n\n\n', '\n\n', '\n', '. ', ' ']
 completed_files = []
 
@@ -45,47 +31,114 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
     def __init__(self, 
         model_id,
         dimensions=None,
-        b_client = boto3.client('bedrock', config=config),
-        ba_client = boto3.client('bedrock-agent', config=config),
-        bar_client = boto3.client('bedrock-agent-runtime', config=config),
-        br_client = boto3.client('bedrock-runtime', config=config)
+        br_client=None,
+        lambda_client=None,
     ):
+        self.utils = utils
         self.model_id = model_id
-        self.bedrock = BedrockProvider(
-            b_client, ba_client, bar_client, br_client
+        
+        if not br_client:
+            self.bedrock_rt = self.utils.BotoClientProvider.get_client('bedrock-runtime')
+        else: 
+            self.bedrock_rt = br_client
+
+        if not lambda_client:
+            self.lambda_ = self.utils.BotoClientProvider.get_client('lambda')
+        else:
+            self.lambda_ = lambda_client
+
+        self.allowed_origins = self.utils.get_allowed_origins()
+
+    # @param model_id
+    # @param dimensions only matters for Titan embeddings v2, where it can be 1024, 512, or 256
+    # @param input_type: either "search_query" or "search_document", 
+    #                    only used for Cohere embeddings.
+    def embed_text(model_id, text, dimensions=1024, input_type='search_query'):
+        response = self.utils.invoke_bedrock(
+            "embed_text",
+            {
+                "dimensions": dimensions,
+                "text": text,
+                "model_id": model_id,
+                "input_type": input_type
+            },
+            self.utils.get_ssm_params('embeddings_provider_function_name')
         )
-        self.model_max_tokens = self.get_model_max_tokens()
+        print(f"Got response from embed_text: {response}")
+        return response
 
-    def encode(self, input_text, input_type=EmbeddingType.search_query, *, dimensions=1024):
-        return self.bedrock.embed_text(input_text, self.model_id)
+    def get_model_dimensions(self, model_id):
+        response = self.utils.invoke_bedrock(
+            "get_model_dimensions",
+            {
+                "model_id": model_id
+            },
+            self.utils.get_ssm_params('embeddings_provider_function_name')
+        )
+        print(f"Got response from get_model_dimensions: {response}")
+        return response
 
-    def get_model_dimensions(self):
-        return self.bedrock.get_model_dimensions(self.model_id)
+    def get_model_max_tokens(self, model_id):
+        response = self.utils.invoke_bedrock(
+            "get_model_max_tokens",
+            {
+                "model_id": model_id
+            },
+            self.utils.get_ssm_params('embeddings_provider_function_name')
+        )
+        print(f"Got response from get_model_max_tokens: {response}")
+        return response
 
-    def get_model_max_tokens(self):
-        if not (hasattr(self, 'model_max_tokens') and self.model_max_tokens):
-            self.model_max_tokens = self.bedrock.get_model_max_tokens(self.model_id)
-        return self.model_max_tokens
-
-    def get_token_count(self, input_text): 
-        return self.bedrock.get_token_count(input_text)
-
+    def get_token_count(self, input_text):
+        return self.utils.get_token_count(input_text)
+            
     def handler(self, event, context):
+        print(f"Embeddings provider received event {event}")
         handler_evt = EmbeddingsProviderEvent.from_lambda_event(event)
+        print(f"handler_evt is {handler_evt.__dict__}")
+        status = 200
+        result = {}
 
-        if handler_evt == 'GET':
+        if handler_evt.origin not in self.allowed_origins:
+            result = self.utils.format_response(403, {'error': 'Access denied'}, handler_evt.origin)
+
+        if operation == 'embed_text':
+            response = self.embed_text(handler_evt)
+            print(f"Got response from self.embed_text {response}")
+            result = {
+                "response": response['encoded_text'],
+            }
+
+        elif operation == 'get_model_dimensions':
+            response = self.get_model_dimensions(handler_evt.model_id)
+            result = {
+                "response": response['dimensions'],
+            }
+
+        elif operation == 'get_model_max_tokens':
+            response = self.get_model_max_tokens(handler_evt.model_id)
+            result = {
+                "response": response['max_tokens'],
+            }
+
+        elif operation == 'get_token_count':
+            result = {
+                "response": self.get_token_count(handler_evt.input_text)
+            }
+
+        return self.utils.format_response(status, result, handler_evt.origin)
     
 def handler(event, context):
     global bedrock_embeddings_provider
     if not bedrock_embeddings_provider:
-        model_id = event['model_id']
+        model_id = event['args']['model_id']
         dimensions = 1024 if not 'dimensions' \
-            in event \
-            else event['dimensions']
-        
+            in event['args'] \
+            else event['args']['dimensions']
         bedrock_embeddings_provider = BedrockEmbeddingsProvider(
             model_id, dimensions
         )
+    return bedrock_embeddings_provider.handler(event, context)
 
     
 
