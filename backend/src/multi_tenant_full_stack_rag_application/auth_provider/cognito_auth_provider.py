@@ -40,6 +40,9 @@ class CognitoAuthProvider(AuthProvider):
         self.utils = utils
         self.account_id = os.getenv('AWS_ACCOUNT_ID')
         print(f"Account id is {self.account_id}")
+        print(f"identity_pool_id {cognito_identity_pool_id}")
+        print(f"user_pool_id {cognito_user_pool_id}")
+
         if not cognito_identity_client:
             self.cognito_identity = self.utils.BotoClientProvider.get_client('cognito-identity')
         else:
@@ -93,19 +96,21 @@ class CognitoAuthProvider(AuthProvider):
 
     def get_userid_from_token(self, auth_token):
         print(F"get_userid_from_token got account_id {self.account_id}, auth token:\n{auth_token}\n.")
-        return self.cognito_identity.get_id(
+        response = self.cognito_identity.get_id(
             AccountId=self.account_id,
             IdentityPoolId=self.identity_pool_id,
             Logins = {
                 self.cognito_url: auth_token
             }
-        )['IdentityId']        
+        )
+        print(f'got response {response}')
+        return response['IdentityId']        
 
     def handler(self, event, context):
         print(f"CognitoAuthProvider.handler got event {event}")
         print(f"CognitoAuthProvider.handler got context {context}")
-        print(f"Invoked function arn is {context[0].invoked_function_arn}")
-        self.account_id = context.invoked_function_arn.split(':')[4] if hasattr(context, 'invoked_function_arn') else ''
+        print(f"Invoked function arn is {context}, dir: {dir(context)}")
+        # self.account_id = context.invoked_function_arn.split(':')[4] if hasattr(context, 'invoked_function_arn') else ''
         handler_evt = CognitoAuthProviderEvent().from_lambda_event(event)
         handler_evt.account_id = self.account_id
     
@@ -113,8 +118,8 @@ class CognitoAuthProvider(AuthProvider):
 
         if hasattr(handler_evt, 'auth_token') and handler_evt.auth_token is not None:
             handler_evt.user_id = self.get_userid_from_token(handler_evt.auth_token)
-
-        if handler_evt.origin not in self.allowed_origins:
+        print(f"Is origin allowed? is {handler_evt.origin} in {self.allowed_origins.values()}?")
+        if handler_evt.origin not in self.allowed_origins.values():
             status = 403
             result = 'forbidden'
             
@@ -126,7 +131,9 @@ class CognitoAuthProvider(AuthProvider):
             result = "ERROR: Unexpected method or path sent"
             status = 400
 
-        return self.utils.format_response(status, result, '', dont_sanitize_fields=['user_id'])
+        final_response = self.utils.format_response(status, result, '', dont_sanitize_fields=['user_id'])
+        print(f"Returning {final_response}")
+        return final_response
         
 def handler(event, context):
     global cognito_auth_provider
