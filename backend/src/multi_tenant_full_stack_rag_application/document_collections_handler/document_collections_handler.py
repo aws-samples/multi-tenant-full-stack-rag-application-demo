@@ -53,6 +53,7 @@ class DocumentCollectionsHandler:
             self.s3 = s3_client
         
         self.allowed_origins = self.utils.get_allowed_origins()
+        self.my_origin = self.utils.get_ssm_params('document_collections_handler_function_name')
         
         # origin_domain_name = self.utils.get_ssm_params('origin_frontend', ssm_client=ssm_client)
         # origin_domain_name = ssm_client.get_parameter(
@@ -365,7 +366,7 @@ class DocumentCollectionsHandler:
         elif hasattr(handler_evt, 'auth_token') and handler_evt.auth_token != '':
             handler_evt.user_id = self.utils.get_userid_from_token(
                 handler_evt.auth_token, 
-                handler_evt.origin,
+                self.my_origin,
                 self.lambda_
             )
             print(f"Got user_id from token {handler_evt.user_id}")
