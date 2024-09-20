@@ -10,6 +10,7 @@ from aws_cdk import (
     NestedStack,
     aws_ec2 as ec2,
     aws_iam as iam,
+    aws_lambda as lambda_,
     aws_opensearchservice as aos,
     aws_ssm as ssm,
 )
@@ -17,10 +18,14 @@ from aws_cdk.aws_cognito import UserPool, UserPoolDomain
 from aws_cdk.aws_cognito_identitypool_alpha import IdentityPool
 from constructs import Construct
 
+from lib.shared.opensearch_access_policy import OpenSearchAccessPolicy
+
 
 class OpenSearchManagedStack(NestedStack):
     def __init__(self, scope: Construct, construct_id: str, 
         app_security_group: ec2.ISecurityGroup,
+        auth_fn: lambda_.IFunction,
+        auth_role_arn: str,
         cognito_identity_pool: IdentityPool,
         cognito_user_pool: UserPool,
         os_data_instance_ct: int,
@@ -61,7 +66,7 @@ class OpenSearchManagedStack(NestedStack):
             actions=['sts:AssumeRole'],
             principals=[
                 iam.ServicePrincipal('es.amazonaws.com'),
-            ],
+            ]
         ))
 
         self.domain = aos.Domain(self, 'OsDomain', 
@@ -102,16 +107,70 @@ class OpenSearchManagedStack(NestedStack):
             }
         )
         
+        OpenSearchAccessPolicy(self, "OpenSearchCognitoDashboardsAccess",
+            self.domain,
+            cognito_dashboards_role.grant_principal,
+            True, True, True, True
+        )
+        
         self.vector_store_endpoint = self.domain.domain_endpoint
 
-        vs_ep_param = ssm.StringParameter(
-            self,
-            'VectorStoreEndpointParam',
-            parameter_name=f'/{parent_stack_name}/vector_store_endpoint',
-            string_value=self.vector_store_endpoint
+        self.vector_store_provider = lambda_.Function(self, 'VectorStoreProviderFunction',
+            code=lambda_.Code.from_asset('src/multi_tenant_full_stack_rag_application',
+                bundling=BundlingOptions(
+                    image=lambda_.Runtime.PYTHON_3_11.bundling_image,
+                    bundling_file_access=BundlingFileAccess.VOLUME_COPY,
+                    command=[
+                        "bash", "-c", " && ".join([
+                            "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/vector_store_provider",
+                            "cp /asset-input/vector_store_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/vector_store_provider",
+                            "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
+                            "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils",
+                            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
+                        ])
+                    ]
+                )
+            ),
+            memory_size=128,
+            runtime=lambda_.Runtime.PYTHON_3_11,
+            architecture=lambda_.Architecture.X86_64,
+            handler='multi_tenant_full_stack_rag_application.vector_store_provider.opensearch_vector_store_provider.handler',
+            timeout=Duration.seconds(60),
+            environment={
+                'VECTOR_STORE_ENDPOINT': self.vector_store_endpoint,
+                # 'AWS_ACCOUNT_ID': self.account,
+                # 'IDENTITY_POOL_ID': identity_pool_id,
+                # 'USER_POOL_ID': user_pool_id,
+                # 'USER_SETTINGS_TABLE': user_settings_table.table_name
+            }
         )
-        vs_ep_param.apply_removal_policy(RemovalPolicy.DESTROY)
 
+        self.vector_store_provider.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "lambda:InvokeFunction",
+                ],
+                resources=[auth_fn.function_arn],
+            )
+        )
+
+        cognito_auth_role = iam.Role.from_role_arn(self, 'CognitoAuthRoleRef', auth_role_arn)
+
+        self.vector_store_provider.grant_invoke(cognito_auth_role)
+
+        OpenSearchAccessPolicy(self, 'OpenSearchAccessForCognitoRole',
+            self.domain,
+            cognito_auth_role.grant_principal,
+            True, True, True, True
+        )
+
+        vs_fn_name = ssm.StringParameter(self, 'VectorStoreProviderFunctionName',
+            parameter_name=f'/{parent_stack_name}/vector_store_provider_function_name',
+            string_value=self.vector_store_provider.function_name
+        )
+
+        vs_fn_name.apply_removal_policy(RemovalPolicy.DESTROY)
+        
         # Now do the OpenSearch Dashboards Proxy. Comment
         # this section out if you don't want it.
         handle = ec2.InitServiceRestartHandle()

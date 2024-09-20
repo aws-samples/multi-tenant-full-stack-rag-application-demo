@@ -6,7 +6,7 @@ from aws_cdk.aws_s3 import Bucket, EventType, IBucket, NotificationKeyFilter
 from aws_cdk.aws_s3_notifications import SqsDestination
 from aws_cdk.aws_sqs import ( IQueue  )
 
-class BucketToQueueNotificationStack(Construct):
+class BucketToQueueNotification(Construct):
     def __init__(self, scope: Construct, construct_id: str, 
         bucket_name: str,
         queue: IQueue,

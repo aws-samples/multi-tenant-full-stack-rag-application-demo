@@ -5,9 +5,6 @@ from aws_cdk import (
     Duration,
     RemovalPolicy,
     Stack,
-    aws_apigatewayv2 as apigw,
-    aws_apigatewayv2_authorizers as apigwa,
-    aws_apigatewayv2_integrations as apigwi,
     aws_ec2 as ec2,
     aws_iam as iam,
     aws_lambda as lambda_,
@@ -16,10 +13,12 @@ from aws_cdk import (
 import os
 
 from constructs import Construct
-
+# from lib.shared.utils_permissions import UtilsPermissions
 
 class BedrockProviderStack(Stack):
     def __init__(self, scope: Construct, construct_id: str,
+        auth_fn: lambda_.IFunction,
+        auth_role_arn: str,
         user_pool_client_id: str,
         user_pool_id:str,
         parent_stack_name: str,
@@ -27,11 +26,12 @@ class BedrockProviderStack(Stack):
         # **kwargs,
     ) -> None:
         super().__init__(scope, construct_id) #  **kwargs)        
-
+        
         build_cmds = [
             "pip3 install -t /asset-output/ -r /asset-input/bedrock_provider/bedrock_provider_requirements.txt",
             'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/bedrock_provider',
             "cp -r /asset-input/bedrock_provider/* /asset-output/multi_tenant_full_stack_rag_application/bedrock_provider",
+            'pip3 install -t /asset-output -r /asset-input/utils/utils_requirements.txt',
             'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils/',
             "cp -r /asset-input/utils/* /asset-output/multi_tenant_full_stack_rag_application/utils/",
         ]
@@ -69,68 +69,37 @@ class BedrockProviderStack(Stack):
             )
         )
 
+        self.bedrock_provider_function.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "lambda:InvokeFunction",
+                ],
+                resources=[auth_fn.function_arn],
+            )
+        )
+        
+        # self.bedrock_provider_function.add_to_role_policy(iam.PolicyStatement(
+        #       effect=iam.Effect.ALLOW,
+        #       actions=['lambda:Invoke'],
+        #       resources=[auth_fn.function_arn]
+        # ))
+
         self.bedrock_provider_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
-            actions=['ssm:GetParameter'],
+            actions=['ssm:GetParameter','ssm:GetParametersByPath'],
             resources=[
-                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}/*",            
+                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}*",            
             ]
         ))
-        
-        bedrock_provider_integration_fn = apigwi.HttpLambdaIntegration(
-            "BedrockProviderLambdaIntegration",
-            self.bedrock_provider_function
-        )
 
-        api_name = 'bedrock_provider'
-
-        self.http_api = apigw.HttpApi(self, 'BedrockProviderHttpApi',
-            api_name=api_name,
-            create_default_stage=True
-        )
-
-        authorizer = apigwa.HttpJwtAuthorizer(
-            "BedrockProviderAuthorizer",
-            f"https://cognito-idp.{self.region}.amazonaws.com/{user_pool_id}",
-            identity_source=["$request.header.Authorization"],
-            jwt_audience=[user_pool_client_id]
-        )
-
-        self.http_api.add_routes(
-            path='/bedrock_provider/list_models',
-            methods=[
-                apigw.HttpMethod.GET,
-            ],
-            authorizer=authorizer,
-            integration=bedrock_provider_integration_fn
+        bedrock_provider_fn_name_param = ssm.StringParameter(
+            self, "BedrockProviderFunctionName",
+            parameter_name=f"/{parent_stack_name}/bedrock_provider_function_name",
+            string_value=self.bedrock_provider_function.function_name
         )
         
-        self.http_api.add_routes(
-            path='/bedrock_provider/{operation}/{model_id}',
-            methods=[
-                apigw.HttpMethod.GET,
-            ],
-            authorizer=authorizer,
-            integration=bedrock_provider_integration_fn
-        )
-
-        self.http_api.add_routes(
-            path='/{proxy+}',
-            methods=[
-                apigw.HttpMethod.OPTIONS
-            ],
-            integration=bedrock_provider_integration_fn
-        )
-
-        bedrock_provider_api_url_param = ssm.StringParameter(
-            self, "BedrockProviderApiUrlParam",
-            parameter_name=f"/{parent_stack_name}/bedrock_provider_api_url",
-            string_value=self.http_api.url
-        )
+        bedrock_provider_fn_name_param.apply_removal_policy(RemovalPolicy.DESTROY)
         
-        bedrock_provider_api_url_param.apply_removal_policy(RemovalPolicy.DESTROY)
-        
-        CfnOutput(self, "BedrockProviderApiUrl",
-            value=self.http_api.url,
-        )
+        cognito_auth_role = iam.Role.from_role_arn(self, 'CognitoAuthRoleRef', auth_role_arn)
+        self.bedrock_provider_function.grant_invoke(cognito_auth_role)
 

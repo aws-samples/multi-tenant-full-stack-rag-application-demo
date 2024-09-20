@@ -8,6 +8,7 @@ from aws_cdk import (
     BundlingOptions,
     CfnOutput,
     Duration,
+    RemovalPolicy,
     Stack,
     aws_ec2 as ec2,
     aws_apigatewayv2 as apigw,
@@ -20,9 +21,11 @@ from aws_cdk import (
     aws_ssm as ssm,
 )
 from constructs import Construct
+# from lib.shared.utils_permissions import UtilsPermissions
 
 class GenerationHandlerStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, 
+        auth_fn: lambda_.IFunction,
         auth_role_arn: str,
         parent_stack_name: str,
         user_pool_client_id: str,
@@ -39,6 +42,7 @@ class GenerationHandlerStack(Stack):
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
             "cp /asset-input/generation_handler/*.py /asset-output/multi_tenant_full_stack_rag_application/generation_handler/",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
+            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output"
         ]
 
         self.generation_handler_function = lambda_.Function(self, 'GenerationHandlerFunction',
@@ -65,10 +69,16 @@ class GenerationHandlerStack(Stack):
         )
         self.generation_handler_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
-            actions=['ssm:GetParameter'],
+            actions=['ssm:GetParameter','ssm:GetParametersByPath'],
             resources=[
-                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}/*"
+                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}*"
             ]
+        ))
+
+        self.generation_handler_function.add_to_role_policy(iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            actions=['lambda:InvokeFunction'],
+            resources=[auth_fn.function_arn]
         ))
 
         self.generation_handler_function.grant_invoke(cognito_auth_role)
@@ -110,8 +120,16 @@ class GenerationHandlerStack(Stack):
             integration=generation_handler_integration_fn
         )
 
-        CfnOutput(self, "GenerationHandlerHttpApiUrl", value=self.http_api.url)
-        ssm.StringParameter(self, 'GenerationHandlerHttpApiUrlParam',
+        CfnOutput(self, "GenerationHandlerHttpApiUrl", value=self.http_api.url.rstrip('/'))
+        
+        gen_handler_api_url_param = ssm.StringParameter(self, 'GenerationHandlerHttpApiUrlParam',
             parameter_name=f'/{parent_stack_name}/generation_handler_api_url',
-            string_value=self.http_api.url
+            string_value=self.http_api.url.rstrip('/')
         )
+        gen_handler_api_url_param.apply_removal_policy(RemovalPolicy.DESTROY)
+
+        gen_handler_origin_param = ssm.StringParameter(self, 'GenerationHandlerOriginParam',
+            parameter_name=f'/{parent_stack_name}/origin_generation_handler',
+            string_value=self.generation_handler_function.function_name
+        )
+        gen_handler_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)

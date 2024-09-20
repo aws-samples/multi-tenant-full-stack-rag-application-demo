@@ -3,7 +3,6 @@
 
 import json
 from datetime import datetime
-from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
 from json import JSONEncoder
 
 def _default(self, obj):
@@ -15,13 +14,16 @@ JSONEncoder.default = _default # Replace it.
 
 class IngestionStatus:
     def __init__(self, user_id: str, doc_id: str, etag: str, 
-        lines_processed: int=0, progress_status: str=''):
+        lines_processed: int=0, progress_status: str='', last_modified=None):
         self.user_id = user_id
         self.doc_id = doc_id
         self.etag = etag
         self.lines_processed = lines_processed
         self.progress_status = progress_status
-        self.last_modified = datetime.now().isoformat() + 'Z'
+        if not last_modified:
+            self.last_modified = datetime.now().isoformat() + 'Z'
+        else:
+            self.last_modified = last_modified
 
     @staticmethod
     def from_ddb_record(rec):
@@ -50,6 +52,7 @@ class IngestionStatus:
         }
 
     def to_json(self):
+        print("Called ingestion_status.to_json()")
         return {
             'user_id': self.user_id,
             'doc_id': self.doc_id,

@@ -6,13 +6,10 @@ import requests
 
 from datetime import datetime
 
-from multi_tenant_full_stack_rag_application.auth_provider import AuthProvider, AuthProviderFactory
-from multi_tenant_full_stack_rag_application.system_settings_provider import SystemSettingsProvider, SystemSettingsProviderFactory
-from multi_tenant_full_stack_rag_application.utils import format_response
+from multi_tenant_full_stack_rag_application import utils 
 from .initialization_handler_event import InitializationHandlerEvent
 
 
-auth_provider = None
 initialization_handler = None
 system_settings_provider = None
 
@@ -26,7 +23,6 @@ class InitializationHandler:
         system_settings_provider: SystemSettingsProvider,
         urls_to_init: [str],
     ):
-        self.auth_provider = auth_provider
         self.init_urls = urls_to_init 
         self.system_settings_provider = system_settings_provider       
 
@@ -42,7 +38,7 @@ class InitializationHandler:
         return "success"
 
 def handler(event, context):
-    global auth_provider, initialization_handler, last_init, system_settings_provider
+    global initialization_handler, last_init, system_settings_provider
     print(f"initialization_handler.handler received event {event}")
     handler_evt = InitializationHandlerEvent().from_lambda_event(event)
     print(f"converted event to InitializationHandlerEvent: {handler_evt}")
@@ -52,10 +48,11 @@ def handler(event, context):
     if handler_evt.method == 'OPTIONS':
         result = {}
     
-    auth_provider =  AuthProviderFactory.get_auth_provider()
-
     if hasattr(handler_evt, "auth_token") and handler_evt.auth_token is not None:
-        user_id = auth_provider.get_userid_from_token(handler_evt.auth_token)
+        user_id = utils.get_userid_from_token(
+            handler_evt.auth_token,
+            handler_evt.origin
+        )
         handler_evt.user_id = user_id
 
     if handler_evt.method == "POST" and handler_evt.path == "/initialization":
@@ -79,4 +76,4 @@ def handler(event, context):
             print(f"Calling initialization_handler with urls {handler_evt.urls_to_init}")
             result = initialization_handler.initialize(handler_evt)
 
-    return format_response(200, result, handler_evt.origin)
+    return utils.format_response(200, result, handler_evt.origin)

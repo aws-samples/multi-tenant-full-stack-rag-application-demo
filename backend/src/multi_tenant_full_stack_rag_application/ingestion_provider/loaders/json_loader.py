@@ -7,12 +7,11 @@ from datetime import datetime
 from copy import deepcopy
 from hashlib import md5 
 
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider_factory import EmbeddingsProviderFactory
-from multi_tenant_full_stack_rag_application.ingestion_provider import IngestionStatus, IngestionStatusProvider, IngestionStatusProviderFactory
+from multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status import IngestionStatus
+from multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status_provider import IngestionStatusProvider
+from multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status_provider_factory import IngestionStatusProviderFactory
 from multi_tenant_full_stack_rag_application.ingestion_provider.loaders import Loader
 from multi_tenant_full_stack_rag_application.ingestion_provider.splitters import Splitter, OptimizedParagraphSplitter
-from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_document import VectorStoreDocument
 
 
 default_json_content_fields = [
@@ -54,9 +53,7 @@ class JsonLoader(Loader):
         self.json_title_fields_order = json_title_fields_order
 
         if not splitter:
-            self.splitter = OptimizedParagraphSplitter(
-                self.emb_provider
-            )
+            self.splitter = OptimizedParagraphSplitter()
         else:
             self.splitter = splitter
         
@@ -131,7 +128,7 @@ class JsonLoader(Loader):
                 "id": doc_id,
                 "content": content,
                 "metadata": meta,
-                "vector": self.emb_provider.encode(content)
+                "vector": self.emb_provider.embed_text(content)
             })
                     
     def load(self, path, user_id, json_lines=False, source=None):
@@ -222,7 +219,7 @@ class JsonLoader(Loader):
         for chunk in text_chunks:
             doc_id = f"{doc['id']}:{ctr}"
             print(f"doc_id is now {doc_id}")
-            vector = self.emb_provider.encode(chunk)
+            vector = self.emb_provider.embed_text(chunk)
             if not return_dicts:
                 new_doc = VectorStoreDocument(
                     doc_id,

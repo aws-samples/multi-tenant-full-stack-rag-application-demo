@@ -10,7 +10,7 @@ import DocumentCollection from './DocumentCollection'
 import DocumentCollectionEnrichmentPipelines from './DocumentCollectionEnrichmentPipelines'
 import DocumentCollectionSharingList from './DocumentCollectionSharingList'
 import DocumentCollectionUploadedDocumentsTable from './DocumentCollectionUploadedDocumentsTable'
-import { atom, useRecoilState, useRecoilValue, RecoilEnv } from 'recoil'
+import { atom, useRecoilState, useResetRecoilState, RecoilEnv } from 'recoil'
 
 RecoilEnv.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = false
 
@@ -20,6 +20,9 @@ const api = new Api();
 async function getTableProvider(urlCollectionId, limit=20, lastEvalKey='') {
   //// console.log("newApi:")
   //// console.dir(provider)
+  if (!urlCollectionId) {
+    return []
+  }
   const data = await api.listUploadedFiles(urlCollectionId, limit, lastEvalKey);
   console.log("getTableProvider received data:")
   console.dir(data)
@@ -31,25 +34,32 @@ const deleteModalMessageTemplate = `Are you sure you want to delete document col
 const filePageSize = 20
 
 
-function createVectorOption(val) {
-  let parts = val.split('_')
-  let label = parts[0][0].toUpperCase() + parts[0].slice(1) + ' ' +
-    parts[1][0].toUpperCase() + parts[1].slice(1)
-  return {
-    "key": val,
-    "label": label,
-    "value": val
-  }
-}
+// function createVectorOption(val) {
+//   console.log("createVectorOption val:")
+//   console.dir(val)
+//   let parts = val.split('_')
+//   let label = parts[0][0].toUpperCase() + parts[0].slice(1) + ' ' +
+//     parts[1][0].toUpperCase() + parts[1].slice(1)
+//   return {
+//     "label": label,
+//     "value": val
+//   }
+// }
 
 export const urlCollectionIdState = atom({
   key: 'DocumentCollectionForm.urlCollectionIdState',
   default: null
 })
 
+const newDocCollection = new DocumentCollection(
+  '',
+  '',
+  ''
+)
+
 export const currentCollectionState = atom({
   key: 'DocumentCollectionForm.currentCollectionState',
-  default: {}
+  default: newDocCollection
 })
 
 export const addUserModalState = atom({
@@ -87,11 +97,13 @@ export const currentPageIndexState = atom({
   default: 0
 })
 
+const defaultDeleteConfirmationMessage = `Are you sure you want to delete this document collection?
+
+{currentCollection.name}
+`
 export const deleteConfirmationMessageState = atom({
   key: 'DocumentCollectionForm.deleteConfirmationMessageState',
-  default: `Are you sure you want to delete this document collection?
-    {currentCollection.name}
-  `
+  default: defaultDeleteConfirmationMessage
 })
 
 export const deleteModalVisibleState = atom({
@@ -119,10 +131,10 @@ export const paramsState = atom({
   default: null
 })
 
-export const selectedVectorEngineState = atom({
-  key: 'DocumentCollectionForm.selectedVectorEngineState',
-  default: createVectorOption(defaultEngine)
-})
+// export const selectedVectorEngineState = atom({
+//   key: 'DocumentCollectionForm.selectedVectorEngineState',
+//   default: createVectorOption(defaultEngine)
+// })
 
 export const submitDisabledState = atom({
   key: 'DocumentCollectionForm.submitDisabledState',
@@ -134,9 +146,12 @@ export const uploadedFilesState = atom({
   default: []
 })
 
+// useResetRecoilState(currentCollectionState)();
+// useResetRecoilState(deleteModalVisibleState)();
+// useResetRecoilState(paramsState)();
+// useResetRecoilState(urlCollectionIdState)();
 
 function DocumentCollectionForm() {
-  
   let tmpParams = useParams()
   const [urlCollectionId, setUrlCollectionId] = useRecoilState(urlCollectionIdState)
   const [currentCollection, setCurrentCollection ] = useRecoilState(currentCollectionState)
@@ -152,18 +167,19 @@ function DocumentCollectionForm() {
   const [isDeleting, setIsDeleting] = useRecoilState(collectionIsDeletingState)
   const [lastEvalKey, setLastEvalKey] = useRecoilState(lastEvalKeyState)
   const [params, setParams] = useRecoilState(paramsState)
-  const [selectedVectorEngine, setSelectedVectorEngine] = useRecoilState(selectedVectorEngineState)
+  // const [selectedVectorEngine, setSelectedVectorEngine] = useRecoilState(selectedVectorEngineState)
   const [submitDisabled, setSubmitDisabled] = useRecoilState(submitDisabledState)
   const [uploadedFiles, setUploadedFiles] = useRecoilState(uploadedFilesState)
   
   useEffect(() => {
-    console.log('initializing:')
-    console.dir(selectedVectorEngine)
-    console.dir(tmpParams)
     setParams(tmpParams)
+    console.log(`tmpParams are ${JSON.stringify(tmpParams)}`)
+    console.log(`urlCollectionId is ${urlCollectionId}`)
   }, [])
 
   useEffect(() => {
+    console.log("params updated:")
+    console.dir(params)
     if (params && params.id) {
       console.log('params.id: ' + params.id)
       setUrlCollectionId(params.id)
@@ -172,16 +188,24 @@ function DocumentCollectionForm() {
   
   useEffect(() => {
     (async () => {
-      if (urlCollectionId) {
+      if (urlCollectionId !== undefined) {
         // console.log("Fetching details for currentCollection " + urlCollectionId)
         let result = await api.getDocCollections()
-        // console.log(`Got object data result: ${JSON.stringify(result)}`)
+        console.log(`Got object data result: `)
+        console.dir(result)
+
         for (let i = 0; i < result.length; i++) {
           let tmpCollection = result[i]
-          // console.log("Got tmpCollection")
-          // console.dir(tmpCollection)
-          // console.log(`tmpCollection.collection_id: ${tmpCollection.collection_id} == urlCollectionId ${urlCollectionId}? ${tmpCollection.collection_id === urlCollectionId}`)
-          // console.log(`does collection_id ${currentCollection.collection_id} === urlCollectionId ${urlCollectionId}?`)
+          console.log("Got tmpCollection")
+          console.dir(tmpCollection)
+          console.log(`enrichmentPipelines == ${JSON.stringify(tmpCollection.enrichment_pipelines)}`)
+          // console.log(`tmpCollection.enrichment_pipelines.entity_extraction.enabled = ${tmpCollection.enrichment_pipelines.entity_extraction.enabled}`)
+          // tmpCollection.enrichment_pipelines = tmpCollection.enrichment_pipelines.replaceAll(': True', ': true').replaceAll("'", "\"")
+          // console.log(`tmpCollection.enrichment_pipelines before JSON.parse = ${tmpCollection.enrichment_pipelines}`)
+          // tmpCollection.enrichment_pipelines = JSON.parse(tmpCollection.enrichment_pipelines)
+          console.log(`tmpCollection.enrichment_pipelines after JSON.parse = ${JSON.stringify(tmpCollection.enrichment_pipelines)}`)
+          console.log(`tmpCollection.collection_id: ${tmpCollection.collection_id} == urlCollectionId ${urlCollectionId}? ${tmpCollection.collection_id === urlCollectionId}`)
+          console.log(`does collection_id ${tmpCollection.collection_id} === urlCollectionId ${urlCollectionId}?`)
           if (tmpCollection.collection_id === urlCollectionId) {
             let tmpCollectionObj = new DocumentCollection(
               tmpCollection.collection_name,
@@ -207,10 +231,8 @@ function DocumentCollectionForm() {
             })
             setCurrentCollection(tmpCollectionObj)
             setCollectionShareList(sharedList)
-            console.log('tmpCollectionObj.sharedList')
-            console.dir(sharedList)
-            console.log('tmpCollectionObj.enrichment_pipelines')
-            console.dir(tmpCollectionObj.enrichmentPipelines)
+            console.log('tmpCollectionObj')
+            console.dir(tmpCollectionObj)
             break;
           }
         }
@@ -223,27 +245,21 @@ function DocumentCollectionForm() {
     // console.log('selectedVectorEngine: '+ selectedVectorEngine['label']);
   }, [urlCollectionId])
 
-  // useEffect( () => {
-  //   console.log("in DocumentCollectionForm got docCollectionEnrichmentPipelines:")
-  //   console.dir(currentCollection.enrichmentPipelines)
-  //   let tmp = currentCollection.clone()
-  //   console.log('before updating tmp')
-  //   console.dir(tmp)
-  //   // tmp.enrichment_pipelines = docCollectionEnrichmentPipelines
-  //   console.log("after updating collection to tmp:")
-  //   console.dir(tmp)
-  //   console.log( `comparing to collection. Are they equal? ${currentCollection == tmp}`)
-  //   console.dir(currentCollection)
-  //   setCurrentCollection(tmp)
-  // }, [docCollectionEnrichmentPipelines])
-
-  // useEffect( () => {
-  //   setDeleteConfirmationMessage()
-  //   checkEnableSubmit()
-  // }, [currentCollection.name])
-
   useEffect( () => {
+    // const onBeforeUnload = (ev) => {
+    //   setCurrentCollection({})
+    //   setUrlCollectionId(null)
+    //   setCollectionShareList(null)
+    //   setCurrentPageIndex(0)
+    //   setLastEvalKey('')
+    // };
+    // window.addEventListener("beforeunload", onBeforeUnload);
+    const deleteConfMsg = defaultDeleteConfirmationMessage.replace('{currentCollection.name}', currentCollection.name)
+    setDeleteConfirmationMessage(deleteConfMsg)
     checkEnableSubmit()
+    // return () => {
+    //   window.removeEventListener("beforeunload", onBeforeUnload);
+    // };
   }, [currentCollection])
 
   function checkEnableSubmit() {
@@ -290,7 +306,7 @@ function DocumentCollectionForm() {
         }}>
         <Form className="documentCollectionForm"
           actions={
-            <SpaceBetween direction="horizontal" size="xs">
+            <SpaceBetween key="sb0" direction="horizontal" size="xs">
               <Button href='#/document-collections' formAction="none" variant="link">
                 Cancel
               </Button>
@@ -305,38 +321,42 @@ function DocumentCollectionForm() {
                 loading={isDeleting}
                 variant="normal"
                 onClick={confirmDeleteCollection}
-              >Delete</Button>
+              >Delete document collection</Button>
             </SpaceBetween>
           }>
           <Container>
-            <SpaceBetween direction="vertical" size="l">
+            <SpaceBetween key="sb1" direction="vertical" size="l">
               {!urlCollectionId ?
-              <FormField label="Collection Name">
+              <FormField key='collection_name' label="Collection Name">
               <Input
+                key='collection_name'
                 onChange={({ detail }) => updateCurrentCollection("name", detail.value)}
                 value={ currentCollection ? currentCollection.name: ''}
               />
               </FormField>
               : 
-              <FormField label="Collection Name">
+              <FormField key='collection_name' label="Collection Name">
               <Input
+                key='collection_name'
                 onChange={({ detail }) => updateCurrentCollection("name", detail.value)}
                 value={currentCollection? currentCollection.name : ''}
                 disabled
               />
               </FormField>
               }
-              <FormField label="Collection Description">
+              <FormField key='collection_description' label="Collection Description">
               <Input
+                key='collection_description'
                 onChange={({ detail }) => updateCurrentCollection("description", detail.value)}
                 value={currentCollection ? currentCollection.description : ''}
               />
               </FormField>
               { urlCollectionId ?
-                <SpaceBetween>
+                <SpaceBetween key="sb2" >
                 <Tabs
                   tabs={[
                     {
+                      key: "uploaded-documents",
                       label: 'Uploaded Documents',
                       id: 'uploaded-documents',
                       content: (<DocumentCollectionUploadedDocumentsTable
@@ -347,6 +367,7 @@ function DocumentCollectionForm() {
                     {
                       label: 'Enrichment Pipelines',
                       id: 'enrichment-pipelines',
+                      key: 'enrichment-pipelines',
                       content: (<DocumentCollectionEnrichmentPipelines
                           // collection={collection}
                           // updateDocCollectionEnrichmentPipelines={updateDocCollectionEnrichmentPipelines}
@@ -356,6 +377,7 @@ function DocumentCollectionForm() {
                     {
                       label: 'Sharing',
                       id: 'sharing',
+                      key: 'sharing',
                       content: (<DocumentCollectionSharingList
                           // urlCollectionId={urlCollectionId}
                           // sharedWith={collectionShareList}
@@ -372,8 +394,8 @@ function DocumentCollectionForm() {
         {confirmationModal}
       </>)
   }
-  async function sendData(){
-    setIsLoading(true)
+  async function sendData(evt){
+    evt.preventDefault()
     // console.log("Sending data from filesVal:")
     // console.dir(filesVal)
     // console.log(`urlCollectionId = ${urlCollectionId}`)
@@ -382,7 +404,7 @@ function DocumentCollectionForm() {
       // console.log(`saving files ${JSON.stringify(filesVal)}`);
       setIsLoading(true)
       let result = await api.uploadFiles(urlCollectionId, filesVal);
-      // console.log(`Files uploaded? ${result}`)
+      console.log(`Files uploaded? ${result}`)
       if (result) {
         setFilesVal([])
         let tmpFiles = await getTableProvider(urlCollectionId, filePageSize, lastEvalKey)
@@ -396,7 +418,7 @@ function DocumentCollectionForm() {
           "document_collection": {
             "collection_name": currentCollection.name,
             "description": currentCollection.description,
-            "vector_db_type": selectedVectorEngine.value,
+            "vector_db_type": "opensearch_managed",
             "shared_with": [],
             "enrichment_pipelines": currentCollection.enrichmentPipelines
           }
@@ -406,10 +428,17 @@ function DocumentCollectionForm() {
       }
       // console.log("Posting data");
       // console.dir(postObject);
+      setIsLoading(true)
       const result = await api.upsertDocCollection(postObject);
-      // evt.preventDefault();
-      // console.log("result from postData");
-      // console.dir(result);
+      console.log("result from upsertDocCollection:")
+      console.dir(result)
+      const collectionName = Object.keys(result)[0]
+      console.log(`Creating collection with `)
+      console.dir(result[collectionName])
+      setCurrentCollection(new DocumentCollection(result[collectionName]))
+      setIsLoading(false)
+      evt.preventDefault();
+      location.hash = `#/document-collections/${result.collection_id}/edit`;
     }
     // console.log(`saving files ${JSON.stringify(filesVal)}`);
     // setIsLoading(true)
@@ -421,7 +450,11 @@ function DocumentCollectionForm() {
     // let tmpFiles = await getTableProvider(urlCollectionId, filePageSize, lastEvalKey)
     // setUploadedFiles(tmpFiles['files'])
     // // console.log("Redirecting to " + location.hash)
-    location.hash = '#/document-collections';
+    // setCurrentCollection({
+    //   collection_name: '',
+    //   description: ''
+    // })
+    // location.hash = '#/document-collections';
   }
 
   async function updateCurrentCollection(key, value) {

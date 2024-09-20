@@ -58,7 +58,7 @@ class NeptuneStack(Construct):
         #     handler='multi_tenant_full_stack_rag_application.graph_store_provider.graph_store_provider.handler',
         #     timeout=Duration.seconds(60),
         #     environment={
-        #         'AWS_ACCOUNT': self.account,
+        #         'AWS_ACCOUNT_ID': self.account,
         #         'GRAPH_STORE_ENDPOINT': self.cluster.cluster_endpoint.socket_address,
         #         # 'GRAPH_STORE_PORT': self.cluster.cluster_endpoint.port
         #     }
@@ -66,10 +66,11 @@ class NeptuneStack(Construct):
         
         self.cluster.grant_connect(allowed_role.grant_principal) # Grant the role neptune-db:* access to the DB
         self.cluster.grant(allowed_role.grant_principal, "neptune-db:ReadDataViaQuery", "neptune-db:WriteDataViaQuery")
-
-        ssm.StringParameter(self, 'NeptuneEndpointAddressParameter',
-            string_value=self.cluster.cluster_endpoint.socket_address,
-            parameter_name=f'/{parent_stack_name}/neptune_endpoint'
-        )
+        self.endpoint_address = self.cluster.cluster_endpoint.socket_address
+        
+        # ssm.StringParameter(self, 'NeptuneEndpointAddressParameter',
+        #     string_value=self.cluster.cluster_endpoint.socket_address,
+        #     parameter_name=f'/{parent_stack_name}/neptune_endpoint_address',
+        # )
 
         CfnOutput(self, 'NeptuneEndpointAddress', value=self.cluster.cluster_endpoint.socket_address)

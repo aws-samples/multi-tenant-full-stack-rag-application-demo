@@ -24,16 +24,25 @@ class VpcStack(Stack):
                 # public subnets, and then search the code under
                 # backend/lib for CHANGE_PUBLIC_SUBNET_TO_ISOLATED,
                 # and change the other ones to ec2.SubnetType.PRIVATE_ISOLATED
+                # PRIVATE_WITH_EGRESS is needed to host the auth provider service,
+                # since it needs to call cognito and cognito doesn't support 
+                # privatelink VPC connectivity. Don't comment out PRIVATE_WITH_EGRESS
+                # unless you're going to provide a different AuthProvider implementation
+                # and not use CognitoAuthProvider.
                 {
                     "cidrMask": 21,
                     "name": 'ingress',
                     "subnetType": ec2.SubnetType.PUBLIC,
                 },
-                # comment out above here but not below.
                 {
                     "cidrMask": 21,
                     "name": 'data_isolated',
                     "subnetType": ec2.SubnetType.PRIVATE_ISOLATED,
+                },
+                 {
+                    "cidrMask": 21,
+                    "name": 'private_with_egress',
+                    "subnetType": ec2.SubnetType.PRIVATE_WITH_EGRESS,
                 },
             ]
         )
@@ -64,7 +73,13 @@ class VpcStack(Stack):
             service = ec2.GatewayVpcEndpointAwsService.DYNAMODB
         )
 
-        CfnOutput(self, 'DynamoDbVpcEndpoint', value=self.dynamodb_endpoint.vpc_endpoint_id)
+        # CfnOutput(self, 'DynamoDbVpcEndpoint', value=self.dynamodb_endpoint.vpc_endpoint_id)
+
+        self.s3_endpoint = self.vpc.add_gateway_endpoint('S3Endpoint',
+            service = ec2.GatewayVpcEndpointAwsService.S3
+        )
+
+        # CfnOutput(self, 'S3VpcEndpoint', value=self.s3_endpoint.vpc_endpoint_id)
 
         self.kms_endpoint = self.vpc.add_interface_endpoint(
             "KmsEndpoint",
@@ -120,4 +135,29 @@ class VpcStack(Stack):
                 subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
             )
         )
+
+        self.apigw_endpoint = self.vpc.add_interface_endpoint(
+            "ApigwEndpoint",
+            private_dns_enabled=True,
+            service=ec2.InterfaceVpcEndpointService(f"com.amazonaws.{self.region}.execute-api",
+                443
+            ),
+            subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
+            ),
+            security_groups=[self.app_security_group]
+        )
+
+        self.lambda_endpoint = self.vpc.add_interface_endpoint(
+            "LambdaEndpoint",
+            private_dns_enabled=True,
+            service=ec2.InterfaceVpcEndpointService(f"com.amazonaws.{self.region}.lambda",
+                443
+            ),
+            subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
+            ),
+            security_groups=[self.app_security_group]
+        )
+        
         

@@ -1,17 +1,16 @@
 #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #  SPDX-License-Identifier: MIT-0
 
+import boto3 
 import json
 import os
 import sys
-import boto3 
 from datetime import datetime
 from uuid import uuid4
 
-from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
 from .prompt_template_handler_event import PromptTemplateHandlerEvent
 from .prompt_template import PromptTemplate
-from multi_tenant_full_stack_rag_application.utils import format_response
+from multi_tenant_full_stack_rag_application import utils 
 
 """
 GET /prompt_templates: list prompt templates
@@ -22,37 +21,53 @@ POST /prompt_templates: create or update prompt template
         'model_ids': [str],
         'template_id'?: str
     }
-DELETE /prompt_templates/{prompt_template_id} :  delete a prompt template
+DELETE /prompt_templates/{template_id} :  delete a prompt template
 """
 
 # use global variables to store injected dependencies on the first initialization
-initialized = None
-auth_provider = None
-user_settings_provider = None
-ssm = None
 prompt_template_handler = None
 
 
 class PromptTemplateHandler:
     def __init__(self,
-        auth_provider: AuthProvider,
-        ssm_client: boto3.client,
-        user_settings_provider: UserSettingsProvider,
+        prompt_templates_table: str,
+        cognito_identity_client: boto3.client=None,
+        ddb_client: boto3.client=None,
+        lambda_client: boto3.client=None,
+        ssm_client: boto3.client=None,
         bedrock_model_param_path:str = 'multi_tenant_full_stack_rag_application/bedrock_provider/bedrock_model_params.json',
         prompt_template_path:str = 'multi_tenant_full_stack_rag_application/prompt_template_handler/prompt_templates'
     ):
+        self.utils = utils
         self.prompt_template_path = prompt_template_path
-        self.ssm_client = ssm_client
-        self.user_id = None
-        self.auth_provider = auth_provider
-        self.user_settings_provider = user_settings_provider
-        origin_domain_name = ssm_client.get_parameter(
-            Name='/multitenantrag/frontendOrigin'
-        )['Parameter']['Value']
+        self.prompt_templates_table = prompt_templates_table
+
+        if not ddb_client:
+            self.ddb = utils.BotoClientProvider.get_client('dynamodb')
+        else: 
+            self.ddb = ddb_client
+        
+        if not lambda_client:
+            self.lambda_ = utils.BotoClientProvider.get_client('lambda')
+        else:
+            self.lambda_ = lambda_client
+            
+        if not ssm_client:
+            self.ssm = utils.BotoClientProvider.get_client('ssm')
+        else:
+            self.ssm = ssm_client
+                
+        origin_domain_name = self.utils.get_ssm_params('origin_frontend', ssm_client=self.ssm)
+        
+        if not origin_domain_name.startswith('http'):
+            origin_domain_name = f'https://{origin_domain_name}'
+        
         self.frontend_origins = [
-            f'https://{origin_domain_name}',
-            'http://localhost:5173'
+            origin_domain_name
         ]
+
+        print(f"frontend_origins: {self.frontend_origins}")
+
         template_files = os.listdir(prompt_template_path)
         # print(f"Template files in {prompt_template_path}: {template_files}")
         self.default_templates = {}
@@ -68,6 +83,7 @@ class PromptTemplateHandler:
             with open(f'{prompt_template_path}/{filename}', 'r') as f:
                 self.default_templates[template_name] = PromptTemplate(
                     user_id=None,
+                    user_email=None,
                     template_name=template_name,
                     template_text=f.read(),
                     model_ids=model_ids,
@@ -77,6 +93,7 @@ class PromptTemplateHandler:
 
     @staticmethod
     def create_prompt_template_record(template_dict):
+        print(f"create_prompt_template_record got {template_dict}")
         template_id = uuid4().hex if 'template_id' not in template_dict \
             else template_dict['template_id']
         created = datetime.now().isoformat() + 'Z' if 'created_date' \
@@ -90,6 +107,7 @@ class PromptTemplateHandler:
             template_dict['stop_sequences']
         return PromptTemplate(
             template_dict['user_id'],
+            template_dict['user_email'],
             template_dict['template_name'],
             template_dict['template_text'],
             template_dict['model_ids'],
@@ -99,30 +117,41 @@ class PromptTemplateHandler:
             updated
         )
 
-    def delete_prompt_template(self, user_id, template_id):
-        curr_templates = self.get_prompt_templates(user_id)
-        final_templates = {}
-        
-        for template_name in curr_templates:
-            template = curr_templates[template_name]
-            if template.template_id != template_id:
-                if hasattr(template,'stop_sequences') and \
-                    (
-                        not isinstance(template.stop_sequences, list) or \
-                        len(template.stop_sequences) == 0
-                    ):
-                    delattr(template,'stop_sequences')
-
-                final_templates[template_name] = template
-        
-        user_setting = UserSetting(
-            user_id, 
-            'prompt_templates', 
-            self.templates_to_dict(final_templates)
+    def delete_prompt_template(self, user_id, template_name):
+        print(f"Deleting prompt template {template_id} for user {user_id}")
+        result = self.ddb.delete_item(
+            TableName=self.prompt_templates_table,
+            Key={
+                'user_id': {'S': user_id},
+                'sort_key': {'S': f"template::{template_name}"}
+            }
         )
-        print(f"Setting data: {user_setting} ")
-        self.user_settings_provider.set_user_setting(user_setting)
-        return final_templates
+        print(f"delete_prompt_template got result {result}")
+        return template_name
+
+        # curr_templates = self.get_prompt_templates(user_id)
+        # final_templates = {}
+        
+        # for template_name in curr_templates:
+        #     template = curr_templates[template_name]
+        #     if template.template_id != template_id:
+        #         if hasattr(template,'stop_sequences') and \
+        #             (
+        #                 not isinstance(template.stop_sequences, list) or \
+        #                 len(template.stop_sequences) == 0
+        #             ):
+        #             delattr(template,'stop_sequences')
+
+        #         final_templates[template_name] = template
+        
+        # user_setting = UserSetting(
+        #     user_id, 
+        #     'prompt_templates', 
+        #     self.templates_to_dict(final_templates)
+        # )
+        # print(f"Setting data: {user_setting} ")
+        # self.user_settings_provider.set_user_setting(user_setting)
+        # return final_templates
 
     def get_default_template_model_ids(self, template_name):
         search_str = template_name.split('_')[1]
@@ -134,70 +163,133 @@ class PromptTemplateHandler:
 
     def get_prompt_template(self, user_id, template_id) -> PromptTemplate:
         print(f"Getting prompt template {template_id} for user {user_id}")
-        templates = self.get_prompt_templates(user_id)
+        templates = self.get_prompt_templates(user_id)["response"]
         template = None
-        for template_name in templates:
-            tmp = templates[template_name]
+        for tmp in templates:
             if tmp.template_id == template_id:
                 template = tmp
                 break
         return template
 
-    def get_prompt_templates(self, user_id):
-        user_setting = self.user_settings_provider.get_user_setting(user_id, 'prompt_templates')
-        template_data = {} if not hasattr(user_setting, 'data') else user_setting.data
-        templates = {}
-        for template_name in template_data:
-            sub = template_data[template_name]
-            stop_seqs = []
-            if 'stop_sequences' in sub:
-                stop_seqs = sub['stop_sequences']
-            print(f"Got sub {sub}")
-            if not 'model_ids' in sub:
-                sub['model_ids'] = []
-            template_obj = PromptTemplate(
-                user_id,
-                template_name,
-                sub['template_text'],
-                sub['model_ids'],
-                stop_seqs,
-                sub['template_id'],
-                sub['created_date'],
-                sub['updated_date']
-            )
-            templates[template_name] = template_obj
-        for template_name in self.default_templates:
-            if template_name not in template_data:
-                template_obj = PromptTemplate(
-                    user_id,
-                    template_name,
-                    self.default_templates[template_name].template_text,
-                    self.get_default_template_model_ids(template_name),
-                    [],
-                    template_name,
-                    None,
-                    None
-                )
-                templates[template_name] = template_obj
-        print(f"get_prompt_templates returning {templates}")
-        return templates
+    def get_prompt_templates(self, user_id, *, limit=20, last_eval_key=''):
+        print(f"Getting prompt templates for user_id {user_id}")
+        if not user_id or user_id == '':
+            return None
+
+        projection_expression = "#user_id, #sort_key, " + \
+          " #user_email, #template_id, #template_name, " + \
+          " #template_text, #model_ids, #stop_sequences, " + \
+          " #created_date, #updated_date"
+
+        expression_attr_names = {
+            "#user_id": "user_id",
+            "#sort_key": "sort_key",
+            "#user_email": "user_email",
+            "#template_id": "template_id",
+            "#template_name": "template_name",
+            "#template_text": "template_text",
+            "#model_ids": "model_ids",
+            "#stop_sequences": "stop_sequences",
+            "#created_date": "created_date",
+            "#updated_date": "updated_date"
+        }
+        sort_key = 'template::'
+        print(f"Getting all items starting with {sort_key} for user_id {user_id}")
+        kwargs = {
+            "TableName": self.prompt_templates_table,
+            "KeyConditions": {
+                "user_id": {
+                    "AttributeValueList": [
+                        {"S": user_id}
+                    ],
+                    "ComparisonOperator": "EQ"
+                },
+                "sort_key": {
+                    "AttributeValueList": [
+                        {"S": sort_key}
+                    ],
+                    "ComparisonOperator": "BEGINS_WITH"
+                }
+            },
+            "ProjectionExpression": projection_expression,
+            "ExpressionAttributeNames": expression_attr_names,
+            "Limit": int(limit)
+        }
+        if last_eval_key != '':
+            kwargs['ExclusiveStartKey'] = last_eval_key
+        
+        print(f"Querying ddb with kwargs {kwargs}")
+        response = self.ddb.query(**kwargs)
+        items = []
+        if "Items" in response.keys():
+            for item in response["Items"]:
+                prompt_template = PromptTemplate.from_ddb_record(item)
+                items.append(prompt_template)
+        result = {
+            "response": items,
+            "last_eval_key": response.get("LastEvaluatedKey", None)
+        }
+        print(f"get_prompt_templates returning value {result}")
+        return result
+        
+        # templates = {}
+        # for template_name in template_data:
+        #     sub = template_data[template_name]
+        #     stop_seqs = []
+        #     if 'stop_sequences' in sub:
+        #         stop_seqs = sub['stop_sequences']
+        #     print(f"Got sub {sub}")
+        #     if not 'model_ids' in sub:
+        #         sub['model_ids'] = []
+        #     template_obj = PromptTemplate(
+        #         user_id,
+        #         user_email,
+        #         template_name,
+        #         sub['template_text'],
+        #         sub['model_ids'],
+        #         stop_seqs,
+        #         sub['template_id'],
+        #         sub['created_date'],
+        #         sub['updated_date']
+        #     )
+        #     templates[template_name] = template_obj
+        # for template_name in self.default_templates:
+        #     if template_name not in template_data:
+        #         template_obj = PromptTemplate(
+        #             user_id,
+        #             template_name,
+        #             self.default_templates[template_name].template_text,
+        #             self.get_default_template_model_ids(template_name),
+        #             [],
+        #             template_name,
+        #             None,
+        #             None
+        #         )
+        #         templates[template_name] = template_obj
+        # print(f"get_prompt_templates returning {templates}")
+        # return templates
 
     def handler(self, event, context): 
         print(f"Got event {event}")
-        
         handler_evt = PromptTemplateHandlerEvent().from_lambda_event(event)
         method = handler_evt.method
         path = handler_evt.path
 
         if handler_evt.origin not in self.frontend_origins:
-            return format_response(403, {}, None)
+            return self.utils.format_response(403, {}, None)
         
-        user_id = None
         status = 200
-        if hasattr(handler_evt, 'auth_token') and handler_evt.auth_token is not None:
-            user_id = self.auth_provider.get_userid_from_token(handler_evt.auth_token)
+        print(f"handler_evt is currently {handler_evt.__dict__}")
+        if hasattr(handler_evt, 'auth_token') and handler_evt.auth_token != '':
+            print(f"Getting user_id for account_id {handler_evt.account_id} and token {handler_evt.auth_token}")
+            handler_evt.user_id = self.utils.get_userid_from_token(
+                handler_evt.auth_token,
+                handler_evt.origin
+            )
         
-        if method != 'OPTIONS' and user_id == None:
+        print(f"after user_id lookup, handler_evt is now {handler_evt.__dict__}")
+
+        if method != 'OPTIONS' and handler_evt.user_id == None:
             status = 403
             result = {"error": "forbidden"}
         
@@ -205,102 +297,75 @@ class PromptTemplateHandler:
             result = {}
 
         elif method == 'GET' and path == '/prompt_templates':
-            templates = self.get_prompt_templates(user_id)
-            result = self.templates_to_dict(templates)
+            templates = self.get_prompt_templates(handler_evt.user_id)["response"]
+            if templates != []:
+                result = self.templates_to_dict(templates)
+            else:
+                result = {}
 
         elif method == 'GET' and path.startswith('/prompt_templates/'):
             template_id = path.split('?')[0]
-            template = self.get_prompt_template(user_id, template_id)
+            template = self.get_prompt_template(handler_evt.user_id, template_id)
             result = self.templates_to_dict({template.template_name: template})
 
         elif method == 'POST' and path == '/prompt_templates':
             body = json.loads(event['body'])
             # add the user_id to the prompt template before passing it on.
-            body['prompt_template']['user_id'] = user_id
+            body['prompt_template']['user_id'] = handler_evt.user_id
+            body['prompt_template']['user_email'] = handler_evt.user_email
             new_template_record = self.create_prompt_template_record(body['prompt_template'])
-            updated_templates = self.update_prompt_templates(new_template_record)
-            result = self.templates_to_dict(updated_templates)
+            response = self.upsert_prompt_template(new_template_record)
+            result = {
+                "upserted_template_id": response,
+                "upserted_template_name": new_template_record.template_name
+            }
 
         elif method == 'DELETE' and path == ('/prompt_templates'):
             template = json.loads(event['body'])['prompt_template']
-            template_id = template['template_id']
-            updated_templates = self.delete_prompt_template(user_id, template_id)
-            result = self.templates_to_dict(updated_templates)
-            
+            template_name = template['template_name']
+            deleted_template_id = self.delete_prompt_template(handler_evt.user_id, template_name)
+            result = {
+                "deleted_template_id": deleted_template_id,
+                "deleted_template_name": template_name
+            }
+
         print(f"Returning result {result}")  
-        return format_response(status, result, handler_evt.origin)
+        return self.utils.format_response(status, result, handler_evt.origin)
 
     @staticmethod
     def templates_to_dict(templates):
         print(f"templates_to_dict got templates {templates}")
         final_templates= {}
-        for template_name in templates:
-            template = templates[template_name]
+        for template in templates:
             if isinstance(template, PromptTemplate):
                 template = template.__dict__()
-
             print(f"Template is now {template}, type {type(template)}")
             template_name = template['template_name']
-            del template['user_id']
-            del template['template_name']
             if template['stop_sequences'] == []:
                 del template['stop_sequences']
             final_templates[template_name] = template
         return final_templates
 
-    def update_prompt_templates(self, new_template: PromptTemplate):
-        print(f"update_prompt_templates got new prompt template {new_template}")
+    def upsert_prompt_template(self, new_template: PromptTemplate):
+        print(f"upsert_prompt_template got new prompt template {new_template}")
         new_template_rec = new_template.to_ddb_record()
-        templates = self.get_prompt_templates(new_template.user_id)
-        final_templates = {}
-        found = False
-
-        for template_name in templates:
-            if template_name.startswith('default_'):
-                continue
-            template = templates[template_name]
-            
-            if template.template_id == new_template.template_id:
-                final_templates[template_name] = new_template
-                found = True
-            else: 
-                final_templates[template_name] = template
-        if not found and not new_template.template_name.startswith('default_'):
-            final_templates[new_template.template_name] = new_template
-
-        user_setting_data = {}
-        for template_name in final_templates:
-            template = final_templates[template_name]
-            print(f"Updating prompt templates. templates is now {template}")
-            if isinstance(template, PromptTemplate):
-                template = template.__dict__()
-            del template['user_id']
-            if template['stop_sequences'] == []:
-                del template['stop_sequences']
-            user_setting_data[template_name] = template
-        print(f'Creating user_setting {user_setting_data} from {new_template}')
-        result = self.user_settings_provider.set_user_setting(
-            UserSetting(
-                new_template.user_id,
-                'prompt_templates',
-                user_setting_data
-            )
+        print(f"Got new_template_rec {new_template_rec}")
+        response = self.ddb.put_item(
+            TableName=self.prompt_templates_table,
+            Item=new_template_rec
         )
-        return final_templates
+        print(f"upsert_prompt_template got response {response}")
+        return new_template_rec.template_id
+
 
 def handler(event, context):
-    global initialized, auth_provider, user_settings_provider, ssm, prompt_template_handler
-    if not initialized:
-        auth_provider = AuthProviderFactory.get_auth_provider()
-        user_settings_provider = UserSettingsProviderFactory.get_user_settings_provider()
-        ssm = BotoClientProvider.get_client('ssm')
+    global prompt_template_handler
+    if not prompt_template_handler:
+        prompt_templates_table = os.getenv('PROMPT_TEMPLATES_TABLE')        
+        ssm = utils.BotoClientProvider.get_client('ssm')
         prompt_template_handler = PromptTemplateHandler(
-            auth_provider, ssm, user_settings_provider
+            prompt_templates_table,
+            ssm
         )
-        initialized = True
     return prompt_template_handler.handler(event, context)
 
-if __name__=='__main__':
-    with open ('event.json', 'r') as evt_in:
-        evt = json.loads(evt_in.read())
-        PromptTemplateHandler.handler(evt, {})

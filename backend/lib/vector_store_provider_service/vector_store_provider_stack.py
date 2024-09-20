@@ -13,17 +13,20 @@ from aws_cdk import (
     aws_cognito as cognito, 
     aws_cognito_identitypool_alpha as idp,
     aws_ec2 as ec2,
+    aws_iam as iam,
     aws_lambda as lambda_,
     aws_ssm as ssm,
 )
 
 from constructs import Construct
-
+from lib.shared.utils_permissions import UtilsPermissions
 from lib.vector_store_provider_service.opensearch_managed import OpenSearchManagedStack
 
 class VectorStoreProviderStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, 
         app_security_group: ec2.ISecurityGroup,
+        auth_fn: lambda_.IFunction,
+        auth_role_arn: str,
         cognito_identity_pool: idp.IdentityPool,
         cognito_user_pool: cognito.UserPool,
         parent_stack_name: str,
@@ -37,6 +40,8 @@ class VectorStoreProviderStack(Stack):
 
         self.vector_store_stack = OpenSearchManagedStack(self, "OpenSearchManagedStack",
             app_security_group=app_security_group,
+            auth_fn=auth_fn,
+            auth_role_arn=auth_role_arn,
             cognito_identity_pool=cognito_identity_pool,
             cognito_user_pool=cognito_user_pool,
             os_data_instance_ct=self.node.try_get_context('os_data_instance_ct'),
@@ -56,77 +61,4 @@ class VectorStoreProviderStack(Stack):
             vpc=vpc
         )
 
-        self.vector_store_provider = lambda_.Function(self, 'VectorStoreProviderFunction',
-            code=lambda_.Code.from_asset('src/multi_tenant_full_stack_rag_application',
-                bundling=BundlingOptions(
-                    image=lambda_.Runtime.PYTHON_3_11.bundling_image,
-                    bundling_file_access=BundlingFileAccess.VOLUME_COPY,
-                    command=[
-                        "bash", "-c", " && ".join([
-                            "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/vector_store_provider",
-                            "cp /asset-input/vector_store_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/vector_store_provider",
-                            "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
-                            "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils"
-                        ])
-                    ]
-                )
-            ),
-            memory_size=128,
-            runtime=lambda_.Runtime.PYTHON_3_11,
-            architecture=lambda_.Architecture.X86_64,
-            handler='multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_provider.handler',
-            timeout=Duration.seconds(60),
-            environment={
-                # 'AWS_ACCOUNT': self.account,
-                # 'IDENTITY_POOL_ID': identity_pool_id,
-                # 'USER_POOL_ID': user_pool_id,
-                # 'USER_SETTINGS_TABLE': user_settings_table.table_name
-            }
-        )
-
-        vector_store_provider_integration_fn = apigwi.HttpLambdaIntegration(
-            "VectorStoreProviderLambdaIntegration", 
-            self.vector_store_provider,
-        )
-
-        api_name = 'vector_store'
-
-        self.http_api = apigw.HttpApi(self, "VectorStoreProviderHandlerApi",
-            api_name=api_name,
-            create_default_stage=True
-        )
-        
-        authorizer = apigwa.HttpJwtAuthorizer(
-            "VectorStoreProviderAuthorizer",
-            f"https://cognito-idp.{self.region}.amazonaws.com/{user_pool_id}",
-            identity_source=["$request.header.Authorization"],
-            jwt_audience=[user_pool_client_id],
-        )
-
-        self.http_api.add_routes(
-            path='/vector_store',
-            methods=[
-                apigw.HttpMethod.GET,
-                apigw.HttpMethod.DELETE,
-                apigw.HttpMethod.POST,
-            ],
-            authorizer=authorizer,
-            integration=vector_store_provider_integration_fn
-        )
-
-        self.http_api.add_routes(
-            path='/{proxy+}',
-            methods=[
-                apigw.HttpMethod.OPTIONS
-            ],
-            integration=vector_store_provider_integration_fn
-        )
-        
-        CfnOutput(self, "VectorStoreHttpApiUrl", value=self.http_api.url)
-
-        vs_url_param = ssm.StringParameter(self, 'VectorStoreHttpApiUrlParam',
-            parameter_name=f'/{parent_stack_name}/vector_store_provider_api_url',
-            string_value=self.http_api.url
-        )
-        vs_url_param.apply_removal_policy(RemovalPolicy.DESTROY)
         

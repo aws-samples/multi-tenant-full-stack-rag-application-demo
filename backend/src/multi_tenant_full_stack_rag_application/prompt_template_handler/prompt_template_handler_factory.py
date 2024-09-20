@@ -5,9 +5,7 @@ import json
 import os
 from importlib import import_module
 
-from multi_tenant_full_stack_rag_application.auth_provider import AuthProviderFactory
-from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
-from multi_tenant_full_stack_rag_application.user_settings_provider import UserSettingsProviderFactory
+from multi_tenant_full_stack_rag_application import utils 
 from .prompt_template_handler import PromptTemplateHandler
 
 class PromptTemplateHandlerFactory:
@@ -23,9 +21,7 @@ class PromptTemplateHandlerFactory:
             )
         if args == []:
             args = [
-                AuthProviderFactory.get_auth_provider(),
-                BotoClientProvider.get_client('ssm'),
-                UserSettingsProviderFactory.get_user_settings_provider()
+                utils.BotoClientProvider.get_client('ssm'),
             ]
         parts = py_path.split('.')
         handler_file = '.'.join(parts[:-1])

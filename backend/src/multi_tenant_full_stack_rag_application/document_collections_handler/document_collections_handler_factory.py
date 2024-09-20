@@ -7,11 +7,6 @@ import os
 from importlib import import_module
 
 from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
-from multi_tenant_full_stack_rag_application.auth_provider import AuthProviderFactory
-# from multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status_provider import IngestionStatusProviderIngestionStatusProviderFactory
-from multi_tenant_full_stack_rag_application.system_settings_provider import SystemSettingsProvider, SystemSettingsProviderFactory
-from multi_tenant_full_stack_rag_application.user_settings_provider import UserSettingsProviderFactory
-from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_provider_factory import VectorStoreProviderFactory   
 from .document_collections_handler import DocumentCollectionsHandler
 
 
@@ -29,13 +24,11 @@ class DocumentCollectionsHandlerFactory:
 
         if args == []:
             args = [
-                AuthProviderFactory.get_auth_provider(),
-                IngestionStatusProviderFactory.get_ingestion_status_provider(),
+                os.getenv('DOCUMENT_COLLECTIONS_TABLE'),
+                BotoClientProvider.get_client('cognito-identity'),
+                BotoClientProvider.get_client('dynamodb'),
                 BotoClientProvider.get_client('s3'),
                 BotoClientProvider.get_client('ssm'),
-                SystemSettingsProviderFactory.get_system_settings_provider(),
-                UserSettingsProviderFactory.get_user_settings_provider(),
-                VectorStoreProviderFactory.get_vector_store_provider(),
             ]
         
         parts = py_path.split('.')

@@ -6,9 +6,6 @@ import os
 from importlib import import_module
 
 from .graph_store_provider import GraphStoreProvider
-# from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider
-# from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider_factory import EmbeddingsProviderFactory
-# from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_provider import VectorStoreProvider
 
 
 class GraphStoreProviderFactory:

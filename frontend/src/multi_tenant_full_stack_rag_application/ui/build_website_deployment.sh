@@ -15,41 +15,26 @@ cp aws-exports.js.template aws-exports.js && \
 echo "Substituting $APP_NAME for <APP_NAME>" && \
 sed -i "s/<APP_NAME>/$APP_NAME/g" aws-exports.js && \
 sed -i "s/<APP_NAME>/$APP_NAME/g" index.html && \
-
-# echo "Substituting $ACCOUNT_ID for <ACCOUNT_ID>" && \
-# sed -i "s/<ACCOUNT_ID>/$ACCOUNT_ID/g" aws-exports.js && \
 echo "Substituting $ESCAPED_URL for <DOC_COLLECTIONS_API_URL> ." && \
 sed -i "s/<DOC_COLLECTIONS_API_URL>/$ESCAPED_URL/g" aws-exports.js && \
-
-export ESCAPED_URL=$(echo $ENRICHMENT_PIPELINES_API_URL | sed 's/\//\\\//g') && \
-echo $ESCAPED_URL && \
-echo "Substituting $ESCAPED_URL for <ENRICHMENT_PIPELINES_API_URL> ." && \
-sed -i "s/<ENRICHMENT_PIPELINES_API_URL>/$ESCAPED_URL/g" aws-exports.js && \
-
+echo "Substituting $ENABLED_ENRICHMENT_PIPELINES for <ENABLED_ENRICHMENT_PIPELINES> ." && \
+sed -i "s/<ENABLED_ENRICHMENT_PIPELINES>/$ENABLED_ENRICHMENT_PIPELINES/g" aws-exports.js && \
 export ESCAPED_URL=$(echo $GENERATION_API_URL | sed 's/\//\\\//g') && \
 echo $ESCAPED_URL && \
 echo "Substituting $ESCAPED_URL for <GENERATION_API_URL> ." && \
 sed -i "s/<GENERATION_API_URL>/$ESCAPED_URL/g" aws-exports.js && \
 echo "Substituting $AWS_REGION for <REGION>." && \
 sed -i "s/<REGION>/$AWS_REGION/g" aws-exports.js && \
-
 export ESCAPED_URL=$(echo $INITIALIZATION_API_URL | sed 's/\//\\\//g') && \
 echo $ESCAPED_URL && \
 echo "Substituting $ESCAPED_URL for <INITIALIZATION_API_URL> ." && \
 sed -i "s/<INITIALIZATION_API_URL>/$ESCAPED_URL/g" aws-exports.js && \
-
-export ESCAPED_URL=$(echo $SHARING_HANDLER_API_URL | sed 's/\//\\\//g') && \
-echo $ESCAPED_URL && \
-echo "Substituting $ESCAPED_URL for <SHARING_HANDLER_API_URL> ." && \
-sed -i "s/<SHARING_HANDLER_API_URL>/$ESCAPED_URL/g" aws-exports.js && \
-
 export ESCAPED_URL=$(echo $PROMPT_TEMPLATES_API_URL | sed 's/\//\\\//g') && \
 echo $ESCAPED_URL && \
 echo "Substituting $ESCAPED_URL for <PROMPT_TEMPLATES_API_URL> ." && \
 sed -i "s/<PROMPT_TEMPLATES_API_URL>/$ESCAPED_URL/g" aws-exports.js && \
 echo "Substituting $AWS_REGION for <REGION>." && \
 sed -i "s/<REGION>/$AWS_REGION/g" aws-exports.js && \
-
 echo "Substituting $INGESTION_BUCKET_NAME for <INGESTION_BUCKET_NAME> for ." && \
 sed -i "s/<INGESTION_BUCKET_NAME>/$INGESTION_BUCKET_NAME/g" aws-exports.js && \
 echo "Substituting <IDENTITY_POOL_ID> for $IDENTITY_POOL_ID." && \

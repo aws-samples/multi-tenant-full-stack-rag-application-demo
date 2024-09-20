@@ -1,23 +1,53 @@
 from aws_cdk import (
     NestedStack,
     aws_iam as iam,
+    aws_lambda as lambda_,
     aws_opensearchservice as aos,
 )
 
 from constructs import Construct
 
-from lib._final_scripts_hook.opensearch_access_policy import OpenSearchAccessPolicy
+from lib.shared.opensearch_access_policy import OpenSearchAccessPolicy
 
 class FinalScriptsStack(NestedStack):
     def __init__(self, scope: Construct, construct_id: str, 
-        domain: aos.IDomain,
-        # inference_role: iam.IRole,
-        ingestion_role: iam.IRole,        **kwargs
+        doc_collections_handler_function: lambda_.IFunction,
+        domain: aos.Domain,
+        embeddings_provider_function: lambda_.IFunction,
+        extraction_principal: iam.IPrincipal,
+        graph_store_provider_function: lambda_.IFunction,
+        inference_principal: iam.IPrincipal,
+        ingestion_principal: iam.IPrincipal,
+        ingestion_status_provider_function: lambda_.IFunction,
+        prompt_templates_handler_function: lambda_.IFunction,
+        vector_store_provider_function: lambda_.IFunction,
+        **kwargs
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        OpenSearchAccessPolicy(self, "OpenSearchAccessPolicy",
+        OpenSearchAccessPolicy(self, "OpenSearchIngestionAccessPolicy",
             domain=domain,
-            # inference_role=inference_role,
-            ingestion_role=ingestion_role
+            grantee_principal=ingestion_principal,
+            domain_read_access=True,
+            domain_write_access=True,
+            index_read_access=True,
+            index_write_access=True
         )
+
+        OpenSearchAccessPolicy(self, "OpenSearchInferenceAccessPolicy",
+            domain=domain,
+            grantee_principal=inference_principal,
+            domain_read_access=False,
+            domain_write_access=False,
+            index_read_access=True,
+            index_write_access=False
+        )
+
+        graph_store_provider_function.grant_invoke(extraction_principal)
+        ingestion_status_provider_function.grant_invoke(extraction_principal)
+        vector_store_provider_function.grant_invoke(extraction_principal)
+    
+        doc_collections_handler_function.grant_invoke(ingestion_principal)
+        embeddings_provider_function.grant_invoke(ingestion_principal)
+        ingestion_status_provider_function.grant_invoke(ingestion_principal)
+        vector_store_provider_function.grant_invoke(ingestion_principal)

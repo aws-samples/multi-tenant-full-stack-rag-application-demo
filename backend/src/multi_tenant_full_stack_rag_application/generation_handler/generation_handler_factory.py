@@ -6,12 +6,10 @@ import os
 from importlib import import_module
 
 from .generation_handler import GenerationHandler
-from multi_tenant_full_stack_rag_application.auth_provider import AuthProviderFactory
 from multi_tenant_full_stack_rag_application.bedrock_provider import BedrockProvider
 from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
 from multi_tenant_full_stack_rag_application.document_collections_handler import DocumentCollectionsHandlerFactory
 from multi_tenant_full_stack_rag_application.prompt_template_handler import PromptTemplateHandlerFactory
-from multi_tenant_full_stack_rag_application.user_settings_provider import UserSettingsProviderFactory
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_search_provider import VectorSearchProvider
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_provider import VectorStoreProvider
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_provider_factory import VectorStoreProviderFactory
@@ -30,7 +28,6 @@ class GenerationHandlerFactory:
             )
         if args == []:
             args = [
-                AuthProviderFactory.get_auth_provider(),
                 BedrockProvider(
                     BotoClientProvider.get_client('bedrock'),
                     BotoClientProvider.get_client('bedrock-agent'),

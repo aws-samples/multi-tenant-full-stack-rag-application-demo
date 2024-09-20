@@ -3,6 +3,7 @@
 
 from aws_cdk import (
     Duration,
+    RemovalPolicy,
     aws_iam as iam,
     aws_s3 as s3,
     aws_s3_notifications as s3n,
@@ -10,9 +11,9 @@ from aws_cdk import (
     aws_sqs as sqs,
 )
 from constructs import Construct
-from .bucket_to_queue_event_trigger import BucketToQueueNotificationStack
+from .bucket_to_queue_event_trigger import BucketToQueueNotification
 
-class QueueStack(Construct):
+class Queue(Construct):
     def __init__(self, scope: Construct, construct_id: str, 
         resource_name: str, 
         visibility_timeout: Duration.minutes, 
@@ -31,7 +32,7 @@ class QueueStack(Construct):
         )
         self.queue.grant_send_messages(iam.ServicePrincipal('s3.amazonaws.com'))
         if bucket_name:
-            self.ingestion_event_trigger = BucketToQueueNotificationStack(self, 'IngestionBucketToQueueTriggerStack', 
+            self.ingestion_event_trigger = BucketToQueueNotification(self, 'IngestionBucketToQueueTriggerStack', 
                 bucket_name=bucket_name,
                 queue=self.queue,
                 resource_name='IngestionEventTrigger'
@@ -39,7 +40,7 @@ class QueueStack(Construct):
         
         if ssm_parameter_name:
             queue_param = ssm.StringParameter(self, f'{resource_name}QueueUrlSsmParameter',
-                parameter_name=f'/{parent_stack_name}/ssm_parameter_name',
+                parameter_name=f'/{parent_stack_name}/ingestion_queue_url',
                 string_value=self.queue.queue_url
             )
             queue_param.apply_removal_policy(RemovalPolicy.DESTROY)

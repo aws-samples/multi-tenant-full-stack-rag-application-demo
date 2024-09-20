@@ -59,6 +59,7 @@ export const UPLOADED_DOCUMENTS_COLUMN_DEFINITIONS = [
     cell: item => item.file_name,
     key: item => item.key,
     isRowHeader: true,
+    isItemDisabled: item => item.hasOwnProperty('disabled') ? item.disabled : false
   },
   // {
   //   id: 'last_modified',
@@ -69,7 +70,8 @@ export const UPLOADED_DOCUMENTS_COLUMN_DEFINITIONS = [
     id: 'ingestion_status',
     header: 'Ingestion Status',
     cell: item => item.status,
-    isRowHeader: true
+    isRowHeader: true,
+    isItemDisabled: item => item.hasOwnProperty('disabled') ? item.disabled : false
   }
 ];
 

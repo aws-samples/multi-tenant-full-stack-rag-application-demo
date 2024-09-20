@@ -3,16 +3,14 @@
 
 from abc import ABC, abstractmethod
 
-from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider
+
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_document import VectorStoreDocument
 
 class VectorStoreProvider(ABC):
     def __init__(self, 
-        embeddings_provider: EmbeddingsProvider,
         vector_store_endpoint: str,
         **args
     ): 
-        self.embeddings_provider = embeddings_provider
         self.vector_store_endpoint = vector_store_endpoint
 
     @abstractmethod

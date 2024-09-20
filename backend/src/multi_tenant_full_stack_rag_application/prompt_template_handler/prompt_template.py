@@ -9,6 +9,7 @@ from uuid import uuid4
 class PromptTemplate:
     def __init__(self,
         user_id: str, 
+        user_email: str,
         template_name: str,
         template_text: str,
         model_ids: [str],
@@ -17,10 +18,9 @@ class PromptTemplate:
         created_date: str=None, 
         updated_date: str=None
     ):
-        if not template_name and template_text and len(model_ids) > 0:
-            raise ValueError("template_name and template_text and model_ids must be provided")
-
         self.user_id = user_id
+        self.sort_key = f"template::{template_name}"
+        self.user_email = user_email
         self.template_name = template_name
         self.template_text = template_text
         self.model_ids = model_ids
@@ -31,43 +31,42 @@ class PromptTemplate:
         self.updated_date = updated_date if updated_date else now
 
     @staticmethod
-    def from_ddb_record(user_id, rec):
-        templates = []
-        for template_name in rec:
-            template = rec[template_name]['M']
-            stop_seqs = []
-            if 'stop_sequences' in template:
-                stop_seqs = template['stop_sequences']['SS']
+    def from_ddb_record(rec):
+        stop_seqs = []
+        if 'stop_sequences' in rec:
+            stop_seqs = rec['stop_sequences']['SS']
 
-            templates.append(PromptTemplate(
-                user_id, 
-                template_name, 
-                template['template_text']['S'],
-                template['model_ids']['SS'], 
-                stop_seqs,
-                template['template_id']['S'], 
-                template['created_date']['S'],
-                template['updated_date']['S']
-            ))
-        return templates
+        template = PromptTemplate(
+            rec['user_id']['S'], 
+            rec['user_email']['S'],
+            rec['template_name']['S'], 
+            rec['template_text']['S'],
+            rec['model_ids']['SS'], 
+            stop_seqs,
+            rec['template_id']['S'], 
+            rec['created_date']['S'],
+            rec['updated_date']['S']
+        )
+        return template
 
     def to_ddb_record(self): 
         rec = {
-            self.template_name: { 'M': {
+            'user_id': {'S': self.user_id},
+            'sort_key': {'S': self.sort_key},
+            'user_email': {'S': self.user_email},
             'template_id': {'S': self.template_id},
+            'template_name': {'S': self.template_name},
             'template_text': {'S': self.template_text},
             'model_ids': {'SS': self.model_ids},
             'created_date': {'S': self.created_date},
             'updated_date': {'S': self.updated_date}
-            }}
         }
+        
         if hasattr(self, 'stop_sequences') and \
             len(self.stop_sequences) > 0:
             rec['stop_sequences']: {'SS': self.stop_sequences}
         return rec
 
-    # def toJson(self):
-    #     return json.dumps(self, default=lambda o: o.__dict__)
     def __dict__(self):
         stop_seqs = []
         if hasattr(self, 'stop_sequences') and \
@@ -77,6 +76,8 @@ class PromptTemplate:
         print(f"stop_seqs = {stop_seqs}")
         return {
             'user_id': self.user_id,
+            'user_email': self.user_email,
+            'sort_key': self.sort_key,
             'template_id': self.template_id,
             'template_name': self.template_name,
             'template_text': self.template_text,
@@ -93,6 +94,8 @@ class PromptTemplate:
 
         return json.dumps({
             'user_id': self.user_id,
+            'sort_key': self.sort_key,
+            'user_email': self.user_email,
             'template_id': template_id,
             'template_name': self.template_name,
             'template_text': self.template_text,
@@ -104,6 +107,7 @@ class PromptTemplate:
     
     def __eq__(self, obj):
         return self.user_id == obj.user_id and \
+            self.user_email == obj.user_email and \
             self.template_id == obj.template_id and \
             self.template_name == obj.template_name and \
             self.template_text == obj.template_text and \

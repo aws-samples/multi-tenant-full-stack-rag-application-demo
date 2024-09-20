@@ -53,13 +53,12 @@ export default class Api {
       // console.log('apiUrls: ')
       // console.dir(this.apiUrls)
       this.lastInitialized = 0
-      this.initialize()
+      // this.initialize()
     }
 
     async deleteDocCollection(collectionId) {
-      let url = this.apiUrls['document_collections']
-      let body = {"collection_id": collectionId}
-      const response = await this.deleteData(url, body)
+      let url = `${this.apiUrls['document_collections']}/${collectionId}`
+      const response = await this.deleteData(url)
       // console.log(`Response from deleteDocCollectioncall: ${JSON.stringify(response)}`)
       // let collections = Cache.getItem('docCollections')
       let updatedCollections = await this.getDocCollections()
@@ -86,7 +85,7 @@ export default class Api {
       
       let headers = {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.idToken}`
+        "Authorization": `Bearer ${this.idToken}`,
       }
       // console.log("headers:")
       // console.dir(headers)
@@ -171,17 +170,13 @@ export default class Api {
       if (!this.idToken) {
         this.idToken = this.getIdToken(this.session);
       }
-      // if (!this.userId) {
-      //   this.userId = this.getUserId(this.session);
-      //   // // console.log("Got userId " + this.userId)
-      // }
-      if (!this.accessToken) {
-        this.accessToken = this.getAccessToken(this.session)
-      }
+      // TODO delete this next line later
+      console.log(`JWT = ${this.idToken}`)
+ 
       this.currentAuth = {
         userId: this.userId,
         session: this.session,
-        idToken: this.idToken
+        idToken: this.idToken,
       }
       // // console.log('returning currentAuth')
       // // console.dir(this.currentAuth)
@@ -211,7 +206,7 @@ export default class Api {
       // console.log(`Url after query params check: ${url}`)
       let headers = {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.idToken}`
+        "Authorization": `Bearer ${this.idToken}`,
       }
       // console.log("headers:")
       // console.dir(headers)
@@ -242,12 +237,14 @@ export default class Api {
       let url = this.apiUrls['document_collections']
       // console.log(`Got api url ${url}`);
       let collectionsStr = await this.getData(url, queryParams)
-      // console.log("getDocCollections received response from server:")
-      // console.dir(collectionsStr)
-      let collectionsObj = JSON.parse(collectionsStr)
+      console.log("getDocCollections received response from server:")
+      console.dir(collectionsStr)
+      let collectionsObj = JSON.parse(collectionsStr)["response"]
       Object.keys(collectionsObj).forEach(key => {
         // collectionsObj[key]['collection_name'] = key
-        if (typeof(collectionsObj[key]['enrichment_pipelines']) == 'string') {
+        if (collectionsObj[key] && 
+          collectionsObj[key].hasOwnProperty('enrichment_pipelines') &&
+          typeof(collectionsObj[key]['enrichment_pipelines']) == 'string') {
           collectionsObj[key]['enrichment_pipelines'] = JSON.parse(collectionsObj[key]['enrichment_pipelines'])
         }
         collections.push(collectionsObj[key])
@@ -333,9 +330,9 @@ export default class Api {
       return finalTemplates
     }
     
-    getAccessToken(session) {
-      return session.accessToken
-    }
+    // getAccessToken(session) {
+    //   return session.accessToken
+    // }
 
     getIdToken(session) {
       return session.idToken.jwtToken
@@ -372,31 +369,35 @@ export default class Api {
 
     async listUploadedFiles(collectionId, limit=20, lastEvalKey='') {
       let url = this.apiUrls['document_collections']
+      if (collectionId == undefined) {
+        console.log("Who is sending me blank collection IDs???")
+        return []
+      }
       url += `/${collectionId}/${limit}/${lastEvalKey}`
       // console.log(`Got api url ${url}`)
       let response = await this.getData(url)
       if (typeof(response) == 'string') {
         response = JSON.parse(response)
       }
-      console.log("listUploadedFiles received response from server:")
-      console.dir(response)
+      // console.log("listUploadedFiles received response from server:")
+      // console.dir(response)
       let filesStr = response.files
-      console.log(`filesStr type ${typeof(filesStr)}`)
-      console.log(filesStr)
+      // console.log(`filesStr type ${typeof(filesStr)}`)
+      // console.log(filesStr)
       let filesList = JSON.parse(filesStr)
-      console.dir(filesList)
+      // console.dir(filesList)
       return filesList
     }
       
     async postData(url = "", data = {}) {
-      // console.log(`postData received url ${url} and data ${data}`)
+      // console.log(`postData received url ${url} and data ${JSON.stringify(data)}`)
       if (!this.idToken) {
         await this.getCurrentAuth()
       }
       // Default options are marked with *
       let headers = {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.idToken}`
+        "Authorization": `Bearer ${this.idToken}`,
       }
       // // console.log("headers:")
       // // console.dir(headers)
@@ -441,14 +442,14 @@ export default class Api {
   
 
     async uploadFiles(collectionId, files) {
-      // console.log('UploadFiles received')
-      // console.dir(files)
+      console.log('UploadFiles received')
+      console.dir(files)
       files.forEach(async file => {
         const key = `${collectionId}/${file.name}`;
-        // console.log(`uploading ${file.name} to s3://${docsBucket}/${key}`)
+        console.log(`uploading ${file.name} to s3://${docsBucket}/${key}`)
         let result = await Storage.put(key, file, {level: 'private'});
-        // console.log("Upload result: ");
-        // console.dir(result);
+        console.log("Upload result: ");
+        console.dir(result);
       })
       return true
    }

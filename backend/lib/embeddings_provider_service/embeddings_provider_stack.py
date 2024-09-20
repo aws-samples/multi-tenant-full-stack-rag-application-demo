@@ -11,9 +11,6 @@ from aws_cdk import (
     Duration,
     RemovalPolicy,
     Stack,
-    aws_apigatewayv2 as apigw,
-    aws_apigatewayv2_authorizers as apigwa,
-    aws_apigatewayv2_integrations as apigwi,
     aws_ec2 as ec2,
     aws_iam as iam,
     aws_lambda as lambda_,
@@ -21,10 +18,13 @@ from aws_cdk import (
 )
 
 from constructs import Construct
+# from lib.shared.utils_permissions import UtilsPermissions
 
 
 class EmbeddingsProviderStack(Stack):
     def __init__(self, scope: Construct, construct_id: str,
+        auth_fn: lambda_.IFunction,
+        auth_role_arn: str,
         embeddings_model_id: str,
         parent_stack_name: str,
         user_pool_client_id: str,
@@ -50,6 +50,8 @@ class EmbeddingsProviderStack(Stack):
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
             "cp /asset-input/embeddings_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/embeddings_provider/",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
+            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
+            "pip3 install -r /asset-input/embeddings_provider/bedrock_embeddings_provider_requirements.txt -t /asset-output"
         ]
 
         embeddings_provider_args = [
@@ -90,6 +92,18 @@ class EmbeddingsProviderStack(Stack):
             }
         )
 
+        emb_provider_fn_name_param =ssm.StringParameter(self, 'EmbeddingsProviderFunctionName',
+            parameter_name=f'/{parent_stack_name}/embeddings_provider_function_name',
+            string_value=self.embeddings_provider_function.function_name
+        )
+        emb_provider_fn_name_param.apply_removal_policy(RemovalPolicy.DESTROY)
+
+        emb_provider_origin_param = ssm.StringParameter(self, 'EmbeddingsProviderOrigin',
+            parameter_name=f'/{parent_stack_name}/origin_embeddings_provider',
+            string_value=self.embeddings_provider_function.function_name
+        )
+        emb_provider_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
+
         self.embeddings_provider_function.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["bedrock:InvokeModel"],
@@ -100,62 +114,27 @@ class EmbeddingsProviderStack(Stack):
                 ]
             )
         )
-
+        
+        self.embeddings_provider_function.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "lambda:InvokeFunction",
+                ],
+                resources=[auth_fn.function_arn],
+            )
+        )
+        
         self.embeddings_provider_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
-            actions=['ssm:GetParameter'],
+            actions=['ssm:GetParameter','ssm:GetParametersByPath'],
             resources=[
-                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}/*",            
+                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}*",            
             ]
         ))
 
-        embeddings_provider_integration_fn = apigwi.HttpLambdaIntegration(
-            "EmbeddingsProviderLambdaIntegration",
-            self.embeddings_provider_function
-        )
-
-        api_name = 'embeddings_provider'
-
-        self.http_api = apigw.HttpApi(self, 'EmbeddingsProviderHttpApi',
-            api_name=api_name,
-            create_default_stage=True
-        )
-
-        authorizer = apigwa.HttpJwtAuthorizer(
-            "EmbeddingsProviderAuthorizer",
-            f"https://cognito-idp.{self.region}.amazonaws.com/{user_pool_id}",
-            identity_source=["$request.header.Authorization"],
-            jwt_audience=[user_pool_client_id]
-        )
-
-        self.http_api.add_routes(
-            path='/embeddings_provider',
-            methods=[
-                apigw.HttpMethod.GET,
-                apigw.HttpMethod.POST,
-            ],
-            authorizer=authorizer,
-            integration=embeddings_provider_integration_fn
-        )
-
-        self.http_api.add_routes(
-            path='/{proxy+}',
-            methods=[
-                apigw.HttpMethod.OPTIONS
-            ],
-            integration=embeddings_provider_integration_fn
-        )
-
-        emb_provider_url_param = ssm.StringParameter(
-            self, "EmbeddingsProviderApiUrlParam",
-            parameter_name=f"/{parent_stack_name}/embeddings_provider_api_url",
-            string_value=self.http_api.url
-        )
-        emb_provider_url_param.apply_removal_policy(RemovalPolicy.DESTROY)
+        cognito_auth_role = iam.Role.from_role_arn(self, 'CognitoAuthRoleRef', auth_role_arn)
+        self.embeddings_provider_function.grant_invoke(cognito_auth_role)
         
-        CfnOutput(self, "EmbeddingsProviderApiUrl",
-            value=self.http_api.url,
-        )
 
 
 
