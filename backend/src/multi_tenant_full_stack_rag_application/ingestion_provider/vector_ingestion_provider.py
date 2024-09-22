@@ -47,6 +47,8 @@ class VectorIngestionProvider:
         # self.json_title_fields_order = json_title_fields_order
     ):
         self.utils = utils
+        self.pdf_loader = PdfImageLoader()
+
         if ocr_model_id:
             self.ocr_model_id = ocr_model_id
         else:
@@ -89,7 +91,7 @@ class VectorIngestionProvider:
         try: 
             self.sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=rcpt_handle)
         except Exception as e:
-            print(f"e.args[0] == {e.args[0]}")
+            # print(f"e.args[0] == {e.args[0]}")
             if "NonExistentQueue" in e.args[0]:
                 print("CAUGHT ERROR due to non-existent queue in dev")
             elif "ReceiptHandleIsInvalid" in e.args[0]:
@@ -152,47 +154,9 @@ class VectorIngestionProvider:
         
         local_path = self.download_s3_file(file_dict['bucket'], s3_key)
 
-        # enrichment_pipelines: [str] = verified_doc_collection.enrichment_pipelines
-        result = self.ingest_file(local_path, file_dict)  #f"{collection_id}/{filename}" , user_id)
+        result = self.ingest_file(local_path, file_dict)  
         return result
-        # if not s3_key.endswith('.jsonl'):
-        #     status_records = self.ingestion_status_provider.get_ingestion_status(user_id, s3_key)
-        #     print(f"Got status_records {status_records}")
-        #     status = 'IN_PROGRESS'
-        #     for status_rec in status_records:
-        #         if status_rec and status_rec.progress_status == 'INGESTED' \
-        #             and etag == status_rec.etag:
-        #             # skip it because it's the same version we already ingested.
-        #             status = 'INGESTED'
-        #             print(f"Skipping {filename} because it's already complete and hasn't changed")
-        #             break
-            
-        #     if status in ['IN_PROGRESS', 'ENRICHMENT_FAILED']:
-        #         print(f"Ingesting file {collection_id}/{filename}")
-        #         self.ingestion_status_provider.set_ingestion_status(
-        #             IngestionStatus(
-        #                 user_id,
-        #                 s3_key,
-        #                 file['etag'],
-        #                 0,
-        #                 status
-        #             )
-        #         )
-        #         local_path = self.download_s3_file(bucket, s3_key)
-        #         id = f"{collection_id}/{filename}"
-    
-        #         docs = self.ingest_file(local_path, id)
-        #         self.vector_store_provider.save(docs, collection_id)
-        #         if id.endswith('.jsonl'):
-        #             for doc in docs:
-        #                 print(f"Got type of {type(doc)} doc: {doc.to_json()}")
-        #                 print(dir(doc)) 
-        #                 ing_status = IngestionStatus(user_id, doc.id, file['etag'], 0, 'INGESTED')
-        #                 self.ingestion_status_provider.set_ingestion_status(ing_status)
-        #         else:                         
-        #             ing_status = IngestionStatus(user_id, s3_key, file['etag'], 0, 'INGESTED')
-        #             self.ingestion_status_provider.set_ingestion_status(ing_status)
-                    
+               
     def handler(self, event, context):
         print(f"VectorIngestionProvider received event {event}")
         handler_evt = VectorIngestionProviderEvent().from_lambda_event(event)
@@ -208,7 +172,7 @@ class VectorIngestionProvider:
             filename = file['filename']
             if 'event' in file and \
                 file["event"]== 's3:TestEvent':
-                print("Deleting s3:TestEvent")
+                # print("Deleting s3:TestEvent")
                 delete_sqs_message(rcpt_handle, queue_url)
                 continue
 
@@ -216,14 +180,14 @@ class VectorIngestionProvider:
                 # if the key ends in a / it will come back None.
                 # this happens when someone creates a folder in the
                 # console.
-                print(f"Skipping rec because it's apparently a directory: {rec}")
+                # print(f"Skipping rec because it's apparently a directory: {rec}")
                 continue
             
             if 'ObjectCreated' in event_name:
                 result = self.handle_object_created(file)
 
             elif 'ObjectRemoved' in event_name:
-                print(f"Removing file {filename}")
+                # print(f"Removing file {filename}")
                 try:
                     result = self.utils.invoke_lambda(
                         self.vector_store_provider_fn_name, 
@@ -236,7 +200,7 @@ class VectorIngestionProvider:
 
                         }
                     )
-                    print(f"Result from deleting record from vector store: {result}")
+                    # print(f"Result from deleting record from vector store: {result}")
                     result2 = self.utils.invoke_lambda(
                         self.ingestion_status_provider_fn_name, 
                         {
@@ -248,11 +212,11 @@ class VectorIngestionProvider:
                             }
                         }
                     )
-                    print(f"Result from deleting ingestion_status: {result2}")
+                    # print(f"Result from deleting ingestion_status: {result2}")
                     # self.vector_store_provider.delete_record(collection_id, filename)
                     # self.ingestion_status_provider.delete_ingestion_status(user_id, filename)
                 except Exception as e:
-                    print(f"Error occurred while deleting file: {e}")
+                    # print(f"Error occurred while deleting file: {e}")
                     raise e
         
             self.delete_message(rcpt_handle, queue_url)
@@ -286,7 +250,7 @@ class VectorIngestionProvider:
         return docs
 
     def ingest_json_file(self, local_path, file_dict, *, json_lines=True, extra_meta={}):
-        print(f"ingest_json_file got local path {local_path}")
+        # print(f"ingest_json_file got local path {local_path}")
         loader = JsonLoader(
             splitter=self.splitter,
             # json_content_fields_order = ["page_content", "content", "text"],
@@ -301,7 +265,7 @@ class VectorIngestionProvider:
         # return docs
 
     def ingest_pdf_file(self, local_path, file_dict, *, extra_meta={}, ocr_model_id=None):
-        print(f"Ingesting pdf file {local_path}")
+        # print(f"Ingesting pdf file {local_path}")
         if not ocr_model_id:
             ocr_model_id = self.ocr_model_id
 
@@ -311,11 +275,11 @@ class VectorIngestionProvider:
         )
         
         docs = loader.load_and_split(local_path, file_dict['user_id'], f"{file_dict['collection_id']}/{file_dict['filename']}", etag=file_dict['etag'], extra_metadata=extra_meta)
-        print(f"ingest_pdf_file returning {docs}")
+        # print(f"ingest_pdf_file returning {docs}")
         return docs
 
     def ingest_text_file(self, local_path, file_dict, extra_meta={}):
-        print(f"Ingesting text file {local_path}")
+        # print(f"Ingesting text file {local_path}")
         loader = TextLoader(
             # emb_provider=self.emb_provider, 
             # ingestion_status_provider=self.ingestion_status_provider,
@@ -323,7 +287,7 @@ class VectorIngestionProvider:
             splitter=self.splitter
         )
         docs = loader.load_and_split(local_path, file_dict['user_id'], f"{file_dict['collection_id']}/{file_dict['filename']}", extra_metadata=extra_meta)
-        print(f"Ingest_text_file returning docs {docs}")
+        # print(f"Ingest_text_file returning docs {docs}")
         return docs
 
     # If you're using scrapy it might spit out content in an array instead of a 
@@ -378,7 +342,7 @@ class VectorIngestionProvider:
     #     while doc:
     #         docs_batch.append(doc)
     #         if len(docs_batch) >= self.os_batch_size:
-    #             print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
+    #             # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
     #             self.vector_store_provider.save(docs_batch, collection_id)
     #             self.set_ingestion_status_batch(
     #                 docs_batch,
@@ -388,13 +352,13 @@ class VectorIngestionProvider:
     #         doc = out_queue.get()
         
     #     if len(docs_batch) > 0:
-    #         print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
+    #         # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
     #         self.vector_store_provider.save(docs_batch,  collection_id)
     #         self.set_ingestion_status_batch(docs_batch, 'INGESTED')
     #     out_queue.put(None)
 
     def verify_collection(self, collection_dict, *, lambda_client=None): 
-        print(f"Verifying collection for file dict {collection_dict}")
+        # print(f"Verifying collection for file dict {collection_dict}")
         user_id = collection_dict['user_id']
         collection_id = collection_dict['collection_id']
         
@@ -404,11 +368,11 @@ class VectorIngestionProvider:
             lambda_client=lambda_client
         )
 
-        print(f"Got verified collection: {verified_collection}")
+        # print(f"Got verified collection: {verified_collection}")
 
         if not verified_collection or \
             verified_collection['collection_id'] != collection_id:
-            print(f"Error: Invalid document collection {collection_id} received for user {user_id}")
+            # print(f"Error: Invalid document collection {collection_id} received for user {user_id}")
             return False
         else:
             return verified_collection
@@ -418,5 +382,5 @@ def handler(event, context):
     global vector_ingestion_provider
     if not vector_ingestion_provider:
         vector_ingestion_provider = VectorIngestionProvider().handler(event, context)
-        print(f"Got vector_ingestion_provider {vector_ingestion_provider}")
+        # print(f"Got vector_ingestion_provider {vector_ingestion_provider}")
     return vector_ingestion_provider.handler(event, context)

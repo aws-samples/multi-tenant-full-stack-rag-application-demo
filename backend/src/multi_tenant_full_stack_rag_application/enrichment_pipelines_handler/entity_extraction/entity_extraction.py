@@ -57,9 +57,9 @@ class EntityExtraction(Pipeline):
         return base64.b64decode(enc_payload).strip()
    
     def neptune_query(self, statement):
-        print(f"Running neptune query {statement}")
+        # print(f"Running neptune query {statement}")
         neptune_response = neptune.make_signed_request(self.neptune_endpoint, 'POST', 'gremlin', statement)
-        print(f"Got neptune response {neptune_response}")
+        # print(f"Got neptune response {neptune_response}")
         if isinstance(neptune_response, str):
             neptune_response = json.loads(neptune_response)
         if 'status' in neptune_response and \
@@ -67,20 +67,20 @@ class EntityExtraction(Pipeline):
         neptune_response['status']['code'] == 200:
             return neptune_response
         else:
-            print(f"Error processing gremlin statement {statement}")
+            # print(f"Error processing gremlin statement {statement}")
             return False
 
     def process(self, event):
-        print(f"entity_extraction.process received {event}")
+        # print(f"entity_extraction.process received {event}")
         records = deaggregate_records(event['Records'])
         for record in records:
-            print(f"Got record {record}")
+            # print(f"Got record {record}")
             enc_payload = record["kinesis"]["data"]
             payload = self.decode_payload(enc_payload)
             rec = json.loads(payload)
-            print(f"Decoded payload: {rec}, {rec.keys()}")
+            # print(f"Decoded payload: {rec}, {rec.keys()}")
             ddb_rec = rec["dynamodb"]
-            print(f"Got ddb_rec {ddb_rec}")
+            # print(f"Got ddb_rec {ddb_rec}")
        
             if 'NewImage' in ddb_rec and \
             rec["eventName"] == 'MODIFY':
@@ -90,7 +90,7 @@ class EntityExtraction(Pipeline):
                     account_id = record['eventSourceARN'].split(':')[4]
                     user_id = ddb_rec['NewImage']['user_id']['S']
 
-                    print(f"Searching for user_id {user_id}, collection_id {collection_id}, {account_id}")
+                    # print(f"Searching for user_id {user_id}, collection_id {collection_id}, {account_id}")
                     dch_evt = {
                         'account_id': account_id,
                         'collection_id': collection_id,
@@ -100,11 +100,11 @@ class EntityExtraction(Pipeline):
                         'user_id': user_id,
                         'origin': 'KINESIS'
                     }
-                    print(f"Got dch_evt dict {dch_evt}")
+                    # print(f"Got dch_evt dict {dch_evt}")
                     dch_evt = DocumentCollectionsHandlerEvent(**dch_evt)
-                    print(f"created dch_evt {dch_evt}")
+                    # print(f"created dch_evt {dch_evt}")
                     collection = self.document_collections_handler.get_doc_collection(user_id, collection_id, include_shared=False)
-                    print(f"Got collection {collection}")
+                    # print(f"Got collection {collection}")
                     if not collection or 'entity_extraction' not in collection.enrichment_pipelines:
                         return None
                     # now fetch all the text chunks from this doc in the vector
@@ -120,7 +120,7 @@ class EntityExtraction(Pipeline):
                         collection_id,
                         query
                     )
-                    # print(f"Got chunks for for entity extraction {response}")
+                    # # print(f"Got chunks for for entity extraction {response}")
                     doc_text = ''
                     for hit in response['hits']['hits']:
                         doc_text += hit['_source']['content']
@@ -130,17 +130,17 @@ class EntityExtraction(Pipeline):
                         user_id,
                         collection_id
                     )
-                    print(f"Got doc_collection {doc_collection}")
+                    # print(f"Got doc_collection {doc_collection}")
                     if not ('entity_extraction' in doc_collection.enrichment_pipelines and \
                         doc_collection.enrichment_pipelines['entity_extraction']['enabled']) :
-                        print(f"Skipping entity extraction for doc collection {doc_collection} because it doesn't have entity extraction enabled.")
+                        # print(f"Skipping entity extraction for doc collection {doc_collection} because it doesn't have entity extraction enabled.")
                         ing_status.progress_status = 'ENRICHMENT_DISABLED_SKIPPING'
                         if not ing_status.doc_id.startswith(collection_id):
                             ing_status.doc_id = f"{collection_id}/{ing_status.doc_id}"
                         self.ingestion_status_provider.set_ingestion_status(ing_status)
                         return True
 
-                    print(f"Entity extraction is enabled for collection {collection_id}")
+                    # print(f"Entity extraction is enabled for collection {collection_id}")
                     entity_extraction_template = self.prompt_template_handler.get_prompt_template(
                         user_id,
                         doc_collection.enrichment_pipelines['entity_extraction']['templateIdSelected']
@@ -165,11 +165,11 @@ class EntityExtraction(Pipeline):
                             "stop_sequences": ["</json>"]
                         }
                     )
-                    print(f"Bedrock response {response}, type {type(response)}")
+                    # print(f"Bedrock response {response}, type {type(response)}")
                     response_json_str = response.replace('<JSON>', '').replace('</JSON>', '').replace("\n", "")
-                    print(f"Got response_json_str {response_json_str}")
+                    # print(f"Got response_json_str {response_json_str}")
                     response = json.loads(response_json_str)
-                    print(f"Got node and entity results {response}")
+                    # print(f"Got node and entity results {response}")
                     gremlin_statements = ''
                     ids_to_types = {}
                     errors = False
@@ -215,7 +215,7 @@ class EntityExtraction(Pipeline):
                         merge_statement += f", 'collection_id': '{collection_id}'"
                         merge_statement = merge_statement.strip(',') + '])' + '\n'
                         gremlin_statements += merge_statement
-                        print(f"Running gremlin statement {merge_statement}")
+                        # print(f"Running gremlin statement {merge_statement}")
                         neptune_response = self.neptune_query(merge_statement)
                         if not neptune_response:
                             errors = True
@@ -231,13 +231,13 @@ class EntityExtraction(Pipeline):
                         merge_statement += f".option(onCreate, [(from): '{edge['source']}', (to): '{edge['target']}', (T.label): '{edge['type']}', weight: 1.0])"
                         merge_statement += f".option(onMatch, [weight: 1.0])\n"
                         gremlin_statements += merge_statement
-                        print(f"Running gremlin statement {merge_statement}")
+                        # print(f"Running gremlin statement {merge_statement}")
                         neptune_response = self.neptune_query(merge_statement)
                         if not neptune_response:
                             errors = True
                             break
                         # neptune_response = neptune.make_signed_request(self.neptune_endpoint, 'POST', 'gremlin', merge_statement)
-                        # print(f"Got neptune response {neptune_response}")
+                        # # print(f"Got neptune response {neptune_response}")
                         # if isinstance(neptune_response, str):
                         #     neptune_response = json.loads(neptune_response)
                         # if not ('status' in neptune_response and \
@@ -245,15 +245,15 @@ class EntityExtraction(Pipeline):
                         # neptune_response['status']['code'] == 200):
                         #     errors = True
                         #     break
-                    # print(f"About to run gremlin statements {json.dumps(gremlin_statements)}")
+                    # # print(f"About to run gremlin statements {json.dumps(gremlin_statements)}")
                     # neptune_response = neptune.make_signed_request(self.neptune_endpoint, 'POST', 'gremlin', gremlin_statements)
-                    # print(f"Got neptune response {neptune_response}")
+                    # # print(f"Got neptune response {neptune_response}")
                     # if isinstance(neptune_response, str):
                     #     neptune_response = json.loads(neptune_response)
 
                     if errors == False:
                         ing_status.progress_status = 'ENRICHMENT_COMPLETE'
-                        print()
+                        # print()
                         if not ing_status.doc_id.startswith(collection_id):
                             ing_status.doc_id = f"{collection_id}/{ing_status.doc_id}"
                         self.ingestion_status_provider.set_ingestion_status(ing_status)
@@ -274,48 +274,48 @@ class EntityExtraction(Pipeline):
                         .fold())
                         .unfold()
                     """
-                    print(f"Running neptune schema query {schema_query}")
+                    # print(f"Running neptune schema query {schema_query}")
                     schema_response = self.neptune_query(schema_query)
                     neptune_schema = {}
                     if schema_response: 
                         if isinstance(schema_response, str):
                             schema_response = json.loads(schema_response)
-                        print(f"Got neptune node_types response {schema_response}")
+                        # print(f"Got neptune node_types response {schema_response}")
                         schema_data = schema_response["result"]["data"]["@value"]
                         schema = {}
                         for row in schema_data:
-                            print(f"schema response row {row}")
+                            # print(f"schema response row {row}")
                             node_label = row['@value'][0]
                             if node_label not in schema:
                                 schema[node_label] = {}
                             node_values = row['@value'][1]['@value']
-                            print(f"{node_label} has node_values {node_values}")
+                            # print(f"{node_label} has node_values {node_values}")
                             last_value_name = ''
                             for i in range(len(node_values)):
                                 node_item = node_values[i]
-                                print(f"{node_label} has node_item {node_item}")
+                                # print(f"{node_label} has node_item {node_item}")
                                 for val in node_item['@value']:
-                                    print(f"Got @value {val}")
+                                    # print(f"Got @value {val}")
                                     if isinstance(val, str):
                                         last_value_name = val
-                                        print(f"Set last_value_name to {last_value_name}")
+                                        # print(f"Set last_value_name to {last_value_name}")
                                         if last_value_name not in schema[node_label]:
                                             schema[node_label][last_value_name] = []
                                     else:
                                         for subval in val['@value']:
-                                            print(f"Got @value {subval}")
-                                            print(f"schema is now {schema}")
+                                            # print(f"Got @value {subval}")
+                                            # print(f"schema is now {schema}")
                                             if subval not in schema[node_label][last_value_name]:
                                                 schema[node_label][last_value_name].append(subval)
-                        print(f"Got schema: {schema}")
+                        # print(f"Got schema: {schema}")
                         collection.graph_schema = schema
                         collection_save_result = self.document_collections_handler.upsert_doc_collection(collection, dch_evt)
-                        print(f"Updated collections result {collection_save_result}")
+                        # print(f"Updated collections result {collection_save_result}")
 
 def handler(event, context):
     global kinesis
-    print(f"entity_extraction_handler received: {event}")
+    # print(f"entity_extraction_handler received: {event}")
     e = EntityExtraction("Entity Extraction")
     result = e.process(event)
-    print(f"entity_extraction.handler returning {result}")
+    # print(f"entity_extraction.handler returning {result}")
     return result

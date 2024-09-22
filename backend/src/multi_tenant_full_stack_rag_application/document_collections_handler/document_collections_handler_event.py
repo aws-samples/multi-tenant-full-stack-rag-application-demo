@@ -14,7 +14,7 @@ class DocumentCollectionsHandlerEvent:
         user_id='',
         origin=''
     ):
-        print(f"dch evt received user_id '{user_id}' (may be uninitialized and populated later)")
+        # print(f"dch evt received user_id '{user_id}' (may be uninitialized and populated later)")
         self.account_id = account_id
         self.auth_token = auth_token
         self.collection_id = collection_id
@@ -25,7 +25,7 @@ class DocumentCollectionsHandlerEvent:
         self.origin = origin
 
     def from_lambda_event(self, event):
-        print(f"dch evt.from_lambda_event received event {event}")
+        # print(f"dch evt.from_lambda_event received event {event}")
         self.account_id = event['requestContext']['accountId']
         [self.method, self.path] = event['routeKey'].split(' ')
         if 'authorizer' in event['requestContext'] and \

@@ -81,12 +81,12 @@ def lambda_handler(event, context):
 def validate_input(method, query_type):
     # Supporting GET and POST for now:
     if (method != 'GET' and method != 'POST'):
-        print('First parameter must be "GET" or "POST", but is "' + method + '".')
+        # print('First parameter must be "GET" or "POST", but is "' + method + '".')
         sys.exit()
 
     # SPARQL UPDATE requires POST
     if (method == 'GET' and query_type == 'sparqlupdate'):
-        print('SPARQL UPDATE is not supported in GET mode. Please choose POST.')
+        # print('SPARQL UPDATE is not supported in GET mode. Please choose POST.')
         sys.exit()
 
 def get_canonical_uri_and_payload(query_type, query, method):
@@ -130,7 +130,7 @@ def get_canonical_uri_and_payload(query_type, query, method):
         payload = {}
 
     else:
-        print(
+        # print(
             'Third parameter should be from ["gremlin", "sparql", "sparqlupdate", "loader", "status] but is "' + query_type + '".')
         sys.exit()
     ## return output as tuple
@@ -141,12 +141,12 @@ def make_signed_request(host, method, query_type, query):
 
     endpoint = 'https://' + host
 
-    print()
-    print('+++++ USER INPUT +++++')
-    print('host = ' + host)
-    print('method = ' + method)
-    print('query_type = ' + query_type)
-    print('query = ' + query)
+    # print()
+    # print('+++++ USER INPUT +++++')
+    # print('host = ' + host)
+    # print('method = ' + method)
+    # print('query_type = ' + query_type)
+    # print('query = ' + query)
 
     # validate input
     validate_input(method, query_type)
@@ -174,28 +174,28 @@ def make_signed_request(host, method, query_type, query):
     # ************* SEND THE REQUEST *************
     if (method == 'GET'):
 
-        print('++++ BEGIN GET REQUEST +++++')
-        print('Request URL = ' + request_url)
+        # print('++++ BEGIN GET REQUEST +++++')
+        # print('Request URL = ' + request_url)
         r = requests.get(request_url, headers=request.headers, verify=False, params=params, timeout=60)
 
     elif (method == 'POST'):
 
-        print('\n+++++ BEGIN POST REQUEST +++++')
-        print('Request URL = ' + request_url)
+        # print('\n+++++ BEGIN POST REQUEST +++++')
+        # print('Request URL = ' + request_url)
         if (query_type == "loader"):
             request.headers['Content-type'] = 'application/json'
         r = requests.post(request_url, headers=request.headers, verify=False, data=data, timeout=60)
 
     else:
-        print('Request method is neither "GET" nor "POST", something is wrong here.')
+        # print('Request method is neither "GET" nor "POST", something is wrong here.')
 
     if r is not None:
-        print()
-        print('+++++ RESPONSE +++++')
-        print('Response code: %d\n' % r.status_code)
+        # print()
+        # print('+++++ RESPONSE +++++')
+        # print('Response code: %d\n' % r.status_code)
         response = r.text
         r.close()
-        print(response)
+        # print(response)
 
         return response
 
@@ -234,7 +234,7 @@ help_msg = '''
             '''
 
 def exit_and_print_help():
-    print(help_msg)
+    # print(help_msg)
     exit()
 
 def parse_input_and_query_neptune():
@@ -253,7 +253,7 @@ def parse_input_and_query_neptune():
     group_data.add_argument("-d", "--data", type=str, help="data required for the http action", default="")
 
     args = parser.parse_args()
-    print(args)
+    # print(args)
 
     # Read command line parameters
     host = args.host
@@ -263,19 +263,19 @@ def parse_input_and_query_neptune():
     query = args.data
 
     if (access_key == ''):
-        print('!!! ERROR: Your AWS_ACCESS_KEY_ID environment variable is undefined.')
+        # print('!!! ERROR: Your AWS_ACCESS_KEY_ID environment variable is undefined.')
         exit_and_print_help()
 
     if (secret_key == ''):
-        print('!!! ERROR: Your AWS_SECRET_ACCESS_KEY environment variable is undefined.')
+        # print('!!! ERROR: Your AWS_SECRET_ACCESS_KEY environment variable is undefined.')
         exit_and_print_help()
 
     if (region == ''):
-        print('!!! ERROR: Your SERVICE_REGION environment variable is undefined.')
+        # print('!!! ERROR: Your SERVICE_REGION environment variable is undefined.')
         exit_and_print_help()
 
     if host is None:
-        print('!!! ERROR: Neptune DNS is missing')
+        # print('!!! ERROR: Neptune DNS is missing')
         exit_and_print_help()
 
     host = host + ":" + str(port)

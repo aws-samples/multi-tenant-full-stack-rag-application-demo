@@ -49,11 +49,11 @@ class PdfTextLoader(Loader):
         results = self.textract.get_document_analysis(JobId=job_id)
         
         while results['JobStatus'] == 'IN_PROGRESS':
-            print('Job is in progress. Waiting for completion.')
+            # print('Job is in progress. Waiting for completion.')
             time.sleep(5)
             results = self.textract.get_document_analysis(JobId=job_id)
         
-        print(f"Status is now {results['JobStatus']}")
+        # print(f"Status is now {results['JobStatus']}")
         if results['JobStatus'] != 'SUCCEEDED':
             raise Exception(f'Error processing s3://{bucket}/{s3_path}')
         
@@ -78,7 +78,7 @@ class PdfTextLoader(Loader):
                 results = self.textract.get_document_analysis(JobId=job_id, NextToken=next_token)
             else:
                 break
-        # print(f"found data {found_data}")
+        # # print(f"found data {found_data}")
 
         output_text = ''
         last_height = 0
@@ -87,7 +87,7 @@ class PdfTextLoader(Loader):
             height = found_item["geometry"]["BoundingBox"]["Height"]
             top = found_item["geometry"]["BoundingBox"]["Top"]
             if found_item['block_type'] == 'PAGE':
-                print(found_item)
+                # print(found_item)
             if "text" in found_item:
                 leading_newlines = self.calculate_leading_newlines(last_height, last_top, top)
                 output_text += leading_newlines + found_item["text"] + " "

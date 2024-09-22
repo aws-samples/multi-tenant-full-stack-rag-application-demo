@@ -19,7 +19,7 @@ class EmbeddingsProviderEvent:
         
 
     def from_lambda_event(self, event):
-        print(f"embeddings_provider evt received event {event}")
+        # print(f"embeddings_provider evt received event {event}")
         self.operation = event['operation']
         self.args = event['args']
         self.operation = event['operation']

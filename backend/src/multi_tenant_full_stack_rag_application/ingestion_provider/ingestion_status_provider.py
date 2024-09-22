@@ -51,11 +51,11 @@ class IngestionStatusProvider:
     
     @staticmethod
     def __strip_userid_prefix__(s3_key) -> str: 
-        print(f"__strip_userid_prefix__ received {s3_key}")
+        # print(f"__strip_userid_prefix__ received {s3_key}")
         if s3_key.startswith('private/'):
             s3_key = s3_key[8:]
         parts = s3_key.split('/')
-        print(f"__strip_userid_prefix__ got parts {parts}")
+        # print(f"__strip_userid_prefix__ got parts {parts}")
         return_val = ''
         if len(parts) == 2:
             return_val = '/'.join(parts)
@@ -67,19 +67,27 @@ class IngestionStatusProvider:
 
     def delete_ingestion_status(self, user_id, doc_id, delete_from_s3=False):
         doc_id = self.__strip_userid_prefix__(doc_id)
-        return self.ddb.delete_item(
+        ddb_delete_result = self.ddb.delete_item(
             TableName=self.table,
             Key={
                 'user_id': {'S': user_id},
                 'doc_id': {'S': doc_id}
             }
         )
+        print(f"delete_ingestion_status deleted record from dynamodb for {user_id}/{doc_id}.\nResult: {ddb_delete_result}")
+        status = None
         if delete_from_s3:
-            self.s3.delete_object(
-                Bucket=os.environ['S3_BUCKET_NAME'],
+            s3_delete_result = self.s3.delete_object(
+                Bucket=os.getenv('INGESTION_BUCKET'),
                 Key=f"private/{user_id}/{doc_id}"
             )
-
+            print(f"delete_ingestion_status deleted file {user_id}/{doc_id} from S3.\nResult: {s3_delete_result}")
+            status = s3_delete_result['ResponseMetadata']['HTTPStatusCode']
+        return {
+            "statusCode": status
+        }
+        
+        
     def get_ingestion_status(self, user_id, doc_id, etag='', lines_processed=0, progress_status='IN_PROGRESS', limit=100, last_eval_key=None)-> IngestionStatus:
         projection_expression = "#user_id, #doc_id, #etag, #lines_processed, #progress_status"
         expression_attr_names = {
@@ -124,7 +132,7 @@ class IngestionStatusProvider:
             for item in result['Items']:
                 items.append(IngestionStatus.from_ddb_record(item))
         
-        print(f"get_ingestion_status returning {items}")
+        # print(f"get_ingestion_status returning {items}")
         return items
 
     def handler(self, event, context):
@@ -134,8 +142,8 @@ class IngestionStatusProvider:
 
         status = 200
         result = None
-
-        if handler_evt.origin not in self.allowed_origins:
+        print(f"Is origin allowed? {handler_evt.origin} in {self.allowed_origins.values()}?")
+        if handler_evt.origin not in self.allowed_origins.values():
             status = 403
             result = {
                 "message": "Forbidden"
@@ -147,7 +155,7 @@ class IngestionStatusProvider:
                 handler_evt.doc_id, 
             )
             result = self.statuses_to_list(response)
-            print(f"get_ingestion_status response = {result}")
+            # print(f"get_ingestion_status response = {result}")
 
         elif handler_evt.operation == 'create_ingestion_status':
             response = self.set_ingestion_status(
@@ -159,26 +167,20 @@ class IngestionStatusProvider:
                     handler_evt.progress_status
                 )
             )
-            print(f"set_ingestion_status response {response}")
+            # print(f"set_ingestion_status response {response}")
             status = response["ResponseMetadata"]["HTTPStatusCode"]
             result = {
                 "message": "SUCCESS"
             }
         
         elif handler_evt.operation == 'delete_ingestion_status':
-            print(f"delete_ingestion_status received user_id {handler_evt.user_id}, doc_id {handler_evt.doc_id}")
-            response = self.delete_ingestion_status(
+            # print(f"delete_ingestion_status received user_id {handler_evt.user_id}, doc_id {handler_evt.doc_id}")
+            result = self.delete_ingestion_status(
                 handler_evt.user_id,
                 handler_evt.doc_id,
-                handler_evt.origin,
                 delete_from_s3=handler_evt.delete_from_s3
             )
-            print(f"delete_ingestion_status response {response}")
-            status = response["ResponseMetadata"]["HTTPStatusCode"]
-            result = {
-                "message": "SUCCESS",
-                "deleted_ingestion_status": handler_evt.doc_id
-            }
+            print(f"delete_ingestion_status response {result}")
     
         else:
             raise Exception(f'Unexpected method {handler_evt.method}')
@@ -191,17 +193,15 @@ class IngestionStatusProvider:
             TableName=self.table,
             Item=ingestion_status.to_ddb_record()
         )
-        print(f"set_ingestion_status result = {result}")
+        # print(f"set_ingestion_status result = {result}")
         return result
     
     def statuses_to_list(self, statuses: [IngestionStatus]):
         final_list = []
-        print(f"statuses_to_list received statuses {statuses}")
+        # print(f"statuses_to_list received statuses {statuses}")
         for status in statuses:
             if not status:
                 continue
-            else:
-                print(f"Got status {status}")
             tmp_dict = status.__dict__
             # del tmp_dict['user_id']
             # del tmp_dict['collection_name']
@@ -211,7 +211,7 @@ class IngestionStatusProvider:
 
 def handler(event, context):
     global ingestion_status_provider
-    print(f"initialization handler received event {event}")
+    # print(f"initialization handler received event {event}")
     if not ingestion_status_provider:
         ddb_client = boto3.client('dynamodb')
         s3_client = utils.get_s3_client()

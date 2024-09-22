@@ -52,7 +52,7 @@ class IngestionStatus:
         }
 
     def to_json(self):
-        print("Called ingestion_status.to_json()")
+        # print("Called ingestion_status.to_json()")
         return {
             'user_id': self.user_id,
             'doc_id': self.doc_id,
@@ -66,7 +66,7 @@ class IngestionStatus:
         return json.dumps(self.to_json())
 
     def __eq__(self, other):
-        print(f"__eq__ received {self}, {other}")
+        # print(f"__eq__ received {self}, {other}")
         return self.user_id == other.user_id and \
             self.doc_id == other.doc_id and \
             self.etag == other.etag and \

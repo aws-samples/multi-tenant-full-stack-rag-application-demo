@@ -64,7 +64,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
             },
             self.utils.get_ssm_params('embeddings_provider_function_name')
         )
-        print(f"Got response from embed_text: {response}")
+        # print(f"Got response from embed_text: {response}")
         return response
 
     def get_model_dimensions(self, model_id):
@@ -75,7 +75,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
             },
             self.utils.get_ssm_params('embeddings_provider_function_name')
         )
-        print(f"Got response from get_model_dimensions: {response}")
+        # print(f"Got response from get_model_dimensions: {response}")
         return response
 
     def get_model_max_tokens(self, model_id):
@@ -86,7 +86,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
             },
             self.utils.get_ssm_params('embeddings_provider_function_name')
         )
-        print(f"Got response from get_model_max_tokens: {response}")
+        # print(f"Got response from get_model_max_tokens: {response}")
         return response
 
     def get_token_count(self, input_text):
@@ -95,16 +95,16 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
     def handler(self, event, context):
         print(f"Embeddings provider received event {event}")
         handler_evt = EmbeddingsProviderEvent.from_lambda_event(event)
-        print(f"handler_evt is {handler_evt.__dict__}")
+        # print(f"handler_evt is {handler_evt.__dict__}")
         status = 200
         result = {}
 
-        if handler_evt.origin not in self.allowed_origins:
+        if handler_evt.origin not in self.allowed_origins.values():
             result = self.utils.format_response(403, {'error': 'Access denied'}, handler_evt.origin)
 
         if operation == 'embed_text':
             response = self.embed_text(handler_evt)
-            print(f"Got response from self.embed_text {response}")
+            # print(f"Got response from self.embed_text {response}")
             result = {
                 "response": response['encoded_text'],
             }

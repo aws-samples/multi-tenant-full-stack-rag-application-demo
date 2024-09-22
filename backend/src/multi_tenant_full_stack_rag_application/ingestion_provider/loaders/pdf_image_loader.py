@@ -28,11 +28,12 @@ class PdfImageLoader(Loader):
         splitter: Splitter = None,
         **kwargs
     ): 
-        print(f"remaining kwargs: {kwargs}")
+        # print(f"remaining kwargs: {kwargs}")
         super().__init__(**kwargs)
 
         self.utils = utils
-
+        self.my_origin = self.utils.get_ssm_params('origin_ingestion_provider')
+        
         if not ocr_model_id:
             self.ocr_model_id = default_ocr_model
         else:
@@ -44,11 +45,11 @@ class PdfImageLoader(Loader):
             self.s3 = s3
 
         if max_tokens_per_chunk == 0:
-            self.max_tokens_per_chunk = self.utils.get_model_max_tokens(self.ocr_model_id)        
+            self.max_tokens_per_chunk = self.utils.get_model_max_tokens(self.ocr_model_id, self.my_origin)        
         else:
             self.max_tokens_per_chunk = max_tokens_per_chunk
         
-        print(f"Max tokens = {self.max_tokens_per_chunk}")
+        # print(f"Max tokens = {self.max_tokens_per_chunk}")
         if not splitter:
             self.splitter = OptimizedParagraphSplitter(
                 max_tokens_per_chunk=self.max_tokens_per_chunk
@@ -57,26 +58,31 @@ class PdfImageLoader(Loader):
             self.splitter = splitter
     
         if not ocr_template_text:
-            with open(default_ocr_template_path, 'r') as f_in:
+            ocr_template_path = self.get_default_ocr_template_path()
+            print(f"Fetching default ocr_template from {ocr_template_path}")
+            with open(ocr_template_path, 'r') as f_in:
                 self.ocr_template_text = f_in.read()
         else:
             self.ocr_template_text = ocr_template_text
-
+        
     def download_from_s3(self, bucket, s3_path):
         ts = datetime.now().isoformat()
         tmpdir = f"/tmp/{ts}"
-        print(f"Creating tmpdir {tmpdir}")
+        # print(f"Creating tmpdir {tmpdir}")
         os.makedirs(tmpdir)
         filename = s3_path.split('/')[-1].replace(' ', '_')
         local_file_path = f"{tmpdir}/{filename}"
-        print(f"Downloading s3://{bucket}/{s3_path} to local_file_path {local_file_path}")
+        # print(f"Downloading s3://{bucket}/{s3_path} to local_file_path {local_file_path}")
         self.s3.download_file(bucket, s3_path, local_file_path)
-        print(f"Success? {os.path.exists(local_file_path)}")
+        # print(f"Success? {os.path.exists(local_file_path)}")
         return local_file_path
 
     def estimate_tokens(self, text):
         return self.utils.get_token_count(text)
     
+    def get_default_ocr_template_path(self):
+        return default_ocr_template_path
+
     def llm_ocr(self, img_paths, parent_filename, extra_header_text, extra_metadata):
         results = []
         chunk_num = 0
@@ -88,7 +94,7 @@ class PdfImageLoader(Loader):
         file_name_header_tokens = self.estimate_tokens(file_name_header)
 
         for path in img_paths:
-            print(f"Processing file {path}")
+            # print(f"Processing file {path}")
             page_header = f"<PAGE_NUM>\n{page_num}\n</PAGE_NUM>\n"
             page_header_tokens = self.estimate_tokens(page_header)
             
@@ -107,22 +113,22 @@ class PdfImageLoader(Loader):
                     "content": f"{file_name_header}\n{page_header}\n{self.ocr_template_text}"
                 }
             ]
-            # print(f"Invoking model with msgs {msgs}")
+            # # print(f"Invoking model with msgs {msgs}")
             response = self.utils.invoke_bedrock(
                 "invoke_model",
                 {
                     "messages": msgs,
                     "model_id": self.ocr_model_id,
                 },
-                self.utils.get_ssm_params('ingestion_provider_function_name')
+                self.utils.get_ssm_params('origin_ingestion_provider')
             )
             print(f"Got response from invoking model: {response}")
-            response = response.replace('<XML_OUTPUT>', '').replace('</XML_OUTPUT>', '')
+            response = response['response'].replace('<XML_OUTPUT>', '').replace('</XML_OUTPUT>', '')
             response_tokens = self.estimate_tokens(response)
-            print(f"curr_chunk_tokens: {curr_chunk_tokens}, file_name_header_tokens {file_name_header_tokens}, page_header_tokens {page_header_tokens} = {curr_chunk_tokens + file_name_header_tokens + page_header_tokens}, max {self.max_tokens_per_chunk}")
+            # print(f"curr_chunk_tokens: {curr_chunk_tokens}, file_name_header_tokens {file_name_header_tokens}, page_header_tokens {page_header_tokens} = {curr_chunk_tokens + file_name_header_tokens + page_header_tokens}, max {self.max_tokens_per_chunk}")
             if curr_chunk_tokens + file_name_header_tokens + page_header_tokens + \
                 response_tokens >= self.max_tokens_per_chunk:
-                print(f"Logging with text {curr_chunk_text}, chunk_id {chunk_id}")
+                # print(f"Logging with text {curr_chunk_text}, chunk_id {chunk_id}")
                 results.append(VectorStoreDocument.from_dict({
                     "id": chunk_id,
                     "content": curr_chunk_text,
@@ -149,7 +155,7 @@ class PdfImageLoader(Loader):
 
             page_num += 1
 
-        print(f"Logging with text {curr_chunk_text}, chunk_id {chunk_id}")
+        # print(f"Logging with text {curr_chunk_text}, chunk_id {chunk_id}")
         results.append(VectorStoreDocument.from_dict({
             "id": f"{parent_filename}:{chunk_num}",
             "content": curr_chunk_text,
@@ -183,13 +189,13 @@ class PdfImageLoader(Loader):
             local_file = self.download_from_s3(bucket, s3_path)
         else:
             local_file = path
-        print(f"Loaded pdf to {local_file}")
+        # print(f"Loaded pdf to {local_file}")
         return local_file
 
     def load_and_split(self, path, user_id, source=None, *, etag='', extra_metadata={}, extra_header_text=''):
         if not source:
             source = path
-        print(f"PdfImageLoader loading {path}, {source}")
+        # print(f"PdfImageLoader loading {path}, {source}")
         collection_id = source.split('/')[-2]
         filename = source.split('/')[-1]
 
@@ -199,7 +205,7 @@ class PdfImageLoader(Loader):
             etag,
             0, 
             'IN_PROGRESS',
-            self.utils.get_ssm_params('ingestion_provider_function_name')
+            self.utils.get_ssm_params('origin_ingestion_provider')
         )
 
         local_file = self.load(path)
@@ -221,19 +227,19 @@ class PdfImageLoader(Loader):
 
     @staticmethod
     def split_pages(local_file):
-        print(f"splitting local file {local_file}")
+        # print(f"splitting local file {local_file}")
         tmp_dir = '/'.join(local_file.split('/')[0:3]) 
         local_imgs_path = tmp_dir + '/img_splits'
         os.makedirs(local_imgs_path, exist_ok=True)
-        print(f"Saving images to {local_imgs_path}")
+        # print(f"Saving images to {local_imgs_path}")
         convert_from_path(local_file, fmt="jpeg", output_folder=local_imgs_path)
         paths = []
         files = os.listdir(local_imgs_path)
-        print(f"Got {len(files)} pages extracted from pdf.")
+        # print(f"Got {len(files)} pages extracted from pdf.")
         for path in files:
             paths.append(f"{local_imgs_path}/{path}")
         paths.sort()
-        print(f"{len(paths)} pages to process")
+        # print(f"{len(paths)} pages to process")
 
         return {
             "data_type": "image_path",

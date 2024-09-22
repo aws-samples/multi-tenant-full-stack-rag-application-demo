@@ -27,7 +27,7 @@ class CsvSplitter(Splitter):
                         key = key.replace('"', '\"')
                     key = f"\"{key}\""
                 response += f"{key},"
-                print()
+                # print()
             else:
                 value = str(row_dict[key])
                 if ',' in value:
@@ -54,7 +54,7 @@ class CsvSplitter(Splitter):
             curr_token_ct = self.estimate_tokens(row)
             if running_token_total + curr_token_ct > self.max_tokens_per_chunk:
                 csv_chunks.append(curr_csv_chunk)
-                print(f"Logged csv_chunk: {curr_csv_chunk}")
+                # print(f"Logged csv_chunk: {curr_csv_chunk}")
                 curr_csv_chunk = header
                 running_token_total = 0
                 running_token_total += self.estimate_tokens(header)
@@ -62,10 +62,10 @@ class CsvSplitter(Splitter):
                 running_token_total += curr_token_ct
             else:
                 curr_csv_chunk += row
-                print(f"Logged csv_chunk: {curr_csv_chunk}")
+                # print(f"Logged csv_chunk: {curr_csv_chunk}")
                 running_token_total += curr_token_ct
             if running_token_total > self.max_tokens_per_chunk:
                 raise Exception(f'Row is going to need splitting because it\'s over {self.max_tokens_per_chunk} tokens long:\n{row}')
         csv_chunks.append(curr_csv_chunk)
-        print(f"Logged csv_chunk: {curr_csv_chunk}")
+        # print(f"Logged csv_chunk: {curr_csv_chunk}")
         return csv_chunks

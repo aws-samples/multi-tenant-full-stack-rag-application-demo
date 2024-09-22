@@ -58,7 +58,7 @@ class PromptTemplateHandlerEvent:
             self.path_parameters = event['pathParameters']
             if 'template_id' in self.path_parameters:
                 self.template_id = self.path_parameters['template_id']
-        print(f'from_lambda_event returning {self.__dict__}')      
+        # print(f'from_lambda_event returning {self.__dict__}')      
         return self
 
     def __str__(self):

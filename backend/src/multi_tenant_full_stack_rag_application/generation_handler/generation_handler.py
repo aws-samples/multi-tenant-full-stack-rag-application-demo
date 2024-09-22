@@ -25,13 +25,9 @@ class GenerationHandler:
     def __init__(self, 
         ssm_client: boto3.client,
     ):
-        origin_domain_name = ssm_client.get_parameter(
-            Name='/multitenantrag/frontendOrigin'
-        )['Parameter']['Value']
-
-        self.frontend_origins = [
-            f'https://{origin_domain_name}',
-        ]
+        self.utils = utils
+        self.my_origin = self.utils.get_ssm_params('origin_generation_handler')
+        self.allowed_origins = self.utils.get_allowed_origins()
         
         # TODO replace with call to utils.invoke_service
         # with open(f"{self.prompt_template_handler.prompt_template_path}/system_get_search_query.txt", 'r') as f_in:
@@ -54,10 +50,10 @@ class GenerationHandler:
         # TODO replace this with a call to invoke_service
         # doc_collections = self.document_collections_handler.get_doc_collections(handler_evt.user_id, include_shared=True)['response']
         # doc_collections_dicts = []
-        # print(f"get_search_query got event {handler_evt}")
+        # # print(f"get_search_query got event {handler_evt}")
         # for collection_id in doc_collections:
         #     collection = doc_collections[collection_id]
-        #     print(f"Got collection {collection}")
+        #     # print(f"Got collection {collection}")
         #     doc_collections_dicts.append({
         #         'id': collection_id,
         #         'name': collection.collection_name,
@@ -69,7 +65,7 @@ class GenerationHandler:
         # prompt =  self.search_query_template.replace('{conversation_history}', hist)\
         #     .replace('{current_user_prompt}', curr_prompt)\
         #     .replace('{available_document_collections}', json.dumps(doc_collections_dicts, indent=2))
-        # print(f"get_search_query sending prompt {prompt}")
+        # # print(f"get_search_query sending prompt {prompt}")
         # TODO change this to utils.invoke_service
         # result = self.bedrock.invoke_model(search_query_model, prompt, model_kwargs={
         #     "max_tokens": 300,
@@ -78,21 +74,21 @@ class GenerationHandler:
         #     "top_p": 0.999,
         #     "stop_sequences": ["</selected_document_collections>"]
         # }).replace('<selected_document_collections>', '').strip()
-        # print(f"Got result from search recommendation invocation: {result}")
+        # # print(f"Got result from search recommendation invocation: {result}")
         # if result == 'NONE':
         #     result = None
         # else:
         #     try:
         #         result = json.loads(result)
         #     except Exception as e:
-        #         print(f"Error parsing search recommendation result: {e}")
+        #         # print(f"Error parsing search recommendation result: {e}")
         #         result = None
         # if result and 'vector_database_search_terms' in result:
         #     result['vector_database_search_terms'] = result['vector_database_search_terms'].replace(collection.collection_name, '')
         # if result and 'graph_database_search_terms' in result:
         #     result['graph_database_search_terms'] = result['graph_database_search_terms'].replace(collection.collection_name, '')
             
-        # print(f"Get search query returning {result}")
+        # # print(f"Get search query returning {result}")
         # return result
         
     def handler(self, event, context):
@@ -112,7 +108,7 @@ class GenerationHandler:
         if hasattr(event, 'auth_token') and event.auth_token is not None:
             user_id = self.utils.get_userid_from_token( 
                 handler_event.auth_token,
-                handler_evt.origin
+                self.my_origin
             )
             event.user_id = user_id
 
@@ -141,7 +137,7 @@ class GenerationHandler:
                 # search terms given the most recent question
                 msg_obj['user_id'] = user_id
                 search_recommendations = self.get_search_query(event)   
-                print(f"Got search_recommendations: {search_recommendations}")
+                # print(f"Got search_recommendations: {search_recommendations}")
                 if search_recommendations is not None:                 
                     # do the context search in the given doc collections.
                     if "vector_database_search_terms" in search_recommendations and \
@@ -163,31 +159,31 @@ class GenerationHandler:
                         # TODO replace with call to utils.invoke_service
                         # context += f"<graph_context>\n<graph_query>\n{graph_query}\n</graph_query>\n"
                         # context += "<graph_query_results>\n"
-                        # print(f"Running neptune query {graph_query}")
+                        # # print(f"Running neptune query {graph_query}")
                         # neptune_response = neptune.make_signed_request(neptune_endpoint, 'POST', 'openCypher', graph_query)
                         # if isinstance(neptune_response, str):
                         #     neptune_response = json.loads(neptune_response)
-                        # print(f"Got neptune response {neptune_response}")
+                        # # print(f"Got neptune response {neptune_response}")
                         # results = neptune_response['results']
                         # final_results = []
                         # for obj in results:
                         #     val = list(obj.values())[0]
                         #     if val not in final_results:
-                        #         print(f"adding val {val} to final_results")
+                        #         # print(f"adding val {val} to final_results")
                         #         final_results.append(val)
                         # # {'results': [{'node_types': ['person']}, {'node_types': ['document']}, {'node_types': ['contingency']}, {'node_types': ['company']}, {'node_types': ['property']}]}
                         # context += "\n".join(final_results) + "\n</graph_query_results>\n</graph_context>\n\n"
                     
             (hist, curr_prompt) = self.get_conversation(msg_obj)
-            print(f'msg_obj before get_prompt_template {msg_obj}')
-            print(f"Getting prompt {msg_obj['prompt_template']}")
+            # print(f'msg_obj before get_prompt_template {msg_obj}')
+            # print(f"Getting prompt {msg_obj['prompt_template']}")
             # TODO replace with call to utils.invoke_service
             # template = self.prompt_template_handler.get_prompt_template(user_id, msg_obj['prompt_template'])
-            # print(f"Got prompt template: {template}")
+            # # print(f"Got prompt template: {template}")
             # prompt = template.template_text.replace('{context}', context).replace('{user_prompt}', curr_prompt).replace('{conversation_history}', hist)
             # model_args = msg_obj['model']['model_args']
-            # print(f"sending model_args {model_args}")
-            #. print(f"sending populated prompt {prompt}")
+            # # print(f"sending model_args {model_args}")
+            #. # print(f"sending populated prompt {prompt}")
             # TODO replace with call to utils.invoke_service
             # result = self.bedrock.invoke_model(msg_obj['model']['model_id'], prompt, model_args)
         
@@ -206,7 +202,7 @@ def handler(event, context):
 
 
 if __name__=='__main__':
-    print("Running GenerationHandler as main")
+    # print("Running GenerationHandler as main")
     with open ('multi_tenant_full_stack_rag_application/generation_handler/example_incoming_event2.json', 'r') as f_in:
         event =json.loads(f_in.read())
     handler(event, None)

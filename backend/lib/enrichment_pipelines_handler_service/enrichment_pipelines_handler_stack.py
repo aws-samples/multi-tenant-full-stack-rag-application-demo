@@ -53,7 +53,7 @@ class EnrichmentPipelinesHandlerStack(Stack):
             account=self.account,
             app_security_group=app_security_group,
             extraction_model_id=self.node.try_get_context("extraction_model_id"),
-            parent_stack_name=self.stack_name,
+            parent_stack_name=parent_stack_name,
             region=self.region,
             vpc=vpc
         )

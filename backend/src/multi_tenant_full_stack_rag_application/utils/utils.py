@@ -34,11 +34,11 @@ stack_name = os.getenv('STACK_NAME')
 #     try: 
 #         sqs_client.delete_message(QueueUrl=queue_url, ReceiptHandle=rcpt_handle)
 #     except Exception as e:
-#         print(f"e.args[0] == {e.args[0]}")
+#         # print(f"e.args[0] == {e.args[0]}")
 #         if "NonExistentQueue" in e.args[0]:
-#             print("CAUGHT ERROR due to non-existent queue in dev")
+#             # print("CAUGHT ERROR due to non-existent queue in dev")
 #         elif "ReceiptHandleIsInvalid" in e.args[0]:
-#             print("CAUGHT ERROR due to non-existent receipt handle in dev.")            
+#             # print("CAUGHT ERROR due to non-existent receipt handle in dev.")            
 #         else:
 #             raise Exception(f'Error occurred while deleting message: {e.args[0]}')
 
@@ -70,12 +70,12 @@ def embed_text(text, model_id, origin, *, dimensions=1024, lambda_client=None):
         }, 
         lambda_client=lambda_client
     )
-    print(f"utils.embed_text got response {response}") 
+    # print(f"utils.embed_text got response {response}") 
     return response
 
 
 def format_response(status, body, origin, *, dont_sanitize_fields=[]):
-    print(f"format_response got status {status}, body {body}, origin {origin}")
+    # print(f"format_response got status {status}, body {body}, origin {origin}")
     body = sanitize_response(body, dont_sanitize_fields=dont_sanitize_fields)
     response = {
         'statusCode': str(status),
@@ -88,7 +88,7 @@ def format_response(status, body, origin, *, dont_sanitize_fields=[]):
         },
         'body': json.dumps(body)
     }
-    print(f"Returning response {response}")
+    # print(f"Returning response {response}")
     return response 
 
 
@@ -137,7 +137,7 @@ def get_bedrock_runtime_client():
 #         "user_id": user_id,
 #     }
 #     response = invoke_lambda(auth_provider_fn, payload, lambda_client=lambda_client)
-#     print(f"get_creds_from_token got response {response}")
+#     # print(f"get_creds_from_token got response {response}")
 #     body = json.loads(response['body'])
 #     return body['creds']
 
@@ -168,9 +168,9 @@ def get_document_collection(collection_id, user_id, *, account_id=None, lambda_c
             }
         }).encode('utf-8')
     )
-    print(f"get_document_collection got response {response}")
+    # print(f"get_document_collection got response {response}")
     payload = json.loads(response['Payload'].read().decode('utf-8'))
-    print(f"Got payload {payload}")
+    # print(f"Got payload {payload}")
     result = None
     dcs = json.loads(payload['body'])['response']
     
@@ -227,7 +227,7 @@ def get_prompt_template(template_id, user_id, origin, *, account_id=None, lambda
         },
         lambda_client=lambda_client
     )
-    print(f"get_prompt_template got response from lambda {response}")
+    # print(f"get_prompt_template got response from lambda {response}")
     return response
 
 def get_s3_client():
@@ -250,12 +250,12 @@ def get_ssm_params(param=None,*, ssm_client=None):
     global ssm_params
     if not ssm_client:
         ssm_client = get_ssm_client()
-    print(f"Stack name is {stack_name}")
+    # print(f"Stack name is {stack_name}")
     if not ssm_params:  
         ssm_params = {}
         next_token = ''
         path =  f"/{stack_name}"
-        print(f"Getting all params with prefix {path}")
+        # print(f"Getting all params with prefix {path}")
         while next_token != None:
             args = {
                 "Path": path,
@@ -265,7 +265,7 @@ def get_ssm_params(param=None,*, ssm_client=None):
             if next_token != '':
                 args['NextToken'] = next_token
             response = ssm_client.get_parameters_by_path(**args)
-            print(f"get_parameters_by_path response = {response}")
+            # print(f"get_parameters_by_path response = {response}")
             for p in response['Parameters']:
                 name = p['Name'].replace(f'/{stack_name}/', '')
                 if name == 'origin_frontend' and \
@@ -276,9 +276,9 @@ def get_ssm_params(param=None,*, ssm_client=None):
                 next_token = response['NextToken']
             else:
                 next_token = None
-    print(f"Params are now {ssm_params}")
+    # print(f"Params are now {ssm_params}")
     if param:
-        print(f"Got here and param is {param}")
+        # print(f"Got here and param is {param}")
         return_vals = {}
         for param_name in ssm_params:
             if param_name.startswith(param):
@@ -291,7 +291,7 @@ def get_ssm_params(param=None,*, ssm_client=None):
         else:
             return return_vals
     else:
-        print(f"Returning all params")
+        # print(f"Returning all params")
         return ssm_params
 
 
@@ -299,11 +299,11 @@ def get_token_count(text):
     return ceil(len(text.split())* 1.3)
 
 
-def get_userid_from_token(auth_token, origin, lambda_client=None):
+def get_userid_from_token(auth_token, origin, *, lambda_client=None ):
     if not auth_token:
         return None
     global lambda_client_singleton
-    print(f"Getting userid from token {auth_token}")
+    # print(f"Getting userid from token {auth_token}")
     if not lambda_client:
         if not lambda_client_singleton:
             lambda_client_singleton = BotoClientProvider.get_client('lambda')
@@ -317,13 +317,13 @@ def get_userid_from_token(auth_token, origin, lambda_client=None):
             "auth_token": auth_token,
         }
     }
-    print(f"About to invoke lambda {auth_provider_fn} with payload {payload}") 
+    # print(f"About to invoke lambda {auth_provider_fn} with payload {payload}") 
     response = invoke_lambda(
         auth_provider_fn, 
         payload, 
         lambda_client=lambda_client
     )
-    print(f"get_userid_from_token got response {response}")
+    # print(f"get_userid_from_token got response {response}")
     if "errorMessage" in response:
         raise Exception(response["errorMessage"])
     body = json.loads(response['body'])
@@ -343,7 +343,7 @@ def invoke_bedrock(operation, kwargs, origin):
             "args": kwargs
         },
     )
-    print(f"Got response from lambda {response}")
+    # print(f"Got response from lambda {response}")
     return response
 
 
@@ -354,26 +354,23 @@ def invoke_lambda(function_name, payload={}, *, lambda_client=None):
             lambda_client_singleton = BotoClientProvider.get_client('lambda')
         lambda_client = lambda_client_singleton
 
-    print(f"Invoking {function_name}")
+    # print(f"Invoking {function_name}")
     print(f"Payload keys: {payload.keys()}")
-    tmp_payload = payload.copy()
-    if 'messages' in tmp_payload['args']:
-        tmp_payload['args']['messages'] = "redacted"
-    print(f"Payload is {tmp_payload}")
+    # print(f"Payload is {tmp_payload}")
     response = lambda_client.invoke(
         FunctionName=function_name,
         InvocationType='RequestResponse',
         Payload=json.dumps(payload)
     )
     response = json.loads(response['Payload'].read().decode("utf-8"))
-    print(f"Got response {response}")
+    # print(f"Got response {response}")
     # body = json.loads(response['body'])
-    # print(f"Response body {body}")
+    # # print(f"Response body {body}")
     return response
 
 
 def invoke_service(method, url, user_creds, *, body={}):
-    print(f"Using user_creds {user_creds}")
+    # print(f"Using user_creds {user_creds}")
     service_url = '/'.join(url.split('/')[2])
     auth = AWSRequestsAuth(aws_access_key=user_creds['AccessKeyId'],
         aws_secret_access_key=user_creds['SecretKey'],
@@ -382,9 +379,9 @@ def invoke_service(method, url, user_creds, *, body={}):
         aws_region=os.getenv('AWS_REGION'),
         aws_service='execute-api'
     )
-    print(f"Got auth {dir(auth)}")
-    print(f"Got auth {auth.__dict__}")
-    print(f"about to {method} {url}")
+    # print(f"Got auth {dir(auth)}")
+    # print(f"Got auth {auth.__dict__}")
+    # print(f"about to {method} {url}")
     headers = {
         'User-Agent': 'MTFSRAD-utils-invoke_service',
         'Accept': '*/*',
@@ -393,7 +390,7 @@ def invoke_service(method, url, user_creds, *, body={}):
         'Origin': get_ssm_params('origin_frontend'),
     }
 
-    print(f"Invoking {method} on {url} with headers {headers} and creds {user_creds}")
+    # print(f"Invoking {method} on {url} with headers {headers} and creds {user_creds}")
 
     if method == 'GET':
         response = requests.get(
@@ -403,14 +400,14 @@ def invoke_service(method, url, user_creds, *, body={}):
         )
     
     elif method == 'POST':
-        print(f"and body {body}")
+        # print(f"and body {body}")
         response = requests.post(
             url,
             headers=headers,
             json=body,
             auth=auth
         )
-    print(f"Got response {response}")
+    # print(f"Got response {response}")
     return response
 
 # max_download_attempts = 3
@@ -434,25 +431,25 @@ def invoke_service(method, url, user_creds, *, body={}):
 #         s3_prefix = '/'.join(s3_key.split('/')[:-1])
 #         s3_key = f"{s3_prefix}/{unquote_plus(filename)}"
 #         if attempts + 1 < max_download_attempts:
-#             print(f"Retrying download of {s3_key} (attempt {attempts + 1})")
+#             # print(f"Retrying download of {s3_key} (attempt {attempts + 1})")
 #             return download_s3_file(bucket, s3_key, attempts + 1)
 #         else:
 #             raise Exception(f"ERROR: Failed to download s3://{bucket}/{s3_key} in {max_download_attempts} attempts.")
 
 def sanitize_response(body, *, dont_sanitize_fields=[]):
-    # print(f"Sanitize_response received body {body}")
+    # # print(f"Sanitize_response received body {body}")
     if isinstance(body, dict):
         keys = list(body.keys())
         for key in keys:
             if key in sanitize_attributes and \
                 key not in dont_sanitize_fields:
-                # print(f"\nDeleting {key}\n")
+                # # print(f"\nDeleting {key}\n")
                 del body[key]
             else:
                 if isinstance(body[key], dict):
                     result = sanitize_response(body[key])
                     body[key] = result
-    # print(f"sanitize_response returning {body}")
+    # # print(f"sanitize_response returning {body}")
     return body
 
 def set_ingestion_status(user_id, doc_id, etag, lines_processed, progress_status, origin):

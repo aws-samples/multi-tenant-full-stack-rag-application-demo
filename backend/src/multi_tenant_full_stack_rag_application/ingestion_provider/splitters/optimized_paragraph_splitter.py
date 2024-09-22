@@ -118,5 +118,5 @@ class OptimizedParagraphSplitter(Splitter):
                         running_part_toks = num_toks
 
             results.append(f"{extra_header_text} {running_part}")   
-        print(f"optimized paragraph splitter returning {results}")  
+        # print(f"optimized paragraph splitter returning {results}")  
         return results

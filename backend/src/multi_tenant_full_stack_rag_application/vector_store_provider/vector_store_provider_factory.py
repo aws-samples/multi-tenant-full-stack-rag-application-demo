@@ -16,7 +16,7 @@ class VectorStoreProviderFactory:
     ):
         if "vector_store_endpoint" not in args:
             args["vector_store_endpoint"] = os.getenv('VECTOR_STORE_ENDPOINT', '')
-        print(f'Vector Store Provider Args: {args}')
+        # # print(f'Vector Store Provider Args: {args}')
         if py_path == '':
             py_path = os.getenv('VECTOR_STORE_PROVIDER_PY_PATH', '')
         if py_path == '':
