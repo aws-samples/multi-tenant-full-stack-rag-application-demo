@@ -17,7 +17,7 @@ class InitializationHandlerEvent:
                 self.user_id = None
             if 'origin' in event['headers']:
                 self.origin = event['headers']['origin']
-                print(f"Set self.origin to {self.origin}")
+                # print(f"Set self.origin to {self.origin}")
 
         if 'body' in event:
             body = json.loads(event['body'])

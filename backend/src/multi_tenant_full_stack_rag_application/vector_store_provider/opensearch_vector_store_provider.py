@@ -189,7 +189,7 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             doc_id = doc['id']
             if doc_id.startswith(f"{collection_id}/"):
                 doc_id = doc_id.replace(f"{collection_id}/", "")
-            print(f"ingesting document {doc}")
+            # print(f"ingesting document {doc}")
             if 'id' in list(doc.keys()):
                 del doc['id']
             # delattr(doc, 'id')
@@ -200,6 +200,6 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             
             'refresh': 'true'
         })
-        print(f"Result from saving doc to vector store: {result}")
+        # print(f"Result from saving doc to vector store: {result}")
         return len(doc_chunks)
 

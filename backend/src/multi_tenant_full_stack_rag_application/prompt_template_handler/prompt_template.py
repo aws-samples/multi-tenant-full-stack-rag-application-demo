@@ -73,7 +73,7 @@ class PromptTemplate:
             isinstance(self.stop_sequences, list) and \
             len(self.stop_sequences) > 0:
             stop_seqs = self.stop_sequences
-        print(f"stop_seqs = {stop_seqs}")
+        # print(f"stop_seqs = {stop_seqs}")
         return {
             'user_id': self.user_id,
             'user_email': self.user_email,

@@ -53,7 +53,7 @@ class DocumentCollectionsHandler:
             self.s3 = s3_client
         
         self.allowed_origins = self.utils.get_allowed_origins()
-        self.my_origin = self.utils.get_ssm_params('document_collections_handler_function_name')
+        self.my_origin = self.utils.get_ssm_params('origin_document_collections_handler')
         
         # origin_domain_name = self.utils.get_ssm_params('origin_frontend', ssm_client=ssm_client)
         # origin_domain_name = ssm_client.get_parameter(
@@ -72,12 +72,10 @@ class DocumentCollectionsHandler:
             return {}
         final_dict = {}
         if isinstance(doc_collections, list):
-            print(f"collections_to_dict received doc collections {doc_collections}")
+            # print(f"collections_to_dict received doc collections {doc_collections}")
             for coll in doc_collections:
                 if not coll:
                     continue
-                else:
-                    print(f"Got doc collection {coll}")
                 if not isinstance(coll, dict):
                     coll = coll.__dict__()
                 final_dict[coll['collection_name']] = coll
@@ -86,17 +84,17 @@ class DocumentCollectionsHandler:
                 coll = doc_collections[coll_id]
                 tmp_dict = coll.__dict__()
                 final_dict[coll_id] = tmp_dict
-        print(f"collections_to_dict returning {final_dict}")
+        # print(f"collections_to_dict returning {final_dict}")
         return final_dict
 
     @staticmethod
     def create_doc_collection_record(handler_evt):
-        print(f"Create doc collection record got evt {handler_evt.__dict__}")    
+        # print(f"Create doc collection record got evt {handler_evt.__dict__}")    
         coll_dict = handler_evt.document_collection
         if not 'collection_id' in coll_dict:
             coll_dict['collection_id'] = uuid4().hex
         
-        print(f"coll_dict is {coll_dict}")
+        # print(f"coll_dict is {coll_dict}")
         created = datetime.now().isoformat() + 'Z' if 'created_date' \
             not in coll_dict else coll_dict['created_date']
         updated = created if 'updated_date' not in coll_dict else \
@@ -106,7 +104,7 @@ class DocumentCollectionsHandler:
         shared_with = [] if 'shared_with' not in coll_dict else coll_dict['shared_with']
         if not 'enrichment_pipelines' in coll_dict:
             coll_dict['enrichment_pipelines'] = {}
-        # print(f"Why is user_email not working? {handler_evt.user_email}, coll {coll_dict}")
+        # # print(f"Why is user_email not working? {handler_evt.user_email}, coll {coll_dict}")
         dc = DocumentCollection(
             handler_evt.user_id,
             handler_evt.user_email,
@@ -119,7 +117,7 @@ class DocumentCollectionsHandler:
             updated,
             enrichment_pipelines=coll_dict['enrichment_pipelines']
         )
-        print(f"Created doc collection record {dc.__dict__()}")
+        # print(f"Created doc collection record {dc.__dict__()}")
         return dc
     
     def delete_doc_collection(self, handler_evt):
@@ -137,7 +135,7 @@ class DocumentCollectionsHandler:
                 "#collection_name": "collection_name"
             }
         )['Items'][0]
-        print(f"delete_doc_collection got query response {response}")
+        # print(f"delete_doc_collection got query response {response}")
         collection_name = response['collection_name']['S']
 
         self.ddb.delete_item(
@@ -182,23 +180,23 @@ class DocumentCollectionsHandler:
         #     self.vector_store_provider.delete_record(collection_id, record['_id'])
 
     def get_doc_collection(self, owned_by_userid, collection_id, include_shared=True) -> DocumentCollection:
-        print(f"get_doc_collection received owned_by_userid {owned_by_userid}, collection_id  {collection_id}")
+        # print(f"get_doc_collection received owned_by_userid {owned_by_userid}, collection_id  {collection_id}")
         doc_collections = self.get_doc_collections(owned_by_userid, include_shared=include_shared)["response"]
         #  coll_id = handler_evt.document_collection['collection_id']
-        print(f"Got doc collections {doc_collections}, looking for {collection_id}")
+        # print(f"Got doc collections {doc_collections}, looking for {collection_id}")
         result = None
         for coll in doc_collections:
             if collection_id == coll.collection_id:
                 result = coll
-                print(f"Found collection {result}")
+                # print(f"Found collection {result}")
         return result
 
     def get_doc_collections(self, user_id, *, include_shared=True, limit=20, last_eval_key='') -> [DocumentCollection]:
-        print(f"get_doc_collections received user_id {user_id}")
+        # print(f"get_doc_collections received user_id {user_id}")
         if user_id is None:
             return None
         
-        print(f"get_doc_collections received user_id {user_id}")
+        # print(f"get_doc_collections received user_id {user_id}")
         projection_expression = "#user_id, #sort_key, #user_email," + \
             " #collection_name, #description, #vector_db_type," + \
             " #collection_id, #shared_with, #created_date, #updated_date," + \
@@ -218,7 +216,7 @@ class DocumentCollectionsHandler:
             "#graph_schema": "graph_schema"
         }
         sort_key = 'collection::'
-        print(f"Getting items starting with {sort_key} for user_id {user_id}")
+        # print(f"Getting items starting with {sort_key} for user_id {user_id}")
         kwargs = {
             'TableName': self.doc_collections_table,
             'KeyConditions': {
@@ -241,35 +239,36 @@ class DocumentCollectionsHandler:
         }
         if last_eval_key != '':
             kwargs['ExclusiveStartKey']: last_eval_key
-        print(f"querying ddb with kwargs {kwargs}")
+        # print(f"querying ddb with kwargs {kwargs}")
         result = self.ddb.query(
             **kwargs
         )
         items = []
-        print(f"result from querying ddb: {result}")
+        # print(f"result from querying ddb: {result}")
         if "Items" in result.keys():
             for item in result["Items"]:        
                 if len(list(item.keys())) > 0:
-                    print(f"About to call DocumentCollection.from_ddb_record for item {item}")
+                    # print(f"About to call DocumentCollection.from_ddb_record for item {item}")
                     doc_collection =  DocumentCollection.from_ddb_record(item)
                     items.append(doc_collection)
         result = {
             "response": items,
             "last_eval_key": result.get("LastEvaluatedKey", None)
         }
-        print(f"get_doc_collections returning value {result}")
+        # print(f"get_doc_collections returning value {result}")
         return result
 
     def get_my_doc_collections(self, user_id, user_email) -> [DocumentCollection]:
-        print(f"Getting user setting for {user_id}, document_collections")
+        pass
+        # print(f"Getting user setting for {user_id}, document_collections")
         # TODO replace this with a call to the doc collections table
         # user_setting = self.user_settings_provider.get_user_setting(user_id, 'document_collections')
-        # print(f"Got user setting {user_setting}")
+        # # print(f"Got user setting {user_setting}")
         # if user_setting == None:
         #     return {}
     
         # dc_data = user_setting.data
-        # print(f"Retrieved dc_data {dc_data}")
+        # # print(f"Retrieved dc_data {dc_data}")
         # doc_collections = {}
         # for coll_name in dc_data:
         #     sub = dc_data[coll_name]
@@ -306,15 +305,15 @@ class DocumentCollectionsHandler:
         # shared_with_user = self.system_settings_provider.get_system_settings('user_by_email', user_email)
         if isinstance(shared_with_user, list) and len(shared_with_user) > 0:
             shared_with_user = shared_with_user[0]
-            print(f"Got doc collection shared_with_user {shared_with_user}")
+            # print(f"Got doc collection shared_with_user {shared_with_user}")
             if hasattr( shared_with_user, 'data') and 'document_collections_enabled' in shared_with_user.data:
                 collection_refs = shared_with_user.data['document_collections_enabled']
-                print(f"Got collection_refs: {collection_refs}")
+                # print(f"Got collection_refs: {collection_refs}")
                 for coll_id in collection_refs:
                     coll = collection_refs[coll_id]
                     shared_by_userid = coll['shared_by_userid']
                     shared_collection = self.get_doc_collection(shared_by_userid, coll.collection_id, include_shared=False)
-                    print(f"Got collection {shared_collection}")
+                    # print(f"Got collection {shared_collection}")
                     # shared_collection = DocumentCollection(
                     #     user_id,
                     #     user_email,
@@ -324,16 +323,16 @@ class DocumentCollectionsHandler:
                     #     coll_id,
                     #     [],
                     # )
-                    # print(f"created shared_collection {shared_collection}")
+                    # # print(f"created shared_collection {shared_collection}")
                     shared_collections[coll_id] = shared_collection
-        print(f"get_shared_doc_collections returning {shared_collections} ")          
+        # print(f"get_shared_doc_collections returning {shared_collections} ")          
         return shared_collections
 
     def handler(self, event, context):
         print(f"Got event {event}")
-        print(f"Got context {context}")
+        # print(f"Got context {context}")
         handler_evt = DocumentCollectionsHandlerEvent().from_lambda_event(event)
-        print(f"converted to handler_evt {handler_evt.__dict__}")
+        # print(f"converted to handler_evt {handler_evt.__dict__}")
         method = handler_evt.method
         path = handler_evt.path
 
@@ -345,7 +344,7 @@ class DocumentCollectionsHandler:
                 handler_evt.user_id = handler_evt.document_collection['user_id']
                 
         elif handler_evt.origin not in self.allowed_origins.values():
-            print(f"Couldn't find {handler_evt.origin} in the allowed_origins.values: {self.allowed_origins.values()}")
+            # print(f"Couldn't find {handler_evt.origin} in the allowed_origins.values: {self.allowed_origins.values()}")
             return utils.format_response(403, {}, None)
         
         status = 200
@@ -367,10 +366,10 @@ class DocumentCollectionsHandler:
             handler_evt.user_id = self.utils.get_userid_from_token(
                 handler_evt.auth_token, 
                 self.my_origin,
-                self.lambda_
+                lambda_client=self.lambda_
             )
-            print(f"Got user_id from token {handler_evt.user_id}")
-            print(f"Handler_evt is now {handler_evt.__dict__}")
+            # print(f"Got user_id from token {handler_evt.user_id}")
+            # print(f"Handler_evt is now {handler_evt.__dict__}")
             if hasattr(handler_evt, 'document_collection'):
                 handler_evt.document_collection['user_id'] = handler_evt.user_id
             if not handler_evt.user_id or handler_evt.user_id == '':
@@ -381,7 +380,7 @@ class DocumentCollectionsHandler:
             #     handler_evt.auth_token, 
             #     self.lambda_
             # )
-            print(f"Handler_evt is now {handler_evt.__dict__}") 
+            # print(f"Handler_evt is now {handler_evt.__dict__}") 
         
         if method == 'OPTIONS': 
             result = {}
@@ -391,16 +390,16 @@ class DocumentCollectionsHandler:
             raise Exception("ERROR: No user_id found in event")
             
         elif method == 'GET' and path == '/document_collections':
-            print(f"Getting all doc collections for user_id {handler_evt.user_id}")
+            # print(f"Getting all doc collections for user_id {handler_evt.user_id}")
             doc_collections_response = self.get_doc_collections(handler_evt.user_id, include_shared=True)
-            print(f"Got doc_collections_response {doc_collections_response}")
+            # print(f"Got doc_collections_response {doc_collections_response}")
             result = {
                 "response":  {},
                 "last_eval_key": doc_collections_response['last_eval_key']
             }
             if len(doc_collections_response["response"]) > 0:
                 result["response"] = self.collections_to_dict(doc_collections_response["response"])
-            print(f"GET /document_collections returning {result}") 
+            # print(f"GET /document_collections returning {result}") 
 
         elif method == 'GET' and path.startswith('/document_collections/'):
             if not hasattr(handler_evt, 'path_parameters') or \
@@ -408,7 +407,7 @@ class DocumentCollectionsHandler:
                    not handler_evt.path_parameters['collection_id']:
                 return utils.format_response(404, {"Error": "Missing collection_id parameter."}, handler_evt.origin)
             collection_id = handler_evt.path_parameters['collection_id']
-            print(f"Got collection_id {collection_id} from path parameters {handler_evt.path_parameters}")
+            # print(f"Got collection_id {collection_id} from path parameters {handler_evt.path_parameters}")
 
             limit = 20 if not (hasattr(handler_evt, 'path_parameters') and \
                 'limit' in handler_evt.path_parameters) else \
@@ -423,7 +422,7 @@ class DocumentCollectionsHandler:
             if not collection:
                 result = None
             else:
-                print(f"GET /document_collections got {collection.__dict__()}")
+                # print(f"GET /document_collections got {collection.__dict__()}")
                 collection_obj = None
                 if collection:
                     collection_obj = self.collections_to_dict([collection])
@@ -438,7 +437,7 @@ class DocumentCollectionsHandler:
                 # base_url = f"{self.services['ingestion_status_provider']}/ingestion_status"
                 # url = f"{base_url}/{quote_plus(handler_evt.user_id)}/{ingestion_prefix}"
                 # creds = self.utils.get_creds_from_token(handler_evt.user_id, handler_evt.auth_token, self.lambda_)
-                print(f"About to get ingested files")
+                # print(f"About to get ingested files")
                 response = self.utils.invoke_lambda(
                     self.utils.get_ssm_params('ingestion_status_provider_function_name'),
                     {
@@ -452,11 +451,11 @@ class DocumentCollectionsHandler:
                     lambda_client=self.lambda_
                 )
                 file_statuses = json.loads(response['body'])
-                print(f"Ingestion_status_provider returned file_statuses {file_statuses}")
+                # print(f"Ingestion_status_provider returned file_statuses {file_statuses}")
                 file_list = []
                 
                 for file_status in file_statuses:
-                    print(f"Got file_status {file_status}")
+                    # print(f"Got file_status {file_status}")
                     file_list.append({
                         'file_name': file_status['doc_id'].split('/')[-1],
                         'last_modified': datetime.now().isoformat() + 'Z' \
@@ -464,7 +463,7 @@ class DocumentCollectionsHandler:
                                 else file_status['last_modified'],
                         'status': file_status['progress_status'],
                     })
-                print(f"file_list is now {file_list}")
+                # print(f"file_list is now {file_list}")
                 result = { 
                     "collection": collection_obj,
                     "files": json.dumps(file_list)
@@ -472,14 +471,14 @@ class DocumentCollectionsHandler:
 
         elif method == 'POST' and path == '/document_collections':
             handler_evt.document_collection['user_id'] = handler_evt.user_id
-            print(f"creating doc collection from event {handler_evt}")
+            # print(f"creating doc collection from event {handler_evt}")
             new_collection_record = self.create_doc_collection_record(handler_evt)
-            print(f"Created new collection record {new_collection_record}")
+            # print(f"Created new collection record {new_collection_record}")
             upserted_collection = self.upsert_doc_collection(new_collection_record, handler_evt)
-            print(f"Upserted collection {upserted_collection}")
+            # print(f"Upserted collection {upserted_collection}")
             if upserted_collection:
                 result = self.collections_to_dict([upserted_collection])
-                print(f"Result from POST /document_collections {result}")
+                # print(f"Result from POST /document_collections {result}")
             else:
                 result = {"Error": "Failed to create collection."}
                 status = 500        
@@ -488,6 +487,7 @@ class DocumentCollectionsHandler:
         # DELETE /document_collections/{collection_id}/{file_name}: deletes a file
         elif method == 'DELETE' and path.startswith('/document_collections/'):
             if not hasattr(handler_evt, 'path_parameters'):
+                status = 400
                 result = {"Error": "Missing path parameters."}
             else:
                 collection_id = handler_evt.path_parameters['collection_id']
@@ -498,16 +498,13 @@ class DocumentCollectionsHandler:
                     result = self.delete_file(s3_key, delete_from_s3=True)
                 else:
                     # delete a doc collection
-                    deleted_doc_collection_id = self.delete_doc_collection(handler_evt)
-                    result = {
-                        "deleted_collection_id": deleted_doc_collection_id
-                    }
+                    result = self.delete_doc_collection(handler_evt)
 
         return utils.format_response(status, result, handler_evt.origin)
 
     def upsert_doc_collection(self, new_collection: DocumentCollection, handler_evt):
-        print(f"upsert_doc_collection got new_collection {new_collection}")
-        print(f"upsert_doc_collection got handler_evt {handler_evt.__dict__}")
+        # print(f"upsert_doc_collection got new_collection {new_collection}")
+        # print(f"upsert_doc_collection got handler_evt {handler_evt.__dict__}")
 
         new_collection_record = new_collection.to_ddb_record()
         
@@ -515,25 +512,25 @@ class DocumentCollectionsHandler:
             TableName=self.doc_collections_table,
             Item=new_collection_record
         )
-        print(f"Got response from ddb.put_item for new_collection_record \n{new_collection_record}\n{response}")
+        # print(f"Got response from ddb.put_item for new_collection_record \n{new_collection_record}\n{response}")
         if 'ResponseMetadata' in response and \
             'HTTPStatusCode' in response['ResponseMetadata'] and \
                 response['ResponseMetadata']['HTTPStatusCode'] == 200:
                 result = DocumentCollection.from_ddb_record(new_collection_record)
-                print(f"returning DocumentCollection {result}")
+                # print(f"returning DocumentCollection {result}")
                 return result
         else:
             raise Exception(f"Failed to upsert collection for {new_collection.__dict__()}.")
         
-        # print(f"after converting to ddb_record: {new_collection_record}")
+        # # print(f"after converting to ddb_record: {new_collection_record}")
         # doc_collections = self.get_doc_collections(handler_evt.user_id, include_shared=False)['response']
-        # print(f"update_doc_collections got doc_collections: {doc_collections}")
+        # # print(f"update_doc_collections got doc_collections: {doc_collections}")
         # final_collections = []
         # if doc_collections != []:
         #     found = False
         #     for coll_id in doc_collections:
         #         coll = doc_collections[coll_id]
-        #         print(f"Is collection owned by user_id {handler_evt.user_id}? {coll}\nType: {type(coll)}")
+        #         # print(f"Is collection owned by user_id {handler_evt.user_id}? {coll}\nType: {type(coll)}")
         #         if coll.user_id != handler_evt.user_id:
         #            raise Exception(f"User {handler_evt.user_email} doesn't own this document collection, so cannot update it.")
 
@@ -552,7 +549,7 @@ class DocumentCollectionsHandler:
         #     data = coll.__dict__()
         #     del data['user_id']
         #     user_setting_data[coll.collection_name] = data
-        # print(f"Sending user_setting_data {user_setting_data} to UserSettingProvider")
+        # # print(f"Sending user_setting_data {user_setting_data} to UserSettingProvider")
         # TODO replace with call to doc collections table.
         # result = self.user_settings_provider.set_user_setting(UserSetting(
         #     new_collection.user_id, 
@@ -580,5 +577,5 @@ def handler(event, context):
             ssm
         )
     result = doc_collections_handler.handler(event, context)
-    print(f"document_collections_handler returning {result}")
+    # print(f"document_collections_handler returning {result}")
     return result

@@ -35,7 +35,7 @@ class JsonlSplitter(Splitter):
                 curr_token_ct = self.estimate_tokens(json.dumps(row) + "\n")
                 if running_token_total + curr_token_ct > self.max_tokens_per_chunk:
                     chunks.append(curr_chunk)
-                    print(f"Logged chunk: {curr_chunk}")
+                    # print(f"Logged chunk: {curr_chunk}")
                     curr_chunk = header
                     running_token_total = 0
                     running_token_total += self.estimate_tokens(header)
@@ -43,12 +43,12 @@ class JsonlSplitter(Splitter):
                     running_token_total += curr_token_ct
                 else:
                     curr_chunk += json.dumps(row) + "\n"
-                    print(f"Logged chunk: {curr_chunk}")
+                    # print(f"Logged chunk: {curr_chunk}")
                     running_token_total += curr_token_ct
                 if running_token_total > self.max_tokens_per_chunk:
                     raise Exception(f'Row is going to need splitting because it\'s over {self.max_tokens_per_chunk} tokens long:\n{row}')
                 chunks.append(curr_chunk)
-                print(f"Logged csv_chunk: {curr_chunk}")
+                # print(f"Logged csv_chunk: {curr_chunk}")
             else:
                 if extra_header_text != '':
                     extra_header_text += "\n"

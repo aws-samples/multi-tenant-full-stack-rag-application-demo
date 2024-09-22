@@ -34,7 +34,7 @@ class DocumentCollection:
         now = datetime.now().isoformat() + 'Z'
         self.created_date = created_date if created_date else now
         self.updated_date = updated_date if updated_date else now
-        print(f"Got enrichment_pipelines {enrichment_pipelines}, type {type(enrichment_pipelines)}")
+        # print(f"Got enrichment_pipelines {enrichment_pipelines}, type {type(enrichment_pipelines)}")
         self.enrichment_pipelines = json.loads(enrichment_pipelines) if isinstance(enrichment_pipelines, str) else enrichment_pipelines
         self.graph_schema = json.loads(graph_schema) if isinstance(graph_schema, str) else graph_schema
 
@@ -42,24 +42,20 @@ class DocumentCollection:
     def check_allowed_email_domains(shared_with):
         checked_shared_with = []
         for domain in allowed_email_domains:
-            print(f"Checking domain {domain} against shared_with list {shared_with}")
+            # print(f"Checking domain {domain} against shared_with list {shared_with}")
             if domain == '*':
-                print("Shared with all domains.")
+                # print("Shared with all domains.")
                 checked_shared_with = shared_with
                 break
             for email in shared_with:
                 if email.endswith(domain):
-                    print(f"Shared with domain {domain}, appending to results.")
+                    # print(f"Shared with domain {domain}, appending to results.")
                     checked_shared_with.append(email)   
-                else:
-                    print(f"{email} does not end with {domain}. Skipping.")
-                    
-        print(f"check_allowed_email_domains returning {checked_shared_with}")       
         return checked_shared_with
             
     @staticmethod
     def from_ddb_record(rec):
-        print(f"document_collection.from_ddb_record received rec {rec}, type {type(rec)}")
+        # print(f"document_collection.from_ddb_record received rec {rec}, type {type(rec)}")
         return DocumentCollection(
             rec['user_id']['S'],
             rec['user_email']['S'],
@@ -91,7 +87,7 @@ class DocumentCollection:
         if len(self.shared_with) > 0:
             record[self.collection_name]['M']['shared_with'] = {'SS': self.shared_with}
 
-        print(f"document_collection.to_ddb_record returning {record}")
+        # print(f"document_collection.to_ddb_record returning {record}")
         return record
 
     def __dict__(self):
@@ -127,7 +123,7 @@ class DocumentCollection:
         })
     
     def __eq__(self, obj):
-        print(f"__eq__ got\nSELF: {self},\nOBJ:  {obj}")
+        # print(f"__eq__ got\nSELF: {self},\nOBJ:  {obj}")
         shared_with_eq = True
         if not (len(self.shared_with) == len(obj.shared_with)):
             shared_with_eq = False
@@ -135,7 +131,7 @@ class DocumentCollection:
             for email in self.shared_with:
                 if not email in obj.shared_with:
                     shared_with_eq = False
-            print(f"Is shared_with equal? {shared_with_eq}")
+            # print(f"Is shared_with equal? {shared_with_eq}")
         enrichment_pipelines_eq = True if self.enrichment_pipelines == obj.enrichment_pipelines else False
 
         graph_schema_eq = True

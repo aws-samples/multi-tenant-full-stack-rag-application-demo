@@ -18,7 +18,7 @@ class AuthProviderFactory:
         auth_provider_py_path = ssm.get_parameter(
             Name=f'/{os.getenv("STACK_NAME")}/auth_provider_py_path'
         )['Parameter']['Value']
-        print(f"AuthProviderFactory: auth_provider_args={auth_provider_args}")
+        # print(f"AuthProviderFactory: auth_provider_args={auth_provider_args}")
         parts = auth_provider_py_path.split('.')
         provider_file = '.'.join(parts[:-1])
         provider_classname = parts[-1]

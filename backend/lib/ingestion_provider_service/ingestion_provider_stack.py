@@ -86,13 +86,14 @@ class IngestionProviderStack(Stack):
                 "INGESTION_BUCKET": self.ingestion_bucket.bucket.bucket_name,
                 "INGESTION_STATUS_TABLE": ingestion_status_table.table.table_name,
                 "STACK_NAME": parent_stack_name,
+                "UPDATED": "2024-09-20T23:02:00Z"
             },
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
             )
         )
-        
+
         self.ingestion_status_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
             actions=[
@@ -147,15 +148,11 @@ class IngestionProviderStack(Stack):
                 "AWS_ACCOUNT_ID": self.account,
                 "STACK_NAME": parent_stack_name,
                 "INGESTION_STATUS_TABLE": ingestion_status_table.table.table_name,
+                "UPDATED": "2024-09-20T23:02:00Z",
             }
         )
-
-        ing_func_origin_param = ssm.StringParameter(self, 'IngestionProviderOriginParam',
-            parameter_name=f"/{parent_stack_name}/origin_ingestion_provider",
-            string_value=self.ingestion_function.function_name,
-        )
-        ing_func_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
-
+        self.ingestion_status_function.grant_invoke(self.ingestion_function.grant_principal)
+        
         self.ingestion_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
             actions=[
@@ -204,6 +201,7 @@ class IngestionProviderStack(Stack):
         ))
         
         self.ingestion_bucket.bucket.grant_read(self.ingestion_function.role)
+        self.ingestion_bucket.bucket.grant_delete(self.ingestion_status_function.grant_principal)
 
         self.ingestion_queue = Queue(self, 'IngestionQueue',
             resource_name='IngestionQueue',
@@ -236,9 +234,22 @@ class IngestionProviderStack(Stack):
         
         isp_fn_name_param.apply_removal_policy(RemovalPolicy.DESTROY)
 
+        isp_origin_param = ssm.StringParameter(self, 'IngestionStatusProviderOriginParam',
+            parameter_name=f"/{parent_stack_name}/origin_ingestion_status_provider",
+            string_value=self.ingestion_status_function.function_name
+        )
+        isp_origin_param.apply_removal_policy(RemovalPolicy('DESTROY'))
+        
         ip_fn_name_param = ssm.StringParameter(self, 'IngestionProviderFunctionName',
             parameter_name=f"/{parent_stack_name}/ingestion_provider_function_name",
             string_value=self.ingestion_function.function_name,
         )
-        
+    
         ip_fn_name_param.apply_removal_policy(RemovalPolicy.DESTROY)
+
+        ip_origin_param = ssm.StringParameter(self, 'IngestionProviderOriginParam',
+            parameter_name=f"/{parent_stack_name}/origin_ingestion_provider",
+            string_value=self.ingestion_function.function_name
+        )
+        ip_origin_param.apply_removal_policy(RemovalPolicy('DESTROY'))
+        

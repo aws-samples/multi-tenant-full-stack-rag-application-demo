@@ -17,7 +17,7 @@ class CognitoAuthProviderEvent:
         
 
     def from_lambda_event(self, event):
-        print(f"cognito auth provider evt received event {event}")
+        # # print(f"cognito auth provider evt received event {event}")
         self.operation = event['operation']
         self.origin = event['origin']
         if 'auth_token' in event['args']:

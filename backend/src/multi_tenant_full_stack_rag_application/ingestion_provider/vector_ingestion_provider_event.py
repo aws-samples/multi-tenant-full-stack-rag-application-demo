@@ -6,23 +6,23 @@ from urllib.parse import unquote_plus
 
 class VectorIngestionProviderEvent:
     def from_lambda_event(self, event):
-        print(f"VectorIngestionProviderrEvent received event {event}")
+        # print(f"VectorIngestionProviderrEvent received event {event}")
         self.ingestion_files = []
         for record in event["Records"]:
-            print(f"Got top-level record {record}")
+            # print(f"Got top-level record {record}")
             self.rcpt_handle = record["receiptHandle"]
             self.evt_source_arn = record["eventSourceARN"]
             self.account_id = self.evt_source_arn.split(":")[4]
             if 'body' in record:
                 body = json.loads(record["body"])
-                print(f"Got event body {body}")
+                # print(f"Got event body {body}")
                 event = ''
                 if "Event" in body:
                     event = body["Event"]
                     
                 if "Records" in body:
                     for rec in body["Records"]:
-                        print(f"Got body rec {rec}")
+                        # print(f"Got body rec {rec}")
                         key = rec["s3"]["object"]["key"]
                         parts = key.split("/")
                         self.user_id = unquote_plus(parts[1])

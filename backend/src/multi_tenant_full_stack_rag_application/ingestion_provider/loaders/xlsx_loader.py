@@ -20,7 +20,7 @@ class XlsxLoader(Loader):
     def load_and_split(self, path, source, *, extra_metadata={}, extra_header_text='', return_dicts=False):
         pass
         #     records = self.load(path)
-        #     print(f"splitting path {path}")
+        #     # print(f"splitting path {path}")
         #     filename = source.split('/')[-1]
 
         #     if not 'source' in extra_metadata:

@@ -151,7 +151,7 @@ class MultiTenantRagStack(Stack):
         )
 
         FinalScriptsStack(self, 'FinalScriptsStack',
-            # auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
+            bedrock_provider_function=bedrock_provider_stack.bedrock_provider_function,
             doc_collections_handler_function=doc_collections_stack.doc_collections_function,
             domain=vector_store_provider_stack.vector_store_stack.domain,
             embeddings_provider_function=embeddings_provider_stack.embeddings_provider_function,

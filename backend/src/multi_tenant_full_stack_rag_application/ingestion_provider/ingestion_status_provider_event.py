@@ -15,6 +15,7 @@ class IngestionStatusProviderEvent:
     lines_processed: int=0
     progress_status: str=''
     origin: str=''
+    delete_from_s3: bool = False
 
     def from_lambda_event(self, event):
         print(f"IngestionStatusProviderEvent.from_lambda_event: {event}")
@@ -32,6 +33,7 @@ class IngestionStatusProviderEvent:
             self.delete_from_s3 = event['args']['delete_from_s3']
         else:
             self.delete_from_s3 = False
+        print(f"self.delete_from_s3 = {self.delete_from_s3}")
         return self
 
     def __str__(self):

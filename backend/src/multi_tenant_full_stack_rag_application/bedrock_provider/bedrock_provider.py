@@ -66,7 +66,7 @@ params_path = path.join(parent_path, 'bedrock_model_params.json')
 
 with open(params_path, 'r') as params_in:
     bedrock_model_params_json = params_in.read()
-    # print(f"Got bedrock_model_params before parsing: {json.dumps(bedrock_model_params_json)}")
+    # # print(f"Got bedrock_model_params before parsing: {json.dumps(bedrock_model_params_json)}")
     bedrock_model_params = json.loads(bedrock_model_params_json)
 
 
@@ -100,48 +100,48 @@ class BedrockProvider():
         if not bedrock_client:
             self.bedrock = utils.get_bedrock_client()
         else:
-            print("Used br client passed in.")
+            # print("Used br client passed in.")
             self.bedrock = bedrock_client
         
         if not bedrock_agent_client:
             self.bedrock_agent = utils.get_bedrock_agent_client()
         else:
-            print("Used bra client passed in.")
+            # print("Used bra client passed in.")
             self.bedrock_agent = bedrock_agent_client
         
         if not bedrock_agent_rt_client:
             self.bedrock_agent_rt = utils.get_bedrock_agent_runtime_client()
         else:
-            print("Used brart client passed in.")
+            # print("Used brart client passed in.")
             self.bedrock_agent_rt = bedrock_agent_rt_client
         
         if not bedrock_rt_client:
             self.bedrock_rt = utils.get_bedrock_runtime_client()
         else:
-            print("Used brt client passed in.")
+            # print("Used brt client passed in.")
             self.bedrock_rt = bedrock_rt_client
         
         if not cognito_identity_client:
             self.cognito = utils.BotoClientProvider.get_client('cognito-identity')
         else:
-            print("Used cognito identity client passed in")
+            # print("Used cognito identity client passed in")
             self.cognito = cognito_identity_client
 
         if not ssm_client:
             self.ssm = utils.BotoClientProvider.get_client('ssm')
         else:
-            print("Used ssm client passed in")
+            # print("Used ssm client passed in")
             self.ssm = ssm_client
 
         self.model_params = bedrock_model_params
         self.stack_name = os.getenv('STACK_NAME')
         self.ssm_params = utils.get_ssm_params(ssm_client=ssm_client)
-        print(f"BedrockProvider now initialized with ssm_params {self.ssm_params}")
+        # print(f"BedrockProvider now initialized with ssm_params {self.ssm_params}")
         # frontend origins initialized lazily
         self.allowed_origins = None
 
     def embed_text(self, text, model_id, input_type='search_query', *, dimensions=1024):
-        print(f"Embedding text with model {model_id} and dimensions {dimensions}")
+        # print(f"Embedding text with model {model_id} and dimensions {dimensions}")
         if model_id.startswith('cohere'):
             kwargs = {'input_type': input_type}
             if dimensions: 
@@ -151,7 +151,7 @@ class BedrockProvider():
             kwargs = {
                 'dimensions': dimensions
             }
-            print(f"Calling with model {model_id}, input {text},  kwargs {kwargs}")
+            # print(f"Calling with model {model_id}, input {text},  kwargs {kwargs}")
             return self.invoke_model(model_id, text, kwargs)
         else:
             raise Exception("Unknown model ID provided.")
@@ -220,7 +220,7 @@ class BedrockProvider():
     def handler(self, event, context):
         print(f"Got event {event}")
         handler_evt = BedrockProviderEvent().from_lambda_event(event)
-        print(f"converted to handler_evt {handler_evt.__dict__}")
+        # print(f"converted to handler_evt {handler_evt.__dict__}")
         
         if not self.allowed_origins:
             self.allowed_origins = self.utils.get_allowed_origins()
@@ -233,37 +233,37 @@ class BedrockProvider():
             response = "forbidden"
         
         elif operation == 'embed_text':
-            model_id = handler_evt.body['model_id']
-            text = handler_evt.body['input_text']
-            dimensions = handler_evt.body['dimensions'] 
+            model_id = handler_evt.model_id
+            text = handler_evt.input_text
+            dimensions = handler_evt.dimensions
             response = self.embed_text(text, model_id, dimensions=dimensions)
         
         elif operation == 'get_model_dimensions':
-            model_id = handler_evt.params['model_id']
+            model_id = handler_evt.model_id
             response = self.get_model_dimensions(model_id)
         
         elif operation == 'get_model_max_tokens':
-            model_id = handler_evt.params['model_id']
+            model_id = handler_evt.model_id
             response = self.get_model_max_tokens(model_id)
 
         elif operation == 'get_semantic_similarity':
-            search_text = handler_evt.body['search_text']
-            chunk_text = handler_evt.body['chunk_text']
-            model_id = handler_evt.body['model_id']
-            dimensions = handler_evt.body['dimensions']
+            search_text = handler_evt.search_text
+            chunk_text = handler_evt.chunk_text
+            model_id = handler_evt.model_id
+            dimensions = handler_evt.dimension
             response = self.get_semantic_similarity(search_text, chunk_text, model_id, dimensions)
         
         elif operation == 'get_token_count':
-            input_text = handler_evt.body['input_text']
+            input_text = handler_evt.input_text
             response = self.get_token_count(input_text)
 
         elif operation == 'invoke_model':
-            model_id = handler_evt.body['model_id']
-            prompt = handler_evt.body['prompt'] if 'prompt' in handler_evt.body else ''
-            model_kwargs = handler_evt.body['model_kwargs'] if 'model_kwargs' in handler_evt.body else {}
-            messages = handler_evt.body['messages'] if 'messages' in handler_evt.body else []
+            model_id = handler_evt.model_id
+            prompt = handler_evt.prompt if hasattr(handler_evt,'prompt')  else ''
+            model_kwargs = handler_evt.model_kwargs if hasattr(handler_evt,'model_kwargs') else {}
+            messages = handler_evt.messages if hasattr(handler_evt,'messages') else []
             response = self.invoke_model(model_id, prompt, model_kwargs, messages=messages)
-            print(f"invoke_model got response {response}")   
+            # print(f"invoke_model got response {response}")   
             
         elif operation == 'list_models':
             response = self.list_models()
@@ -280,12 +280,12 @@ class BedrockProvider():
         return result
 
     def invoke_model(self, model_id: str, prompt: str='', model_kwargs={}, *, messages=[]):
-        # print(f"Invoking model {model_id}")
+        # # print(f"Invoking model {model_id}")
         content_type = 'application/json'
         accept = '*/*'
-        print(f"Invoke model got model_kwargs {model_kwargs}")
+        # print(f"Invoke model got model_kwargs {model_kwargs}")
         model_kwargs = self._populate_default_args(model_id, model_kwargs)
-        print(f"After merging default args, model_kwargs = {model_kwargs}")
+        # print(f"After merging default args, model_kwargs = {model_kwargs}")
 
         if model_id.startswith('amazon'):
             args = {
@@ -343,12 +343,12 @@ class BedrockProvider():
                     "role": "user",
                     "content": final_content
                 }]
-            # print(f"Running with args['messages'] = {args['messages']}")
+            # # print(f"Running with args['messages'] = {args['messages']}")
         else:
             args = model_kwargs
             args["prompt"] = prompt
 
-        # print(f"invoking model with model_id {model_id} and args {args}")
+        # # print(f"invoking model with model_id {model_id} and args {args}")
         result = self.bedrock_rt.invoke_model(
             modelId=model_id,
             accept=accept,

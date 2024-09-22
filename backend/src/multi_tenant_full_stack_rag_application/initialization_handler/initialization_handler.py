@@ -28,20 +28,20 @@ class InitializationHandler:
 
     def initialize(self, handler_evt):
         user_rec = self.system_settings_provider.get_system_settings('user_by_email', handler_evt.user_email)[0]
-        print(f"Got user record {user_rec}")
+        # print(f"Got user record {user_rec}")
         user_rec.data['user_id'] = handler_evt.user_id
         self.system_settings_provider.set_system_setting(user_rec)
-        print(f"Initialized urls {handler_evt.urls_to_init} and updated user record {user_rec}")
+        # print(f"Initialized urls {handler_evt.urls_to_init} and updated user record {user_rec}")
         for url in handler_evt.urls_to_init:
-            print(f"Calling {url}")
+            # print(f"Calling {url}")
             requests.get(url, timeout=60)
         return "success"
 
 def handler(event, context):
     global initialization_handler, last_init, system_settings_provider
-    print(f"initialization_handler.handler received event {event}")
+    # print(f"initialization_handler.handler received event {event}")
     handler_evt = InitializationHandlerEvent().from_lambda_event(event)
-    print(f"converted event to InitializationHandlerEvent: {handler_evt}")
+    # print(f"converted event to InitializationHandlerEvent: {handler_evt}")
     now = datetime.now().timestamp()
     status = 200
     user_id = None
@@ -58,12 +58,12 @@ def handler(event, context):
     if handler_evt.method == "POST" and handler_evt.path == "/initialization":
         # if it's been less than max_init_frequency, 
         # just return
-        print(f"It's now {now} and we last ran {now - last_init} seconds ago. Is it less than {max_init_frequency_s}?")
+        # print(f"It's now {now} and we last ran {now - last_init} seconds ago. Is it less than {max_init_frequency_s}?")
         if now - last_init < max_init_frequency_s:
-            print("Yes, it is less than {max_init_frequency_s} seconds. Returning")
+            # print("Yes, it is less than {max_init_frequency_s} seconds. Returning")
             result = f"Initialization recently done within the last {max_init_frequency_s} seconds", handler_evt.origin
         else:
-            print("No, it is more than {max_init_frequency_s} seconds. Updating last_init.")
+            # print("No, it is more than {max_init_frequency_s} seconds. Updating last_init.")
             last_init = now
 
             if not initialization_handler:
@@ -73,7 +73,7 @@ def handler(event, context):
                     handler_evt.urls_to_init
                 )
 
-            print(f"Calling initialization_handler with urls {handler_evt.urls_to_init}")
+            # print(f"Calling initialization_handler with urls {handler_evt.urls_to_init}")
             result = initialization_handler.initialize(handler_evt)
 
     return utils.format_response(200, result, handler_evt.origin)

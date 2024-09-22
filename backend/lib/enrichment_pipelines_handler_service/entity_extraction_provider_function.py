@@ -91,11 +91,11 @@ class EntityExtractionProviderFunction(Construct):
             security_groups=[app_security_group]
         )
 
-        ent_extraction_origin_param = ssm.StringParameter(self, 'EntityExtractionProviderOrigin',
-            parameter_name=f'/{parent_stack_name}/origin_entity_extraction',
-            string_value=self.entity_extraction_function.function_name
-        )
-        ent_extraction_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
+        # ent_extraction_origin_param = ssm.StringParameter(self, 'EntityExtractionProviderOrigin',
+        #     parameter_name=f'/{parent_stack_name}/origin_entity_extraction',
+        #     string_value=self.entity_extraction_function.function_name
+        # )
+        # ent_extraction_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
 
         self.entity_extraction_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
