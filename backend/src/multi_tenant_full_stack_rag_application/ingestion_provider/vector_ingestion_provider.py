@@ -16,7 +16,6 @@ from .loaders.text_loader import TextLoader
 from .splitters.optimized_paragraph_splitter import OptimizedParagraphSplitter
 from .vector_ingestion_provider_event import VectorIngestionProviderEvent
 
-
 # default_json_content_fields = [
 #     "page_content", "content", "text"
 # ]
@@ -47,7 +46,7 @@ class VectorIngestionProvider:
         # self.json_title_fields_order = json_title_fields_order
     ):
         self.utils = utils
-        self.pdf_loader = PdfImageLoader()
+        self.pdf_loader = self.get_pdf_loader()
 
         if ocr_model_id:
             self.ocr_model_id = ocr_model_id
@@ -119,6 +118,9 @@ class VectorIngestionProvider:
             if field in json_dict:
                 return field
         return ''
+
+    def get_pdf_loader(self):
+        return PdfImageLoader()
 
     @staticmethod
     def get_queue_url_from_arn(arn: str):
@@ -269,12 +271,12 @@ class VectorIngestionProvider:
         if not ocr_model_id:
             ocr_model_id = self.ocr_model_id
 
-        loader = PdfImageLoader(
-            max_tokens_per_chunk=self.max_tokens_per_chunk,
-            ocr_model_id=ocr_model_id
-        )
+        # loader = PdfImageLoader(
+        #     max_tokens_per_chunk=self.max_tokens_per_chunk,
+        #     ocr_model_id=ocr_model_id
+        # )
         
-        docs = loader.load_and_split(local_path, file_dict['user_id'], f"{file_dict['collection_id']}/{file_dict['filename']}", etag=file_dict['etag'], extra_metadata=extra_meta)
+        docs = self.pdf_loader.load_and_split(local_path, file_dict['user_id'], f"{file_dict['collection_id']}/{file_dict['filename']}", etag=file_dict['etag'], extra_metadata=extra_meta)
         # print(f"ingest_pdf_file returning {docs}")
         return docs
 

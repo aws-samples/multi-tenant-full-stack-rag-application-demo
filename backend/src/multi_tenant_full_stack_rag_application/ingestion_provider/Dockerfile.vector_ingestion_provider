@@ -5,6 +5,8 @@ RUN yum install -y poppler poppler-cpp poppler-devel poppler-glib poppler-cpp-de
 RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/loaders
 RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/splitters
 COPY ingestion_provider/* /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/
+RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/vector_store_provider/
+COPY vecto_store_provider/vector_store_document.py /var/task/multi_tenant_full_stack_rag_application/vector_store_provider/
 COPY ingestion_provider/loaders/* /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/loaders/
 COPY ingestion_provider/splitters/* /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/splitters/
 RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/utils

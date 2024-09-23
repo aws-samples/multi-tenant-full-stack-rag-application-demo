@@ -94,7 +94,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
             
     def handler(self, event, context):
         print(f"Embeddings provider received event {event}")
-        handler_evt = EmbeddingsProviderEvent.from_lambda_event(event)
+        handler_evt = EmbeddingsProviderEvent().from_lambda_event(event)
         # print(f"handler_evt is {handler_evt.__dict__}")
         status = 200
         result = {}
@@ -102,26 +102,27 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
         if handler_evt.origin not in self.allowed_origins.values():
             result = self.utils.format_response(403, {'error': 'Access denied'}, handler_evt.origin)
 
-        if operation == 'embed_text':
+        if handler_evt.operation == 'embed_text':
             response = self.embed_text(handler_evt)
             # print(f"Got response from self.embed_text {response}")
             result = {
-                "response": response['encoded_text'],
+                "response": response['response'],
             }
 
-        elif operation == 'get_model_dimensions':
+        elif handler_evt.operation == 'get_model_dimensions':
             response = self.get_model_dimensions(handler_evt.model_id)
             result = {
-                "response": response['dimensions'],
+                "response": response['response'],
             }
 
-        elif operation == 'get_model_max_tokens':
+        elif handler_evt.operation == 'get_model_max_tokens':
             response = self.get_model_max_tokens(handler_evt.model_id)
+            print(f"Got response from get_model_max_tokens: {response}")
             result = {
-                "response": response['max_tokens'],
+                "response": response['response'],
             }
 
-        elif operation == 'get_token_count':
+        elif handler_evt.operation == 'get_token_count':
             result = {
                 "response": self.get_token_count(handler_evt.input_text)
             }
@@ -131,6 +132,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
 def handler(event, context):
     global bedrock_embeddings_provider
     if not bedrock_embeddings_provider:
+        print(f'bedrock_embeddings_provider.handler got event {event}')
         model_id = event['args']['model_id']
         dimensions = 1024 if not 'dimensions' \
             in event['args'] \
