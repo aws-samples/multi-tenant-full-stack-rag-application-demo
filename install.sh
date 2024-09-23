@@ -41,6 +41,8 @@ source .venv/bin/activate
 pip3 install --upgrade --no-cache -r backend/requirements.txt
 pip3 install --upgrade --no-cache -r frontend/requirements.txt
 
+aws iam create-service-linked-role --aws-service-name opensearchservice.amazonaws.com
+
 if [ $b -eq 1 ]; then
   cd backend
   echo
