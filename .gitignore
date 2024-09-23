@@ -4,7 +4,6 @@ frontend/src/multi_tenant_full_stack_rag_application/ui/.vite
 *.PRIVATE
 frontend/backend_outputs.json
 yarn.lock
-cdk.context.json
 node_modules
 __pycache__
 .venv
