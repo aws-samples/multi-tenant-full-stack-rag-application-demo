@@ -2,10 +2,12 @@
 #  SPDX-License-Identifier: MIT-0
 
 import boto3
+import json
 import os
 import shutil
 import time
 
+from base64 import b64encode
 from datetime import datetime
 from pdf2image import convert_from_path
 
@@ -14,6 +16,7 @@ from multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status
 from multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status_provider import IngestionStatusProvider
 from multi_tenant_full_stack_rag_application.ingestion_provider.loaders import Loader
 from multi_tenant_full_stack_rag_application.ingestion_provider.splitters import Splitter, OptimizedParagraphSplitter
+from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_document import VectorStoreDocument
 
 
 default_ocr_template_path = 'multi_tenant_full_stack_rag_application/ingestion_provider/loaders/pdf_image_loader_ocr_template.txt'
@@ -45,26 +48,29 @@ class PdfImageLoader(Loader):
             self.s3 = s3
 
         if max_tokens_per_chunk == 0:
-            self.max_tokens_per_chunk = self.utils.get_model_max_tokens(self.ocr_model_id, self.my_origin)        
+            response = self.utils.get_model_max_tokens(self.ocr_model_id, self.my_origin)        
+            self.max_tokens_per_chunk = json.loads(response['body'])['response']
         else:
             self.max_tokens_per_chunk = max_tokens_per_chunk
         
-        # print(f"Max tokens = {self.max_tokens_per_chunk}")
+        print(f"Max tokens = {self.max_tokens_per_chunk}")
         if not splitter:
             self.splitter = OptimizedParagraphSplitter(
                 max_tokens_per_chunk=self.max_tokens_per_chunk
             )
         else:
             self.splitter = splitter
-    
+        # print(f"before checking, ocr_template_text = {ocr_template_text}")
         if not ocr_template_text:
             ocr_template_path = self.get_default_ocr_template_path()
-            print(f"Fetching default ocr_template from {ocr_template_path}")
+            # print(f"Fetching default ocr_template from {ocr_template_path}")
             with open(ocr_template_path, 'r') as f_in:
                 self.ocr_template_text = f_in.read()
         else:
+            # print("Using ocr template data passed in.")
             self.ocr_template_text = ocr_template_text
-        
+        # print(f"PdfImageLoader initialized with ocr template text {self.ocr_template_text}")
+    
     def download_from_s3(self, bucket, s3_path):
         ts = datetime.now().isoformat()
         tmpdir = f"/tmp/{ts}"
@@ -84,6 +90,11 @@ class PdfImageLoader(Loader):
         return default_ocr_template_path
 
     def llm_ocr(self, img_paths, parent_filename, extra_header_text, extra_metadata):
+        if not hasattr(self, 'ocr_template_text') or not self.ocr_template_text:
+            ocr_template_path = self.get_default_ocr_template_path()
+            # print(f"Fetching default ocr_template from {ocr_template_path}")
+            with open(ocr_template_path, 'r') as f_in:
+                self.ocr_template_text = f_in.read()
         results = []
         chunk_num = 0
         page_num = 1
@@ -101,7 +112,8 @@ class PdfImageLoader(Loader):
             chunk_id = f"{parent_filename}:{chunk_num}"
 
             with open(path, 'rb') as img:
-                content = img.read()
+                content = b64encode(img.read()).decode('utf-8')
+                print(f"Type of content is now {type(content)}")
             msgs = [
                 {
                     "mime_type": "image/jpeg",

@@ -356,7 +356,14 @@ def invoke_lambda(function_name, payload={}, *, lambda_client=None):
 
     # print(f"Invoking {function_name}")
     print(f"Payload keys: {payload.keys()}")
-    # print(f"Payload is {tmp_payload}")
+    print(f"args keys: {payload['args'].keys()}")
+    if 'messages' in payload['args'].keys():
+        print(f"message keys: {payload['args']['messages'][0].keys()}")
+        msg = payload['args']['messages'][0]
+        if msg['mime_type'] == 'image/jpeg':
+            print(f"Type of content is {type(msg['content'])}")
+ 
+    # print(f"Payload is {payload}")
     response = lambda_client.invoke(
         FunctionName=function_name,
         InvocationType='RequestResponse',

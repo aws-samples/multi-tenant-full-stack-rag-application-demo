@@ -52,7 +52,7 @@ class IngestionStatus:
         }
 
     def to_json(self):
-        # print("Called ingestion_status.to_json()")
+        print("Called ingestion_status.to_json()")
         return {
             'user_id': self.user_id,
             'doc_id': self.doc_id,

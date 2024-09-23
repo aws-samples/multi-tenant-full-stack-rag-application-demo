@@ -270,13 +270,13 @@ class BedrockProvider():
 
         else: 
             raise Exception(f"Unknown operation {operation}")
-             
+
         result = {
             "statusCode": status,
             "operation": handler_evt.operation,
             "response": response,
         }
-        
+        print(f"Bedrock_provider returning result {result}") 
         return result
 
     def invoke_model(self, model_id: str, prompt: str='', model_kwargs={}, *, messages=[]):
@@ -311,6 +311,7 @@ class BedrockProvider():
                 # for images content should be bytes.
                 final_content = []
                 for msg in messages:
+                    print(f"Got message with mime type {msg['mime_type']}")
                     if msg["mime_type"] in ['text/plain','text', 'txt']:
                         final_content.append({
                             "type": "text",
@@ -326,14 +327,15 @@ class BedrockProvider():
                         "webp",
                         "image/gif"
                         "gif"
-                    ]: 
-                        content_image = b64encode(msg["content"]).decode('utf8')
+                    ]:   
+                        # content_image = msg["content"].encode('utf-8')
+                        print(f"Type of msg content is now {type(msg['content'])}")
                         final_content.append({
                             "type": "image", 
                             "source": {
                                 "type": "base64",
                                 "media_type": "image/jpeg", 
-                                "data": content_image
+                                "data": msg["content"]
                             }
                         })
                     else:
@@ -348,7 +350,7 @@ class BedrockProvider():
             args = model_kwargs
             args["prompt"] = prompt
 
-        # # print(f"invoking model with model_id {model_id} and args {args}")
+        print(f"invoking model with model_id {model_id} and args {args}")
         result = self.bedrock_rt.invoke_model(
             modelId=model_id,
             accept=accept,
@@ -356,7 +358,7 @@ class BedrockProvider():
             body=json.dumps(args)
         )
         body = json.loads(result['body'].read())
-
+        print(f"Invocation result: {body}")
         if "content" in body:
             text = ''
             for line in body['content']:

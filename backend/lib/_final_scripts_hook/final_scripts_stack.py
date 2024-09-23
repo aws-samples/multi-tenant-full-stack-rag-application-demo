@@ -45,6 +45,8 @@ class FinalScriptsStack(NestedStack):
             index_write_access=False
         )
         
+        bedrock_provider_function.grant_invoke(embeddings_provider_function.grant_principal)
+
         bedrock_provider_function.grant_invoke(extraction_principal)
         graph_store_provider_function.grant_invoke(extraction_principal)
         ingestion_status_provider_function.grant_invoke(extraction_principal)

@@ -148,6 +148,7 @@ class IngestionProviderStack(Stack):
                 "AWS_ACCOUNT_ID": self.account,
                 "STACK_NAME": parent_stack_name,
                 "INGESTION_STATUS_TABLE": ingestion_status_table.table.table_name,
+                "OCR_MODEL_ID": self.node.get_context('ocr_model_id'),
                 "UPDATED": "2024-09-20T23:02:00Z",
             }
         )
