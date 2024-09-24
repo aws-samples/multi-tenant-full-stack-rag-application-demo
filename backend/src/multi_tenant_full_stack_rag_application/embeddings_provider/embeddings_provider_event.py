@@ -26,6 +26,8 @@ class EmbeddingsProviderEvent:
         self.origin = event['origin']
         if 'dimensions' in self.args:
             self.dimensions = self.args['dimensions']
+        else:
+            self.dimensions = 1024
         if 'input_text' in self.args:
             self.input_text = self.args['input_text']
         if 'model_id' in self.args:

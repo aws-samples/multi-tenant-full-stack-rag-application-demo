@@ -103,7 +103,8 @@ class PdfImageLoader(Loader):
 
         file_name_header = f'<FILENAME>\n{parent_filename.split("/")[-1]}\n</FILENAME>\n'
         file_name_header_tokens = self.estimate_tokens(file_name_header)
-
+        print(f"** Received {len(img_paths)} pages to process **")
+        
         for path in img_paths:
             # print(f"Processing file {path}")
             page_header = f"<PAGE_NUM>\n{page_num}\n</PAGE_NUM>\n"
@@ -140,11 +141,11 @@ class PdfImageLoader(Loader):
             # print(f"curr_chunk_tokens: {curr_chunk_tokens}, file_name_header_tokens {file_name_header_tokens}, page_header_tokens {page_header_tokens} = {curr_chunk_tokens + file_name_header_tokens + page_header_tokens}, max {self.max_tokens_per_chunk}")
             if curr_chunk_tokens + file_name_header_tokens + page_header_tokens + \
                 response_tokens >= self.max_tokens_per_chunk:
-                # print(f"Logging with text {curr_chunk_text}, chunk_id {chunk_id}")
+                print(f"Logging with text {curr_chunk_text}, chunk_id {chunk_id}")
                 results.append(VectorStoreDocument.from_dict({
                     "id": chunk_id,
                     "content": curr_chunk_text,
-                    "vector": self.emb_provider.embed_text(curr_chunk_text),
+                    "vector": self.utils.embed_text(curr_chunk_text, self.my_origin),
                     "metadata": {
                         "title": f"{parent_filename}:{chunk_num}",
                         "page_num": page_num,
@@ -164,27 +165,30 @@ class PdfImageLoader(Loader):
                     curr_chunk_tokens += page_header_tokens
                 curr_chunk_text += response
                 curr_chunk_tokens += response_tokens
-
-            page_num += 1
+            # print(f"\n\n***Processed page {page_num}***\n\n")
+            # page_num += 1
 
         # print(f"Logging with text {curr_chunk_text}, chunk_id {chunk_id}")
-        results.append(VectorStoreDocument.from_dict({
-            "id": f"{parent_filename}:{chunk_num}",
-            "content": curr_chunk_text,
-            "vector": self.emb_provider.embed_text(curr_chunk_text),
-            "metadata": {
-                "title": f"{parent_filename}:{chunk_num}",
-                "page_num": page_num,
-                "source": parent_filename,
-                **extra_metadata
-            }
-        }))
+        if curr_chunk_text != '':
+            print(f"Final chunk text is {curr_chunk_text}")
+            results.append(VectorStoreDocument.from_dict({
+                "id": f"{parent_filename}:{chunk_num}",
+                "content": curr_chunk_text,
+                "vector": self.utils.embed_text(curr_chunk_text, self.my_origin),
+                "metadata": {
+                    "title": f"{parent_filename}:{chunk_num}",
+                    "page_num": page_num,
+                    "source": parent_filename,
+                    **extra_metadata
+                }
+            }))
+            print(f"\n\n***Processed page {page_num}***\n\n")
 
         # id = f"{parent_filename}:{page_num}"
         # results.append(VectorStoreDocument.from_dict({
         #     "id": id,
         #     "content": header + response,
-        #     "vector": self.emb_provider.embed_text(header + response),
+        #     "vector": self.utils.embed_text(header + response, self.my_origin),
         #     "metadata": {
         #         "title": id,
         #         "page_num": page_num,
@@ -194,6 +198,7 @@ class PdfImageLoader(Loader):
         return results
 
     def load(self, path):
+        print(f"Loading path {path}")
         if path.startswith('s3://'):
             parts = path.split('/')
             bucket = parts[2]
@@ -219,22 +224,41 @@ class PdfImageLoader(Loader):
             'IN_PROGRESS',
             self.utils.get_ssm_params('origin_ingestion_provider')
         )
+        try:
+            local_file = self.load(path)
+            split_results = self.split_pages(local_file)
+            docs: [VectorStoreDocument] = self.llm_ocr(split_results['splits'], source, extra_header_text, extra_metadata)
+            return docs
+        except Exception as e:
+            print(f"Error loading {path}: {e}")
+            self.utils.set_ingestion_status(
+                user_id, 
+                f"{collection_id}/{filename}",
+                etag,
+                0, 
+                f'ERROR: {e.args[0]}',
+                self.utils.get_ssm_params('origin_ingestion_provider')
+            )
+            raise e
+        
+        # self.utils.save_vector_docs(docs, user_id, collection_id)
 
-        local_file = self.load(path)
-        split_results = self.split_pages(local_file)
-        docs: [VectorStoreDocument] = self.llm_ocr(split_results['splits'], source, extra_header_text, extra_metadata)
-
-        self.save_vectors(docs, collection_id)
-
-        ing_status = IngestionStatus(
-            user_id,
-            f"{collection_id}/{filename}",
-            etag,
-            1,
-            'INGESTED'
-        )
-        self.ingestion_status_provider.set_ingestion_status(ing_status)
-
+        # ing_status = IngestionStatus(
+        #     user_id,
+        #     f"{collection_id}/{filename}",
+        #     etag,
+        #     1,
+        #     'INGESTED'
+        # )
+        # payload['origin'] = self.my_origin
+        # self.utils.set_ingestion_status(
+        #     user_id,
+        #     f"{collection_id}/{filename}",
+        #     etag,
+        #     1,
+        #     'INGESTED',
+        #     self.my_origin,
+        # )
         return docs
 
     @staticmethod

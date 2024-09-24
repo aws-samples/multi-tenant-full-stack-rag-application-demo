@@ -85,7 +85,8 @@ class VectorIngestionProvider:
 
         self.ingestion_status_provider_fn_name = self.utils.get_ssm_params('ingestion_status_provider_function_name', ssm_client=ssm_client)
         self.vector_store_provider_fn_name = self.utils.get_ssm_params('vector_store_provider_function_name', ssm_client=ssm_client)
-
+        self.my_origin = self.utils.get_ssm_params('origin_ingestion_provider', ssm_client=ssm_client)
+    
     def delete_message(self, rcpt_handle:str, queue_url: str): 
         try: 
             self.sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=rcpt_handle)
@@ -249,6 +250,9 @@ class VectorIngestionProvider:
             docs = self.ingest_text_file(local_path, file_dict)
         # else:
         #     raise Exception(f'unsupported file type: {local_path}\nMore file types coming soon.')
+        
+        self.utils.save_vector_docs(docs, file_dict['collection_id'], self.my_origin)
+
         return docs
 
     def ingest_json_file(self, local_path, file_dict, *, json_lines=True, extra_meta={}):
@@ -338,26 +342,26 @@ class VectorIngestionProvider:
     #             doc.user_id,
 
     #         )
-    # def save_docs(self, out_queue, collection_id, user_id): 
-    #     docs_batch = []
-    #     doc = out_queue.get()
-    #     while doc:
-    #         docs_batch.append(doc)
-    #         if len(docs_batch) >= self.os_batch_size:
-    #             # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
-    #             self.vector_store_provider.save(docs_batch, collection_id)
-    #             self.set_ingestion_status_batch(
-    #                 docs_batch,
-    #                 'INGESTED'
-    #             )
-    #             docs_batch = []
-    #         doc = out_queue.get()
+    def save_docs(self, out_queue, collection_id, user_id): 
+        docs_batch = []
+        doc = out_queue.get()
+        while doc:
+            docs_batch.append(doc)
+            if len(docs_batch) >= self.os_batch_size:
+                # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
+                self.vector_store_provider.save(docs_batch, collection_id)
+                self.set_ingestion_status_batch(
+                    docs_batch,
+                    'INGESTED'
+                )
+                docs_batch = []
+            doc = out_queue.get()
         
-    #     if len(docs_batch) > 0:
-    #         # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
-    #         self.vector_store_provider.save(docs_batch,  collection_id)
-    #         self.set_ingestion_status_batch(docs_batch, 'INGESTED')
-    #     out_queue.put(None)
+        if len(docs_batch) > 0:
+            # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
+            self.vector_store_provider.save(docs_batch,  collection_id)
+            self.set_ingestion_status_batch(docs_batch, 'INGESTED')
+        out_queue.put(None)
 
     def verify_collection(self, collection_dict, *, lambda_client=None): 
         # print(f"Verifying collection for file dict {collection_dict}")
@@ -383,6 +387,6 @@ class VectorIngestionProvider:
 def handler(event, context):
     global vector_ingestion_provider
     if not vector_ingestion_provider:
-        vector_ingestion_provider = VectorIngestionProvider().handler(event, context)
+        vector_ingestion_provider = VectorIngestionProvider()
         # print(f"Got vector_ingestion_provider {vector_ingestion_provider}")
     return vector_ingestion_provider.handler(event, context)

@@ -159,5 +159,17 @@ class VpcStack(Stack):
             ),
             security_groups=[self.app_security_group]
         )
+
+        self.sqs_endpoint = self.vpc.add_interface_endpoint(
+            "SqsEndpoint",
+            private_dns_enabled=True,
+            service=ec2.InterfaceVpcEndpointService(f"com.amazonaws.{self.region}.sqs",
+                443
+            ),
+            subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
+            ),
+            security_groups=[self.app_security_group]
+        )
         
         
