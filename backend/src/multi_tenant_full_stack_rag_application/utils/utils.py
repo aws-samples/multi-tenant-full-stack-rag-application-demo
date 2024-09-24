@@ -56,7 +56,7 @@ def delete_ingestion_status(user_id, doc_id, origin, *, delete_from_s3=False):
         }
     )
 
-def embed_text(text, model_id, origin, *, dimensions=1024, lambda_client=None):
+def embed_text(text, origin, *, dimensions=1024, lambda_client=None):
     response = invoke_lambda(
         get_ssm_params('embeddings_provider_function_name'),
         {
@@ -64,7 +64,6 @@ def embed_text(text, model_id, origin, *, dimensions=1024, lambda_client=None):
             'origin': origin, 
             'args': {
                 'input_text': text,
-                'model_id': model_id,
                 'dimensions': dimensions
             }
         }, 
@@ -364,6 +363,7 @@ def invoke_lambda(function_name, payload={}, *, lambda_client=None):
             print(f"Type of content is {type(msg['content'])}")
  
     # print(f"Payload is {payload}")
+
     response = lambda_client.invoke(
         FunctionName=function_name,
         InvocationType='RequestResponse',
@@ -458,6 +458,24 @@ def sanitize_response(body, *, dont_sanitize_fields=[]):
                     body[key] = result
     # # print(f"sanitize_response returning {body}")
     return body
+
+
+def save_vector_docs(docs, collection_id, origin):
+    evt = {
+        "operation": "save",
+        "origin": origin,
+        "args": {
+            "collection_id": collection_id,
+            "documents": docs
+        }
+    }
+    response = invoke_lambda(
+        get_ssm_params('vector_store_provider_function_name'),
+        evt
+    )
+    print(f"save_vector_docs got response {response}")
+    return len(docs)
+
 
 def set_ingestion_status(user_id, doc_id, etag, lines_processed, progress_status, origin):
     response = invoke_lambda(

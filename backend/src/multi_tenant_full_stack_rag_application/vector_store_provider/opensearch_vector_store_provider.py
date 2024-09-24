@@ -3,6 +3,7 @@
 
 import boto3
 import json
+import os
 from boto3.session import Session
 from opensearchpy import  OpenSearch, RequestsHttpConnection
 from queue import Queue
@@ -11,16 +12,22 @@ from threading import Thread
 
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_document import VectorStoreDocument
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_provider import VectorStoreProvider
+from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_provider_event import VectorStoreProviderEvent
+from multi_tenant_full_stack_rag_application import utils
+
 
 # API
-# DELETE /vector_store/{operation}/{resource_id}
-#            .../index/index_id
-#.           .../record/record_id
-# POST /vector_store/{operation}
-#        .../create_index
-#        .../query
-#.       .../save
-#        .../semantic_query
+#    operation: [ create_index | delete_index | delete_record | query | save | semantic_query | ]
+#    args:
+#       for create_index: collection_id
+#       for delete_index: collection_id
+#       for delete_record: collection_id, doc_id
+#       for query: collection_id, query, top_k
+#       for save: collection_id, document
+#       for semantic_query: collection_id, query, top_k
+
+
+vector_store_provider = None
 
 
 class OpenSearchVectorStoreProvider(VectorStoreProvider):
@@ -31,11 +38,13 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
         **kwargs
     ):         
         super().__init__(vector_store_endpoint)
+        self.utils = utils
         self.vector_store_endpoint = vector_store_endpoint
         self.port = port
         self.proto = proto
         # self.user = user
         # self.pwd = pwd
+        self.allowed_origins = self.utils.get_allowed_origins()
 
     def create_index(self, collection_id):
         os_vector_db = self.get_vector_store(collection_id)
@@ -107,6 +116,40 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
                 self.create_index(collection_id)
     
         return self.vector_db_client
+    
+    def handler(self, event, context):
+        print(f'OpenSearchVectorStoreProvider got event {event}')
+        handler_evt = VectorStoreProviderEvent().from_lambda_event(event)
+        
+        status = 200
+        result = {}
+
+        if handler_evt.origin not in self.allowed_origins:
+            status = 403
+            result = {"error": "Access denied"}
+            
+        elif handler_evt.operation == 'create_index':
+            result = self.create_index(handler_evt.collection_id)
+    
+        elif handler_evt.operation == 'delete_index':
+            result = self.delete_index(handler_evt.collection_id)
+        
+        elif handler_evt.operation == 'delete_record':
+            result = self.delete_record(handler_evt.collection_id, handler_evt.doc_id)
+
+        elif handler_evt.operation == 'query':
+            pass
+
+        elif handler_evt.operation == 'save':
+            pass
+
+        elif handler_evt.operation == 'semantic_query':
+            pass
+        else:
+            status = 400
+            result = {'error', 'Unknown operation'}
+
+        return self.utils.format_response(status, result, self.my_origin)
     
     def query(self, collection_id, query):
         os_vector_db = self.get_vector_store(collection_id)
@@ -197,9 +240,18 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             payload += '{"index": { "_index": "' + collection_id + '", "_id": "' + doc_id + '"}}\n' + json.dumps(doc) + "\n"
         
         result = os_vector_db.bulk(payload, params={
-            
             'refresh': 'true'
         })
-        # print(f"Result from saving doc to vector store: {result}")
+        print(f"Result from saving doc to vector store: {result}")
         return len(doc_chunks)
 
+
+def handler(event, context):
+    global vector_store_provider
+    if not vector_store_provider:
+        print(f'vector_store_provider.handler got event {event}')
+        vs_endpoint = os.getenv('VECTOR_STORE_ENDPOINT')
+        vector_store_provider = OpenSearchVectorStoreProvider(vs_endpoint)
+    return vector_store_provider.handler(event, context)
+
+    

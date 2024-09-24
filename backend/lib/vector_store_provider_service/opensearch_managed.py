@@ -127,6 +127,7 @@ class OpenSearchManagedStack(NestedStack):
                             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
                             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils",
                             "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
+                            "pip3 install -r /asset-input/vector_store_provider/opensearch_requirements.txt -t /asset-output"
                         ])
                     ]
                 )
@@ -137,6 +138,7 @@ class OpenSearchManagedStack(NestedStack):
             handler='multi_tenant_full_stack_rag_application.vector_store_provider.opensearch_vector_store_provider.handler',
             timeout=Duration.seconds(60),
             environment={
+                'STACK_NAME': parent_stack_name,
                 'VECTOR_STORE_ENDPOINT': self.vector_store_endpoint,
                 # 'AWS_ACCOUNT_ID': self.account,
                 # 'IDENTITY_POOL_ID': identity_pool_id,
@@ -153,6 +155,14 @@ class OpenSearchManagedStack(NestedStack):
                 resources=[auth_fn.function_arn],
             )
         )
+
+        self.vector_store_provider.add_to_role_policy(iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            actions=['ssm:GetParameter','ssm:GetParametersByPath'],
+            resources=[
+                f"arn:aws:ssm:{self.region}:{self.account}:parameter/{parent_stack_name}*",            
+            ]
+        ))
 
         cognito_auth_role = iam.Role.from_role_arn(self, 'CognitoAuthRoleRef', auth_role_arn)
 

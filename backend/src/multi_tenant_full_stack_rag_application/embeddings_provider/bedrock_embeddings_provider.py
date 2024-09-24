@@ -53,12 +53,14 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
     # @param dimensions only matters for Titan embeddings v2, where it can be 1024, 512, or 256
     # @param input_type: either "search_query" or "search_document", 
     #                    only used for Cohere embeddings.
-    def embed_text(model_id, text, dimensions=1024, input_type='search_query'):
+    def embed_text(self, text, model_id=None, dimensions=1024, input_type='search_query'):
+        if model_id == None:
+            model_id = self.model_id
         response = self.utils.invoke_bedrock(
             "embed_text",
             {
                 "dimensions": dimensions,
-                "text": text,
+                "input_text": text,
                 "model_id": model_id,
                 "input_type": input_type
             },
@@ -95,16 +97,20 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
     def handler(self, event, context):
         print(f"Embeddings provider received event {event}")
         handler_evt = EmbeddingsProviderEvent().from_lambda_event(event)
+        if not hasattr(handler_evt,'model_id') or handler_evt.model_id == '':
+            handler_evt.model_id = self.model_id
+            
         # print(f"handler_evt is {handler_evt.__dict__}")
         status = 200
         result = {}
 
         if handler_evt.origin not in self.allowed_origins.values():
-            result = self.utils.format_response(403, {'error': 'Access denied'}, handler_evt.origin)
+            result = {'error': 'Access denied'}
+            status = 403
 
-        if handler_evt.operation == 'embed_text':
-            response = self.embed_text(handler_evt)
-            # print(f"Got response from self.embed_text {response}")
+        elif handler_evt.operation == 'embed_text':
+            response = self.embed_text(handler_evt.input_text, handler_evt.model_id, handler_evt.dimensions)
+            print(f"Got response from self.embed_text {response}")
             result = {
                 "response": response['response'],
             }
