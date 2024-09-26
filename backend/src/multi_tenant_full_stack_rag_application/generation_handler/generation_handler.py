@@ -96,7 +96,7 @@ class GenerationHandler:
         event = GenerationHandlerEvent().from_lambda_event(event)
         method = event.method
         path = event.path
-        if event.origin not in self.frontend_origins:
+        if event.origin not in self.allowed_origins.values():
             return format_response(403, {}, None)
     
         status = 200

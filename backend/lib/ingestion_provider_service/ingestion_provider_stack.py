@@ -146,6 +146,7 @@ class IngestionProviderStack(Stack):
             security_groups=[app_security_group],
             environment={ 
                 "AWS_ACCOUNT_ID": self.account,
+                "EMBEDDING_MODEL_ID": self.node.get_context("embeddings_model_id"),
                 "STACK_NAME": parent_stack_name,
                 "INGESTION_STATUS_TABLE": ingestion_status_table.table.table_name,
                 "OCR_MODEL_ID": self.node.get_context('ocr_model_id'),

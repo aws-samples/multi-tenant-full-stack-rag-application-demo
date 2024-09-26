@@ -58,9 +58,9 @@ class PromptTemplateHandler:
             self.ssm = ssm_client
                 
         self.allowed_origins = self.utils.get_allowed_origins()
+        self.my_origin = self.allowed_origins['origin_prompt_template_handler']
 
-        # print(f"frontend_origins: {self.frontend_origins}")
-
+        
         template_files = os.listdir(prompt_template_path)
         # # print(f"Template files in {prompt_template_path}: {template_files}")
         self.default_templates = {}
@@ -268,7 +268,7 @@ class PromptTemplateHandler:
         method = handler_evt.method
         path = handler_evt.path
 
-        if handler_evt.origin not in self.frontend_origins:
+        if handler_evt.origin not in self.allowed_origins.values():
             return self.utils.format_response(403, {}, None)
         
         status = 200

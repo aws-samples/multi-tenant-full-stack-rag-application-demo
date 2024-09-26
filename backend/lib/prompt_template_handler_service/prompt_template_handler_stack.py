@@ -91,6 +91,13 @@ class PromptTemplateHandlerStack(Stack):
         )
         pt_fn_name_param.apply_removal_policy(RemovalPolicy.DESTROY)
 
+        pt_origin_param = ssm.StringParameter(
+            self, "PromptTemplateHandlerOriginParam",
+            parameter_name=f"/{parent_stack_name}/origin_prompt_template_handler",
+            string_value=self.prompt_template_handler_function.function_name
+        )
+        pt_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
+
         self.prompt_templates_table.table.grant_read_write_data(self.prompt_template_handler_function.grant_principal)
         
         self.prompt_template_handler_function.add_to_role_policy(iam.PolicyStatement(

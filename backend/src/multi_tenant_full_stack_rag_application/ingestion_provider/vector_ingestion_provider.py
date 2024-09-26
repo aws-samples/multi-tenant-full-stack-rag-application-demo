@@ -47,6 +47,7 @@ class VectorIngestionProvider:
     ):
         self.utils = utils
         self.pdf_loader = self.get_pdf_loader()
+        self.my_origin = self.utils.get_ssm_params('origin_ingestion_provider', ssm_client=ssm_client)
 
         if ocr_model_id:
             self.ocr_model_id = ocr_model_id
@@ -85,8 +86,8 @@ class VectorIngestionProvider:
 
         self.ingestion_status_provider_fn_name = self.utils.get_ssm_params('ingestion_status_provider_function_name', ssm_client=ssm_client)
         self.vector_store_provider_fn_name = self.utils.get_ssm_params('vector_store_provider_function_name', ssm_client=ssm_client)
-        self.my_origin = self.utils.get_ssm_params('origin_ingestion_provider', ssm_client=ssm_client)
-    
+        
+
     def delete_message(self, rcpt_handle:str, queue_url: str): 
         try: 
             self.sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=rcpt_handle)

@@ -81,8 +81,8 @@ class DocumentCollection:
             'vector_db_type': {'S': self.vector_db_type},
             'created_date': {'S': self.created_date},
             'updated_date': {'S': self.updated_date},
-            'graph_schema': {'S': str(self.graph_schema if self.graph_schema else '{}')},
-            'enrichment_pipelines': {'S': str(self.enrichment_pipelines if self.enrichment_pipelines else '{}')},
+            'graph_schema': {'S': json.dumps(self.graph_schema if self.graph_schema else {})},
+            'enrichment_pipelines': {'S': json.dumps(self.enrichment_pipelines if self.enrichment_pipelines else {})},
         }
         if len(self.shared_with) > 0:
             record[self.collection_name]['M']['shared_with'] = {'SS': self.shared_with}
