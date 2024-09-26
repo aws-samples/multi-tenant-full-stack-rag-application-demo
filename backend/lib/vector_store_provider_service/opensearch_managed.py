@@ -181,6 +181,13 @@ class OpenSearchManagedStack(NestedStack):
 
         vs_fn_name.apply_removal_policy(RemovalPolicy.DESTROY)
         
+        vs_origin_param = ssm.StringParameter(self, 'VectorStoreProviderOrigin',
+            parameter_name=f'/{parent_stack_name}/origin_vector_store_provider',
+            string_value=self.vector_store_provider.function_name
+        )
+
+        vs_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
+        
         # Now do the OpenSearch Dashboards Proxy. Comment
         # this section out if you don't want it.
         handle = ec2.InitServiceRestartHandle()

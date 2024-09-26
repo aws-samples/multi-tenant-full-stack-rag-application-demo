@@ -15,7 +15,7 @@ class BedrockProviderEvent:
         origin='',
         prompt='',
         search_text='',
-        text='',
+        input_text='',
     ):
         # now assign all variables to self.
         self.chunk_text = chunk_text
@@ -28,7 +28,7 @@ class BedrockProviderEvent:
         self.origin = origin
         self.prompt = prompt
         self.search_text = search_text
-        self.text = text
+        self.input_text = input_text
 
     def from_lambda_event(self, event):
         self.operation = event['operation']
@@ -41,7 +41,7 @@ class BedrockProviderEvent:
         # like this, so you'll get an error
         # on that operation if they're not there.
         if self.operation == 'embed_text':
-            self.text = args['text']
+            self.input_text = args['input_text']
         
         elif self.operation == 'get_semantic_similarity':
             self.chunk_text = args['chunk_text']

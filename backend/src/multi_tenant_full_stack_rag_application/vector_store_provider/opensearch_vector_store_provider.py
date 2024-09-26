@@ -45,7 +45,8 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
         # self.user = user
         # self.pwd = pwd
         self.allowed_origins = self.utils.get_allowed_origins()
-
+        self.my_origin = self.utils.get_ssm_params('origin_vector_store_provider')
+    
     def create_index(self, collection_id):
         os_vector_db = self.get_vector_store(collection_id)
         index_body = {
@@ -57,7 +58,7 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
                     "content": {"type": "text"},
                     "vector": {
                         "type": "knn_vector",
-                        "dimension": self.embeddings.get_model_dimensions()
+                        "dimension": self.utils.get_model_dimensions(self.my_origin)
                     },
                     "metadata": {"type": "object"}
                 }
@@ -124,7 +125,8 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
         status = 200
         result = {}
 
-        if handler_evt.origin not in self.allowed_origins:
+        if handler_evt.origin not in self.allowed_origins.values():
+            print(f"handler_evt.origin {handler_evt.origin} is not in allowed origins {self.allowed_origins}")
             status = 403
             result = {"error": "Access denied"}
             
@@ -176,7 +178,7 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
                 id = recommendation['id']
                 search_query = recommendation['vector_database_search_terms']
                 results = {}
-                vector = self.embeddings.embed_text(search_query)
+                vector = self.utils.embed_text(search_query, self.my_origin)
         
                 search_query = { 
                     "size": top_k,
@@ -236,7 +238,7 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             if 'id' in list(doc.keys()):
                 del doc['id']
             # delattr(doc, 'id')
-            doc['vector'] = self.embeddings.embed_text(doc['content'])
+            doc['vector'] = self.utils.embed_text(doc['content'], self.my_origin)
             payload += '{"index": { "_index": "' + collection_id + '", "_id": "' + doc_id + '"}}\n' + json.dumps(doc) + "\n"
         
         result = os_vector_db.bulk(payload, params={

@@ -48,6 +48,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
             self.lambda_ = lambda_client
 
         self.allowed_origins = self.utils.get_allowed_origins()
+        self.my_origin = self.utils.get_ssm_params('origin_embeddings_provider')
 
     # @param model_id
     # @param dimensions only matters for Titan embeddings v2, where it can be 1024, 512, or 256
@@ -69,7 +70,9 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
         # print(f"Got response from embed_text: {response}")
         return response
 
-    def get_model_dimensions(self, model_id):
+    def get_model_dimensions(self, model_id=None):
+        if model_id == None:
+            model_id = self.model_id
         response = self.utils.invoke_bedrock(
             "get_model_dimensions",
             {
@@ -80,7 +83,9 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
         # print(f"Got response from get_model_dimensions: {response}")
         return response
 
-    def get_model_max_tokens(self, model_id):
+    def get_model_max_tokens(self, model_id=None):
+        if model_id == None:
+            model_id = self.model_id
         response = self.utils.invoke_bedrock(
             "get_model_max_tokens",
             {
@@ -105,6 +110,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
         result = {}
 
         if handler_evt.origin not in self.allowed_origins.values():
+            print(f"{handler_evt.origin} is not in {self.allowed_origins.values()}. Returning 403")
             result = {'error': 'Access denied'}
             status = 403
 

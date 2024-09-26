@@ -79,8 +79,7 @@ class MultiTenantRagStack(Stack):
             parent_stack_name=self.stack_name,
             user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
             user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
-            vpc=vpc_stack.vpc,
-            # vpc_endpoint_apigw=vpc_stack.apigw_endpoint
+            vpc=vpc_stack.vpc
         )
 
         vector_store_provider_stack = VectorStoreProviderStack(self, 'VectorStoreProviderStack',
@@ -96,11 +95,6 @@ class MultiTenantRagStack(Stack):
             vpc=vpc_stack.vpc
         )
 
-        # final_scripts_hook = FinalScriptsStack(self, 'FinalScriptsStack',
-        #     domain=vector_store_provider_stack.vector_store_stack.domain,
-        #     ingestion_role=ingestion_provider_stack.ingestion_role
-        # )
-        
         doc_collections_stack = DocumentCollectionsHandlerStack(self, 'DocumentCollectionsHandlerStack',
             app_security_group=vpc_stack.app_security_group,
             auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
@@ -158,7 +152,10 @@ class MultiTenantRagStack(Stack):
             extraction_principal=enrichment_pipelines_handler_stack.entity_extraction_function.entity_extraction_function.grant_principal,
             graph_store_provider_function=graph_store_provider_stack.graph_store_provider,
             inference_principal=generation_handler_stack.generation_handler_function.grant_principal,
-            ingestion_principal=ingestion_provider_stack.ingestion_function.grant_principal,
+            ingestion_bucket=ingestion_provider_stack.ingestion_bucket.bucket,
+            ingestion_function=ingestion_provider_stack.ingestion_function,
+            # ingestion_principal=ingestion_provider_stack.ingestion_function.grant_principal,
+            ingestion_queue=ingestion_provider_stack.ingestion_queue.queue,
             ingestion_status_provider_function=ingestion_provider_stack.ingestion_status_function,
             prompt_templates_handler_function=prompt_templates_handler_stack.prompt_template_handler_function,
             vector_store_provider_function=vector_store_provider_stack.vector_store_stack.vector_store_provider,
@@ -172,6 +169,7 @@ class MultiTenantRagStack(Stack):
         #     user_pool_client_id=cognito_stack.user_pool_client.user_pool_client_id,
         #     user_pool_id=cognito_stack.user_pool.user_pool_id
         # )
+        
         CfnOutput(self, 'AppName', value=self.node.get_context('app_name'))
         CfnOutput(self, 'RemovalPolicy', value=self.node.get_context('removal_policy'))
         CfnOutput(self, 'StackName', value=self.stack_name)

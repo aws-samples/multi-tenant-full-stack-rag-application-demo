@@ -24,10 +24,10 @@ class BucketToQueueNotification(Construct):
                 prefix='private'
             )
         )
-        bucket.add_event_notification(
-            EventType.OBJECT_REMOVED,
-            notification,
-            NotificationKeyFilter(
-                prefix='private'
-            )
-        )
+        # bucket.add_event_notification(
+        #     EventType.OBJECT_REMOVED,
+        #     notification,
+        #     NotificationKeyFilter(
+        #         prefix='private'
+        #     )
+        # )
