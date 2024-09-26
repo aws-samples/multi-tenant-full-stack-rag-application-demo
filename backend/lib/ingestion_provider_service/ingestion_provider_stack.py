@@ -18,7 +18,7 @@ import os
 from constructs import Construct
 
 from lib.shared.bucket import Bucket
-from lib.shared.bucket_to_queue_event_trigger import BucketToQueueNotification
+# from lib.shared.bucket_to_queue_event_trigger import BucketToQueueNotification
 from lib.shared.dynamodb_table import DynamoDbTable
 from lib.shared.queue import Queue
 from lib.shared.queue_to_function_event_trigger import QueueToFunctionTrigger
@@ -210,19 +210,13 @@ class IngestionProviderStack(Stack):
             bucket_name=self.ingestion_bucket.bucket.bucket_name
         )
 
-        self.ingestion_queue.queue.grant_consume_messages(self.ingestion_function.grant_principal)
-
-        self.bucket_to_queue_trigger = BucketToQueueNotification(self, 'IngestionBucketNotifications',
-            bucket_name=self.ingestion_bucket.bucket.bucket_name,
-            queue=self.ingestion_queue.queue,
-            resource_name='IngestionBucketToQueueTrigger'
-        )
-
         self.queue_to_function_trigger_stack = QueueToFunctionTrigger(self, 'QueueToFunctionTrigger',
             function=self.ingestion_function,
             queue_arn=self.ingestion_queue.queue.queue_arn,
             resource_name='IngestionQueueToFunctionTrigger'
         )
+        
+        self.ingestion_queue.queue.grant_consume_messages(self.ingestion_function.grant_principal)
 
         CfnOutput(self, 'IngestionBucketName',
             value=self.ingestion_bucket.bucket.bucket_name,

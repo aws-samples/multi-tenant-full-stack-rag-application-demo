@@ -72,7 +72,7 @@ class VectorIngestionProvider:
             self.utils.get_ssm_params('embeddings_provider_function_name'),
             {
                 "operation": "get_model_max_tokens",
-                "origin": self.utils.get_ssm_params('ingestion_provider_function_name'),
+                "origin": self.my_origin,
                 "args": {
                     "model_id": default_ocr_model
                 }

@@ -57,6 +57,7 @@ def delete_ingestion_status(user_id, doc_id, origin, *, delete_from_s3=False):
     )
 
 def embed_text(text, origin, *, dimensions=1024, lambda_client=None):
+    print(f'utils.embed_text got text {text}, origin {origin}')
     response = invoke_lambda(
         get_ssm_params('embeddings_provider_function_name'),
         {
@@ -185,7 +186,20 @@ def get_identity_pool_id():
     return get_ssm_params('identity_pool_id')
 
 
-def  get_model_max_tokens(model_id, origin):
+def get_model_dimensions(origin, model_id=None):
+    fn_name = get_ssm_params('embeddings_provider_function_name')
+    return invoke_lambda(
+        fn_name,
+        {
+            "operation": "get_model_dimensions",
+            "origin": origin,
+            "args": {
+                "model_id": model_id
+            }
+        }
+    )
+
+def  get_model_max_tokens(origin, model_id=None):
     fn_name = get_ssm_params('embeddings_provider_function_name')
     return invoke_lambda(
         fn_name,

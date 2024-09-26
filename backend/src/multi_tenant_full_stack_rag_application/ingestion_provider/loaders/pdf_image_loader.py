@@ -21,6 +21,7 @@ from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_
 
 default_ocr_template_path = 'multi_tenant_full_stack_rag_application/ingestion_provider/loaders/pdf_image_loader_ocr_template.txt'
 default_ocr_model = "anthropic.claude-3-haiku-20240307-v1:0"
+default_embedding_model = "amazon.titan-embed-text-v2"
 
 class PdfImageLoader(Loader):
     def __init__(self,*, 
@@ -48,7 +49,8 @@ class PdfImageLoader(Loader):
             self.s3 = s3
 
         if max_tokens_per_chunk == 0:
-            response = self.utils.get_model_max_tokens(self.ocr_model_id, self.my_origin)        
+            response = self.utils.get_model_max_tokens(self.my_origin, default_embedding_model, )   
+            print(f"Got response for model max tokens : {response}")     
             self.max_tokens_per_chunk = json.loads(response['body'])['response']
         else:
             self.max_tokens_per_chunk = max_tokens_per_chunk
