@@ -15,6 +15,8 @@ from .loaders.pdf_image_loader import PdfImageLoader
 from .loaders.text_loader import TextLoader
 from .splitters.optimized_paragraph_splitter import OptimizedParagraphSplitter
 from .vector_ingestion_provider_event import VectorIngestionProviderEvent
+from .ingestion_status import IngestionStatus
+
 
 # default_json_content_fields = [
 #     "page_content", "content", "text"
@@ -236,25 +238,44 @@ class VectorIngestionProvider:
     # line in the file, as a VectorDocument object. 
     def ingest_file(self, local_path, file_dict, extra_meta={}): #  source, user_id, extra_meta={}) -> [VectorStoreDocument]:
         docs = []
-        # collection_id = file_dict['collection_id']  # source.split('/')[0]
-        if local_path.lower().endswith('.jsonl'):
-            docs = self.ingest_json_file(local_path, file_dict, json_lines=True)
-        elif local_path.lower().endswith('.json'): 
-            docs = self.ingest_json_file(local_path, file_dict, json_lines=False)
-        elif local_path.lower().endswith('.pdf'):
-            docs = self.ingest_pdf_file(local_path, file_dict)
-        elif local_path.lower().endswith('.docx'):
-            print(f'.docx not yet supported.')
-        else:
-            # local_path.endswith('.txt'):
-            # assume you can parse it as text for now
-            docs = self.ingest_text_file(local_path, file_dict)
-        # else:
-        #     raise Exception(f'unsupported file type: {local_path}\nMore file types coming soon.')
-        
-        self.utils.save_vector_docs(docs, file_dict['collection_id'], self.my_origin)
-
-        return docs
+        try:
+            # collection_id = file_dict['collection_id']  # source.split('/')[0]
+            if local_path.lower().endswith('.jsonl'):
+                docs = self.ingest_json_file(local_path, file_dict, json_lines=True)
+            elif local_path.lower().endswith('.json'): 
+                docs = self.ingest_json_file(local_path, file_dict, json_lines=False)
+            elif local_path.lower().endswith('.pdf'):
+                docs = self.ingest_pdf_file(local_path, file_dict)
+            elif local_path.lower().endswith('.docx'):
+                print(f'.docx not yet supported.')
+            else:
+                # local_path.endswith('.txt'):
+                # assume you can parse it as text for now
+                docs = self.ingest_text_file(local_path, file_dict)
+            # else:
+            #     raise Exception(f'unsupported file type: {local_path}\nMore file types coming soon.')
+            print(f"vector_ingestion_provider.ingest_file saving docs {docs}")
+            self.utils.save_vector_docs(docs, file_dict['collection_id'], self.my_origin)
+            self.utils.set_ingestion_status(
+                file_dict['user_id'],
+                f"{file_dict['collection_id']}/{file_dict['filename']}",
+                file_dict['etag'],
+                0,
+                'INGESTED',
+                self.my_origin
+            )
+            return docs
+        except Exception as e:
+            print(f"Error occurred while ingesting file: {e}")
+            self.utils.set_ingestion_status(
+                file_dict['user_id'],
+                f"{file_dict['collection_id']}/{file_dict['filename']}",
+                file_dict['etag'],
+                0,
+                f"ERROR: {e['args'][0]}",
+                self.my_origin
+            )
+            raise e
 
     def ingest_json_file(self, local_path, file_dict, *, json_lines=True, extra_meta={}):
         # print(f"ingest_json_file got local path {local_path}")
@@ -282,7 +303,7 @@ class VectorIngestionProvider:
         # )
         
         docs = self.pdf_loader.load_and_split(local_path, file_dict['user_id'], f"{file_dict['collection_id']}/{file_dict['filename']}", etag=file_dict['etag'], extra_metadata=extra_meta)
-        # print(f"ingest_pdf_file returning {docs}")
+        print(f"ingest_pdf_file returning {docs}")
         return docs
 
     def ingest_text_file(self, local_path, file_dict, extra_meta={}):
@@ -337,32 +358,35 @@ class VectorIngestionProvider:
         else:
             return s3_key
 
-    # def set_ingestion_status_batch(docs_batch, status):
-    #     for doc in docs_batch:
+    # def set_ingestion_status_batch(self, docs_batch, status, file_dict):
     #         ing_status = IngestionStatus(
-    #             doc.user_id,
-
+    #             file_dict['user_id'],
+    #             file_dict['etag'],
+    #             file_dict['lines_processed'],
+    #             status
     #         )
-    def save_docs(self, out_queue, collection_id, user_id): 
-        docs_batch = []
-        doc = out_queue.get()
-        while doc:
-            docs_batch.append(doc)
-            if len(docs_batch) >= self.os_batch_size:
-                # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
-                self.vector_store_provider.save(docs_batch, collection_id)
-                self.set_ingestion_status_batch(
-                    docs_batch,
-                    'INGESTED'
-                )
-                docs_batch = []
-            doc = out_queue.get()
+    #         self.utils.set_ingestion_status(**ing_status, origin=self.my_origin)
+
+    # def save_docs(self, out_queue, collection_id, user_id): 
+    #     docs_batch = []
+    #     doc = out_queue.get()
+    #     while doc:
+    #         docs_batch.append(doc)
+    #         if len(docs_batch) >= self.os_batch_size:
+    #             # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
+    #             self.vector_store_provider.save(docs_batch, collection_id)
+    #             self.set_ingestion_status_batch(
+    #                 docs_batch,
+    #                 'INGESTED'
+    #             )
+    #             docs_batch = []
+    #         doc = out_queue.get()
         
-        if len(docs_batch) > 0:
-            # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
-            self.vector_store_provider.save(docs_batch,  collection_id)
-            self.set_ingestion_status_batch(docs_batch, 'INGESTED')
-        out_queue.put(None)
+    #     if len(docs_batch) > 0:
+    #         # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
+    #         self.vector_store_provider.save(docs_batch,  collection_id)
+    #         self.set_ingestion_status_batch(docs_batch, 'INGESTED')
+    #     out_queue.put(None)
 
     def verify_collection(self, collection_dict, *, lambda_client=None): 
         # print(f"Verifying collection for file dict {collection_dict}")

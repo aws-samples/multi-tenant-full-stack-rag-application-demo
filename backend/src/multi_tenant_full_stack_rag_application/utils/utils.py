@@ -70,8 +70,8 @@ def embed_text(text, origin, *, dimensions=1024, lambda_client=None):
         }, 
         lambda_client=lambda_client
     )
-    # print(f"utils.embed_text got response {response}") 
-    return response
+    embeddings = json.loads(response['body'])['response']
+    return embeddings
 
 
 def format_response(status, body, origin, *, dont_sanitize_fields=[]):
@@ -475,20 +475,25 @@ def sanitize_response(body, *, dont_sanitize_fields=[]):
 
 
 def save_vector_docs(docs, collection_id, origin):
+    converted_docs = []
+    for doc in docs:
+        converted_docs.append(doc.to_dict())
+    print(f"utils.save_vector_docs called with {converted_docs}, {collection_id}, {origin}")
     evt = {
         "operation": "save",
         "origin": origin,
         "args": {
             "collection_id": collection_id,
-            "documents": docs
+            "documents": converted_docs
         }
     }
+    print(f"utils.save_vector_docs sending event {evt}")
     response = invoke_lambda(
         get_ssm_params('vector_store_provider_function_name'),
         evt
     )
     print(f"save_vector_docs got response {response}")
-    return len(docs)
+    return len(converted_docs)
 
 
 def set_ingestion_status(user_id, doc_id, etag, lines_processed, progress_status, origin):

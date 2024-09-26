@@ -144,7 +144,12 @@ class OpenSearchManagedStack(NestedStack):
                 # 'IDENTITY_POOL_ID': identity_pool_id,
                 # 'USER_POOL_ID': user_pool_id,
                 # 'USER_SETTINGS_TABLE': user_settings_table.table_name
-            }
+            },
+            vpc=vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
+            ),
+            security_groups=[app_security_group],
         )
 
         self.vector_store_provider.add_to_role_policy(
