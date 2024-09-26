@@ -20,8 +20,8 @@ from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_
 
 
 default_ocr_template_path = 'multi_tenant_full_stack_rag_application/ingestion_provider/loaders/pdf_image_loader_ocr_template.txt'
-default_ocr_model = "anthropic.claude-3-haiku-20240307-v1:0"
-default_embedding_model = "amazon.titan-embed-text-v2"
+default_ocr_model = os.getenv('OCR_MODEL_ID')
+default_embedding_model = os.getenv('EMBEDDING_MODEL_ID')
 
 class PdfImageLoader(Loader):
     def __init__(self,*, 

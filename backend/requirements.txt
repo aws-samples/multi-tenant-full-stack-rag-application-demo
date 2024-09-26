@@ -3,3 +3,4 @@ constructs>=10.0.0,<11.0.0
 aws-cdk.aws-cognito-identitypool-alpha
 aws-cdk.aws-neptune-alpha
 pyyaml
+jq

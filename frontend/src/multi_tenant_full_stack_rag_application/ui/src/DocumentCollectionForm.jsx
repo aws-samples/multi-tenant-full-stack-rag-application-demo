@@ -438,7 +438,7 @@ function DocumentCollectionForm() {
       setCurrentCollection(new DocumentCollection(result[collectionName]))
       setIsLoading(false)
       evt.preventDefault();
-      location.hash = `#/document-collections/${result.collection_id}/edit`;
+      location.hash = `#/document-collections/${result[collectionName]['collection_id']}/edit`;
     }
     // console.log(`saving files ${JSON.stringify(filesVal)}`);
     // setIsLoading(true)
