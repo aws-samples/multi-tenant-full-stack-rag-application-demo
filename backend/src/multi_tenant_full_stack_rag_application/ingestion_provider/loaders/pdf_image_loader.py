@@ -197,6 +197,7 @@ class PdfImageLoader(Loader):
         #         "source": parent_filename
         #     }
         # }))
+        
         return results
 
     def load(self, path):

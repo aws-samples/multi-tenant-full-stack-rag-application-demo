@@ -10,7 +10,7 @@ from aws_cdk import (
 from constructs import Construct
 
 from lib.shared.opensearch_access_policy import OpenSearchAccessPolicy
-from lib.shared.bucket_to_queue_event_trigger import BucketToQueueNotification
+# from lib.shared.bucket_to_queue_event_trigger import BucketToQueueNotification
 # from lib.shared.queue_to_function_event_trigger import QueueToFunctionTrigger
 
 
@@ -35,7 +35,8 @@ class FinalScriptsStack(NestedStack):
         super().__init__(scope, construct_id, **kwargs)
 
         ingestion_principal = ingestion_function.grant_principal
-        
+        vector_store_principal = vector_store_provider_function.grant_principal
+
         OpenSearchAccessPolicy(self, "OpenSearchIngestionAccessPolicy",
             domain=domain,
             grantee_principal=ingestion_principal,
@@ -83,3 +84,5 @@ class FinalScriptsStack(NestedStack):
         doc_collections_handler_function.grant_invoke(ingestion_principal)
         embeddings_provider_function.grant_invoke(ingestion_principal)
         vector_store_provider_function.grant_invoke(ingestion_principal)
+
+        embeddings_provider_function.grant_invoke(vector_store_principal)

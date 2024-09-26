@@ -24,7 +24,8 @@ from multi_tenant_full_stack_rag_application import utils
 #       for delete_record: collection_id, doc_id
 #       for query: collection_id, query, top_k
 #       for save: collection_id, document
-#       for semantic_query: collection_id, query, top_k
+#       for semantic_query: search_recommendations (mapping of collection IDs to keywords to search for in those collections), 
+#                           top_k
 
 
 vector_store_provider = None
@@ -140,13 +141,14 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             result = self.delete_record(handler_evt.collection_id, handler_evt.doc_id)
 
         elif handler_evt.operation == 'query':
-            pass
+            result = self.query(handler_evt.collection_id, handler_evt.query)
 
         elif handler_evt.operation == 'save':
-            pass
+            result = self.save(handler_evt.documents, handler_evt.collection_id)
 
         elif handler_evt.operation == 'semantic_query':
-            pass
+            result = self.semantic_query(handler_evt.search_recommendations, handler_evt.top_k)
+
         else:
             status = 400
             result = {'error', 'Unknown operation'}
@@ -229,9 +231,12 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
     def save(self, doc_chunks: [VectorStoreDocument], collection_id, *, return_docs=False, return_vectors=False): 
         os_vector_db = self.get_vector_store(collection_id)
         payload = ''
+        print(f"Saving {len(doc_chunks)} (type {type(doc_chunks[0])}) documents to vector store {collection_id}")
+        doc_ids = []
         for doc in doc_chunks:
-            doc = doc.to_dict()
+            print(f"saving doc {doc}")
             doc_id = doc['id']
+            doc_ids.append(doc_id)
             if doc_id.startswith(f"{collection_id}/"):
                 doc_id = doc_id.replace(f"{collection_id}/", "")
             # print(f"ingesting document {doc}")
@@ -244,8 +249,9 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
         result = os_vector_db.bulk(payload, params={
             'refresh': 'true'
         })
+        
         print(f"Result from saving doc to vector store: {result}")
-        return len(doc_chunks)
+        return doc_ids
 
 
 def handler(event, context):

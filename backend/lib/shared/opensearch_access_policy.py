@@ -21,12 +21,12 @@ class OpenSearchAccessPolicy(Construct):
         # domain.add_access_policies(iam.PolicyStatement(
         #     actions=['es:*'],
         #     principals=[
-        #         grantee_role.grant_principal,
+        #         grantee_principal,
         #     ],
         #     resources=[
-        #         f"arn:aws:es:{self.region}:{self.account}:domain/{self.domain.domain_name}",
-        #         f"arn:aws:es:{self.region}:{self.account}:domain/{self.domain.domain_name}/*",
-        #         f"arn:aws:es:{self.region}:{self.account}:domain/{self.domain.domain_name}/*/*"
+        #         f"arn:aws:es:*:*:domain/{domain.domain_name}",
+        #         f"arn:aws:es:*:*:domain/{domain.domain_name}/*",
+        #         f"arn:aws:es:*:*:domain/{domain.domain_name}/*/*"
         #     ]
         # ))
         if domain_write_access:
