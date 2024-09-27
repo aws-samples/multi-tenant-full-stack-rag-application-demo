@@ -57,7 +57,7 @@ class FinalScriptsStack(NestedStack):
             retry_attempts=0,
             filters=[
                 lambda_.FilterCriteria.filter({"event_name": lambda_.FilterRule.is_equal("MODIFY")}),
-                lambda_.FilterCriteria.filter({"dynamodb": lambda_.FilterRule.filter({"new_image": lambda_.FilterRule.is_equal({"progress_status": lambda_.FilterRule.or_(["ENRICHMENT_FAILED", "INGESTED"])})})})
+                # lambda_.FilterCriteria.filter({"dynamodb": lambda_.FilterRule.filter({"new_image": lambda_.FilterRule.is_equal({"progress_status": lambda_.FilterRule.or_(["ENRICHMENT_FAILED", "INGESTED"])})})})
             ]
         )
 
