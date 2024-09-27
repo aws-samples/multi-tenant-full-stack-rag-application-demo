@@ -149,7 +149,8 @@ class MultiTenantRagStack(Stack):
             doc_collections_handler_function=doc_collections_stack.doc_collections_function,
             domain=vector_store_provider_stack.vector_store_stack.domain,
             embeddings_provider_function=embeddings_provider_stack.embeddings_provider_function,
-            extraction_principal=enrichment_pipelines_handler_stack.entity_extraction_function.entity_extraction_function.grant_principal,
+            # enrichment_pipelines_handler_stack.entity_extraction_function.entity_extraction_function.grant_principal,
+            extraction_function=enrichment_pipelines_handler_stack.entity_extraction_function.entity_extraction_function,
             graph_store_provider_function=graph_store_provider_stack.graph_store_provider,
             inference_principal=generation_handler_stack.generation_handler_function.grant_principal,
             ingestion_bucket=ingestion_provider_stack.ingestion_bucket.bucket,
@@ -157,6 +158,7 @@ class MultiTenantRagStack(Stack):
             # ingestion_principal=ingestion_provider_stack.ingestion_function.grant_principal,
             ingestion_queue=ingestion_provider_stack.ingestion_queue.queue,
             ingestion_status_provider_function=ingestion_provider_stack.ingestion_status_function,
+            ingestion_status_table=ingestion_provider_stack.ingestion_status_table.table,
             prompt_templates_handler_function=prompt_templates_handler_stack.prompt_template_handler_function,
             vector_store_provider_function=vector_store_provider_stack.vector_store_stack.vector_store_provider,
         )

@@ -1,7 +1,9 @@
 from aws_cdk import (
     NestedStack,
+    aws_dynamodb as ddb,
     aws_iam as iam,
     aws_lambda as lambda_,
+    aws_lambda_event_sources as lambda_event_sources,
     aws_opensearchservice as aos,
     aws_s3 as s3,
     aws_sqs as sqs,
@@ -20,7 +22,7 @@ class FinalScriptsStack(NestedStack):
         doc_collections_handler_function: lambda_.IFunction,
         domain: aos.Domain,
         embeddings_provider_function: lambda_.IFunction,
-        extraction_principal: iam.IPrincipal,
+        extraction_function: lambda_.IFunction,
         graph_store_provider_function: lambda_.IFunction,
         inference_principal: iam.IPrincipal,
         ingestion_bucket: s3.IBucket,
@@ -28,12 +30,14 @@ class FinalScriptsStack(NestedStack):
         # ingestion_principal: iam.IPrincipal,
         ingestion_queue: sqs.IQueue,
         ingestion_status_provider_function: lambda_.IFunction,
+        ingestion_status_table: ddb.ITable,
         prompt_templates_handler_function: lambda_.IFunction,
         vector_store_provider_function: lambda_.IFunction,
         **kwargs
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        extraction_principal = extraction_function.grant_principal
         ingestion_principal = ingestion_function.grant_principal
         vector_store_principal = vector_store_provider_function.grant_principal
 
@@ -46,6 +50,19 @@ class FinalScriptsStack(NestedStack):
             index_write_access=True
         )
 
+        enrichment_evt_source = lambda_event_sources.DynamoEventSource(
+            ingestion_status_table,
+            starting_position=lambda_.StartingPosition.LATEST,
+            batch_size=1,
+            retry_attempts=0,
+            filters=[
+                lambda_.FilterCriteria.filter({"event_name": lambda_.FilterRule.is_equal("MODIFY")}),
+                lambda_.FilterCriteria.filter({"dynamodb": lambda_.FilterRule.filter({"new_image": lambda_.FilterRule.is_equal({"progress_status": lambda_.FilterRule.or_(["ENRICHMENT_FAILED", "INGESTED"])})})})
+            ]
+        )
+
+        extraction_function.add_event_source(enrichment_evt_source)
+        
         # self.bucket_to_queue_trigger = BucketToQueueNotification(self, 'IngestionBucketNotifications',
         #     bucket_name=ingestion_bucket.bucket_name,
         #     queue=ingestion_queue,

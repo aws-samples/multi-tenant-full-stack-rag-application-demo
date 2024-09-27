@@ -38,7 +38,7 @@ class IngestionProviderStack(Stack):
     ) -> None:
         super().__init__(scope, construct_id) #  **kwargs)        
         
-        # ssm_param_name = 'ingestion_status_table'
+        # ssm_param_name = 'self.ingestion_status_table'
         removal_policy = self.node.get_context('removal_policy')
         
         self.ingestion_bucket = Bucket(self, 'IngestionBucket',
@@ -48,7 +48,7 @@ class IngestionProviderStack(Stack):
             removal_policy=RemovalPolicy(removal_policy),
         )
         
-        ingestion_status_table = DynamoDbTable(self, 'DdbTable',
+        self.ingestion_status_table = DynamoDbTable(self, 'DdbTable',
             parent_stack_name=parent_stack_name,
             partition_key='user_id',
             partition_key_type=ddb.AttributeType.STRING,
@@ -84,7 +84,7 @@ class IngestionProviderStack(Stack):
             environment={
                 "AWS_ACCOUNT_ID": self.account,
                 "INGESTION_BUCKET": self.ingestion_bucket.bucket.bucket_name,
-                "INGESTION_STATUS_TABLE": ingestion_status_table.table.table_name,
+                "INGESTION_STATUS_TABLE": self.ingestion_status_table.table.table_name,
                 "STACK_NAME": parent_stack_name,
                 "UPDATED": "2024-09-20T23:02:00Z"
             },
@@ -120,7 +120,7 @@ class IngestionProviderStack(Stack):
 
         # UtilsPermissions(self, 'IngestionStatusUtilsPermissions', self.ingestion_status_function.role)
 
-        ingestion_status_table.table.grant_read_write_data(self.ingestion_status_function.grant_principal)
+        self.ingestion_status_table.table.grant_read_write_data(self.ingestion_status_function.grant_principal)
 
         # self.ingestion_status_provider_role = self.ingestion_status_function.role.grant_principal
 
@@ -148,7 +148,7 @@ class IngestionProviderStack(Stack):
                 "AWS_ACCOUNT_ID": self.account,
                 "EMBEDDING_MODEL_ID": self.node.get_context("embeddings_model_id"),
                 "STACK_NAME": parent_stack_name,
-                "INGESTION_STATUS_TABLE": ingestion_status_table.table.table_name,
+                "INGESTION_STATUS_TABLE": self.ingestion_status_table.table.table_name,
                 "OCR_MODEL_ID": self.node.get_context('ocr_model_id'),
                 "UPDATED": "2024-09-20T23:02:00Z",
             }
@@ -165,7 +165,7 @@ class IngestionProviderStack(Stack):
             ]
         ))
         
-        ingestion_status_table.table.grant_read_write_data(self.ingestion_function.grant_principal)
+        self.ingestion_status_table.table.grant_read_write_data(self.ingestion_function.grant_principal)
         
         cognito_auth_role = iam.Role.from_role_arn(self, 'CognitoAuthRoleRef', auth_role_arn)
 

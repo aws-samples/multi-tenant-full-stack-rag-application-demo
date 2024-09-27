@@ -41,7 +41,7 @@ source .venv/bin/activate
 pip3 install --upgrade --no-cache -r backend/requirements.txt
 pip3 install --upgrade --no-cache -r frontend/requirements.txt
 
-SERVICE_LINKED_ROLE=`aws iam get-role --role-name AWSServiceRoleForAmazonOpenSearchService | jq .Role.RoleName`
+SERVICE_LINKED_ROLE=`aws iam get-role --role-name AWSServiceRoleForAmazonOpenSearchService --query Role.RoleName`
 if [ "$SERVICE_LINKED_ROLE" != "\"AWSServiceRoleForAmazonOpenSearchService\"" ]; then
   aws iam create-service-linked-role --aws-service-name opensearchservice.amazonaws.com
 fi
