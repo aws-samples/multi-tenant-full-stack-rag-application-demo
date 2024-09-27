@@ -71,6 +71,7 @@ def embed_text(text, origin, *, dimensions=1024, lambda_client=None):
         lambda_client=lambda_client
     )
     embeddings = json.loads(response['body'])['response']
+    print(f"utils.embed_text returning {embeddings}")
     return embeddings
 
 

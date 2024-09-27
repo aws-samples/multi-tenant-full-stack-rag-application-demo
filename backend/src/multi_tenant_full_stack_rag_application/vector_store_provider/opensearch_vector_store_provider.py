@@ -162,6 +162,35 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             index=collection_id
         )
         
+    def save(self, doc_chunks: [VectorStoreDocument], collection_id, *, return_docs=False, return_vectors=False): 
+        os_vector_db = self.get_vector_store(collection_id)
+        payload = ''
+        print(f"Saving {len(doc_chunks)} (type {type(doc_chunks[0])}) documents to vector store {collection_id}")
+        doc_ids = []
+        for doc in doc_chunks:
+            print(f"saving doc {doc}")
+            doc_id = doc['id']
+            doc_ids.append(doc_id)
+            if doc_id.startswith(f"{collection_id}/"):
+                doc_id = doc_id.replace(f"{collection_id}/", "")
+            # print(f"ingesting document {doc}")
+            if 'id' in list(doc.keys()):
+                del doc['id']
+            # delattr(doc, 'id')
+            doc['vector'] = self.utils.embed_text(doc['content'], self.my_origin)
+            payload += '{"index": { "_index": "' + collection_id + '", "_id": "' + doc_id + '"}}\n' + json.dumps(doc) + "\n"
+        
+        print(f"Saving payload {payload}")
+        result = os_vector_db.bulk(payload, params={
+            'refresh': 'true'
+        })
+
+        if result['errors']:
+            raise Exception(f"Error saving to vector store: {result}")
+            
+        print(f"Result from saving doc to vector store: {result}")
+        return doc_ids
+
     def semantic_query(self, search_recommendations, top_k: int=5, score_threshold: float=0.2) -> [VectorStoreDocument]:
         in_queue = Queue()
         out_queue = Queue()
@@ -227,31 +256,6 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             final_docs.append(doc)
         
         return final_docs
-
-    def save(self, doc_chunks: [VectorStoreDocument], collection_id, *, return_docs=False, return_vectors=False): 
-        os_vector_db = self.get_vector_store(collection_id)
-        payload = ''
-        print(f"Saving {len(doc_chunks)} (type {type(doc_chunks[0])}) documents to vector store {collection_id}")
-        doc_ids = []
-        for doc in doc_chunks:
-            print(f"saving doc {doc}")
-            doc_id = doc['id']
-            doc_ids.append(doc_id)
-            if doc_id.startswith(f"{collection_id}/"):
-                doc_id = doc_id.replace(f"{collection_id}/", "")
-            # print(f"ingesting document {doc}")
-            if 'id' in list(doc.keys()):
-                del doc['id']
-            # delattr(doc, 'id')
-            doc['vector'] = self.utils.embed_text(doc['content'], self.my_origin)
-            payload += '{"index": { "_index": "' + collection_id + '", "_id": "' + doc_id + '"}}\n' + json.dumps(doc) + "\n"
-        
-        result = os_vector_db.bulk(payload, params={
-            'refresh': 'true'
-        })
-        
-        print(f"Result from saving doc to vector store: {result}")
-        return doc_ids
 
 
 def handler(event, context):
