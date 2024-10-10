@@ -53,12 +53,14 @@ class EntityExtractionProviderFunction(Construct):
         #     build_cmds.append(f"pip3 install -r /asset-input/{path} -t /asset-output/")
 
         build_cmds += [
-            "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_handler/entity_extraction",
+            "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_provider/entity_extraction",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
-            "cp /asset-input/enrichment_pipelines_handler/*.py /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_handler",
-            "cp /asset-input/enrichment_pipelines_handler/entity_extraction/*.py /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_handler/entity_extraction/",
-            "cp /asset-input/enrichment_pipelines_handler/entity_extraction/*.txt /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_handler/entity_extraction/",
+            "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/ingestion_provider",
+            "cp /asset-input/enrichment_pipelines_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_provider",
+            "cp /asset-input/enrichment_pipelines_provider/entity_extraction/*.py /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_provider/entity_extraction/",
+            "cp /asset-input/enrichment_pipelines_provider/entity_extraction/*.txt /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_provider/entity_extraction/",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
+            "cp /asset-input/ingestion_provider/ingestion_status.py /asset-output/multi_tenant_full_stack_rag_application/ingestion_provider/",
             "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output"
         ]
 
@@ -75,9 +77,10 @@ class EntityExtractionProviderFunction(Construct):
             memory_size=1024,
             runtime=lambda_.Runtime.PYTHON_3_11,
             architecture=lambda_.Architecture.X86_64,
-            handler='multi_tenant_full_stack_rag_application.enrichment_pipelines_handler.entity_extraction.handler',
+            handler='multi_tenant_full_stack_rag_application.enrichment_pipelines_provider.entity_extraction.handler',
             timeout=Duration.seconds(900),
             environment={
+                "AWS_ACCOUNT_ID": account,
                 "EXTRACTION_MODEL_ID": extraction_model_id,
                 'SERVICE_REGION': region,
                 "STACK_NAME": parent_stack_name,
@@ -91,11 +94,11 @@ class EntityExtractionProviderFunction(Construct):
             security_groups=[app_security_group]
         )
 
-        # ent_extraction_origin_param = ssm.StringParameter(self, 'EntityExtractionProviderOrigin',
-        #     parameter_name=f'/{parent_stack_name}/origin_entity_extraction',
-        #     string_value=self.entity_extraction_function.function_name
-        # )
-        # ent_extraction_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
+        ent_extraction_origin_param = ssm.StringParameter(self, 'EntityExtractionProviderOrigin',
+            parameter_name=f'/{parent_stack_name}/origin_entity_extraction',
+            string_value=self.entity_extraction_function.function_name
+        )
+        ent_extraction_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
 
         self.entity_extraction_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,

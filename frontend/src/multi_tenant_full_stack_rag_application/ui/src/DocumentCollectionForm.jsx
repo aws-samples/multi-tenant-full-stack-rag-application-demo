@@ -208,12 +208,14 @@ function DocumentCollectionForm() {
           console.log(`does collection_id ${tmpCollection.collection_id} === urlCollectionId ${urlCollectionId}?`)
           if (tmpCollection.collection_id === urlCollectionId) {
             let tmpCollectionObj = new DocumentCollection(
+              tmpCollection.user_email,
               tmpCollection.collection_name,
               tmpCollection.description,
-              tmpCollection.collection_id,
               tmpCollection.vector_db_type,
-              tmpCollection.enrichment_pipelines,
+              tmpCollection.collection_id,
               tmpCollection.shared_with,
+              tmpCollection.enrichment_pipelines,
+              tmpCollection.graph_schema,
               tmpCollection.created_date,
               tmpCollection.updated_date,
             ) 
@@ -277,7 +279,7 @@ function DocumentCollectionForm() {
     setConfirmationModal(
       <DeleteConfirmationModal
         message={deleteConfirmationMessage}
-        deleteFn={api.deleteDocCollection}
+        deleteFn={deleteCollection}
         deleteRedirectLocation={'#/document-collections'}
         resourceId={urlCollectionId}
         visible={true}
@@ -287,6 +289,11 @@ function DocumentCollectionForm() {
     // api.deleteDocCollection(evt.urlCollectionId)
   }
   
+  function deleteCollection(collectionId) {
+    api.deleteDocCollection(collectionId)
+    setDeleteModalVisible(false)
+  }
+
   function getLoadingPageContent() {
     return (
       <>
@@ -433,10 +440,24 @@ function DocumentCollectionForm() {
       console.log("result from upsertDocCollection:")
       console.dir(result)
       const collectionName = Object.keys(result)[0]
-      console.log(`Creating collection with `)
-      console.dir(result[collectionName])
-      setCurrentCollection(new DocumentCollection(result[collectionName]))
+      console.log(`Created collection with name ${collectionName}`)
+      // console.log(`Creating collection with `)
+      // console.dir(result[collectionName])
+      let collection = result[collectionName]
+      setCurrentCollection(new DocumentCollection(
+        collection.user_email,
+        collection.collection_name,
+        collection.description,
+        collection.vector_db_type,
+        collection.collection_id,
+        collection.shared_with,
+        collection.enrichment_pipelines,
+        collection.graph_schema,
+        collection.created_date,
+        collection.updated_date,
+      ))
       setIsLoading(false)
+      setUrlCollectionId(collection.collection_id)
       evt.preventDefault();
       location.hash = `#/document-collections/${result[collectionName]['collection_id']}/edit`;
     }

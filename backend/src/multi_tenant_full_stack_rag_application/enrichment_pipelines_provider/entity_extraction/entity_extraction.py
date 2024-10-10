@@ -19,11 +19,11 @@ import shutil
 import multi_tenant_full_stack_rag_application.enrichment_pipelines_provider.entity_extraction.neptune_client as neptune
 
 from multi_tenant_full_stack_rag_application import utils
-from multi_tenant_full_stack_rag_application.enrichment_pipelines import Pipeline
-
+from multi_tenant_full_stack_rag_application.enrichment_pipelines_provider import Pipeline
 
 # default_entity_extraction_template_path = 'multi_tenant_full_stack_rag_application/enrichment_pipelines/entity_extraction/default_entity_extraction_template.txt'
 default_extraction_model_id = os.getenv('EXTRACTION_MODEL_ID')
+entity_extraction = None
 
 
 class EntityExtraction(Pipeline):
@@ -39,10 +39,12 @@ class EntityExtraction(Pipeline):
     ):
         super().__init__(pipeline_name, **kwargs)
 
+        self.utils = utils
         if not neptune_endpoint:
             self.neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
         else:
             self.neptune_endpoint = neptune_endpoint
+        self.my_origin = self.utils.get_ssm_params('origin_entity_extraction')
 
     def neptune_query(self, statement):
         # print(f"Running neptune query {statement}")
@@ -59,93 +61,89 @@ class EntityExtraction(Pipeline):
             return False
 
     def process(self, event):
-        # print(f"entity_extraction.process received {event}")
+        print(f"entity_extraction.process received {event}")
         for record in event['Records']:
             ddb_rec = record['dynamodb']
             if not (record['eventName'] == 'MODIFY' and \
                 ddb_rec['NewImage']['progress_status']['S'] in ['ENRICHMENT_FAILED','INGESTED']):
+                print(f"Skipping ddb_rec because it's not the right progress status: {ddb_rec}")
                 continue
-
-            ing_status = IngestionStatus.from_ddb_record(ddb_rec['NewImage'])
-            if ing_status.progress_status in ['INGESTED', 'ENRICHMENT_FAILED']:
-                collection_id = ing_status.doc_id.split('/')[0]
+            
+            new_image = ddb_rec['NewImage']
+            print(f"Got new image {new_image}")
+            if new_image['progress_status']['S'] in ['INGESTED', 'ENRICHMENT_FAILED']:
+                collection_id = new_image['doc_id']['S'].split('/')[0]
                 account_id = record['eventSourceARN'].split(':')[4]
-                user_id = ddb_rec['NewImage']['user_id']['S']
+                user_id = new_image['user_id']['S']
 
-                # print(f"Searching for user_id {user_id}, collection_id {collection_id}, {account_id}")
-                dch_evt = {
-                    'account_id': account_id,
-                    'collection_id': collection_id,
-                    'method': 'GET',
-                    'path': f'/document_collections/{collection_id}/edit',
-                    'user_email': '',
-                    'user_id': user_id,
-                    'origin': 'KINESIS'
-                }
-                # print(f"Got dch_evt dict {dch_evt}")
-                dch_evt = DocumentCollectionsHandlerEvent(**dch_evt)
-                # print(f"created dch_evt {dch_evt}")
-                collection = self.document_collections_handler.get_doc_collection(user_id, collection_id, include_shared=False)
-                # print(f"Got collection {collection}")
-                if not collection or 'entity_extraction' not in collection.enrichment_pipelines:
+                collection = self.utils.get_document_collection(collection_id, user_id)
+                print(f"Got collection {collection}")
+                if not collection or 'entity_extraction' not in collection['enrichment_pipelines']:
+                    print(f"Skipping entity extraction for doc collection {collection} because it doesn't have entity extraction enabled.")
                     return None
                 # now fetch all the text chunks from this doc in the vector
                 # database
                 query = {
                     "query": {
                         "term": {
-                            "metadata.source.keyword":  ing_status.doc_id
+                            "metadata.source.keyword": new_image['doc_id']['S']
                         }
                     }
                 }
-                response = self.vector_store_provider.query(
+                response = self.utils.vector_store_query(
                     collection_id,
-                    query
+                    query,
+                    self.my_origin
                 )
-                # # print(f"Got chunks for for entity extraction {response}")
+                body = json.loads(response['body'])
+                print(f"Got chunks for for entity extraction {body}")
                 doc_text = ''
-                for hit in response['hits']['hits']:
+                for hit in body['hits']['hits']:
                     doc_text += hit['_source']['content']
-                
-                # get the document collection by collection_id
-                doc_collection = self.document_collections_handler.get_doc_collection(
-                    user_id,
-                    collection_id
-                )
+                print(f"Got doc text\n{doc_text}")
+                # # get the document collection by collection_id
+                # doc_collection = self.utils.get_document_collection(
+                #     collection_id, user_id
+                # )
                 # print(f"Got doc_collection {doc_collection}")
-                if not ('entity_extraction' in doc_collection.enrichment_pipelines and \
-                    doc_collection.enrichment_pipelines['entity_extraction']['enabled']) :
-                    # print(f"Skipping entity extraction for doc collection {doc_collection} because it doesn't have entity extraction enabled.")
-                    ing_status.progress_status = 'ENRICHMENT_DISABLED_SKIPPING'
-                    if not ing_status.doc_id.startswith(collection_id):
-                        ing_status.doc_id = f"{collection_id}/{ing_status.doc_id}"
-                    self.ingestion_status_provider.set_ingestion_status(ing_status)
-                    return True
+                # if not ('entity_extraction' in collection.enrichment_pipelines and \
+                #     collection.enrichment_pipelines['entity_extraction']['enabled']) :
+                #     # print(f"Skipping entity extraction for doc collection {doc_collection} because it doesn't have entity extraction enabled.")
+                #     new_image['progress-status']['S'] = 'ENRICHMENT_DISABLED_SKIPPING'
+                #     if not new_image['doc_id']['S'].startswith(collection_id):
+                #         new_image['doc_id']['S'] = f"{collection_id}/{new_image['doc_id']['S']}"
+                #     self.ingestion_status_provider.set_ingestion_status(ing_status)
+                #     return True
 
-                # print(f"Entity extraction is enabled for collection {collection_id}")
-                entity_extraction_template = self.prompt_template_handler.get_prompt_template(
+                print(f"Entity extraction is enabled for collection {collection_id}")
+                template_id = json.loads(collection['enrichment_pipelines"'])["entity_extraction"]["templateIdSelected"]
+                entity_extraction_template = self.utils.get_prompt_template(
+                    template_id,
                     user_id,
-                    doc_collection.enrichment_pipelines['entity_extraction']['templateIdSelected']
+                    self.my_origin
                 )
-                print (f"Got entity_extraction_template {entity_extraction_template}")
+                print (f"Got entity_extraction_template {entity_extraction_template}, type {type(entity_extraction_template)}")
                 ee_template_name = entity_extraction_template.template_name  #  ['template_name']
                 ee_template_text = entity_extraction_template.template_text  #  ['template_text']    
                 prompt = ee_template_text.replace('{document_content}', doc_text)
-                prompt = f"<COLLECTION_ID>\n{collection_id}\n</COLLECTION_ID>\n<FILENAME>{ing_status.doc_id}</FILENAME>\n\n" + prompt
-                response = self.bedrock.invoke_model(
-                    default_extraction_model_id,
-                    prompt,
-                    messages=[{
-                        "mime_type": "text/plain",
-                        "content": prompt
-                    }],
-                    model_kwargs={
-                        "max_tokens": 4096,
-                        "temperature": 0.0,
-                        "top_p": 0.9,
-                        "top_k": 250,
-                        "stop_sequences": ["</json>"]
-                    }
+                prompt = f"<COLLECTION_ID>\n{collection_id}\n</COLLECTION_ID>\n<FILENAME>{new_image['doc_id']['S']}</FILENAME>\n\n" + prompt
+                response = self.utils.invoke_bedrock(
+                    'invoke_model',
+                    {
+                        "prompt": prompt,
+                        "messages": [{
+                            "mime_type": "text/plain",
+                            "content": prompt
+                        }],
+                        "model_kwargs": {
+                            "max_tokens": 4096,
+                            "temperature": 0.0,
+                            "top_p": 0.9,
+                            "top_k": 250,
+                            "stop_sequences": ["</json>"]
+                        }
+                    },
+                    self.my_origin
                 )
                 # print(f"Bedrock response {response}, type {type(response)}")
                 response_json_str = response.replace('<JSON>', '').replace('</JSON>', '').replace("\n", "")
@@ -155,12 +153,12 @@ class EntityExtraction(Pipeline):
                 gremlin_statements = ''
                 ids_to_types = {}
                 errors = False
-                document_id = ing_status.doc_id.replace('/', '::').replace('-', '_')
+                document_id = new_image['doc_id']['S'].replace('/', '::').replace('-', '_')
                 response['nodes'].append(
                     {
                         "id": document_id,
                         "type": "document",
-                        "source": ing_status.doc_id
+                        "source": new_image['doc_id']['S']
                     }
                 )
                 
@@ -185,7 +183,7 @@ class EntityExtraction(Pipeline):
                         key = key.replace('-', '_').replace(' ', '_').replace("\'", "\\\'")
                         node[key] = node[key].replace("\'", "\\\'")
                         merge_statement += f", '{key}': '{node[key]}'"
-                    merge_statement += f", 'from_file': '{ing_status.doc_id}'"
+                    merge_statement += f", 'from_file': '{new_image['doc_id']['S']}'"
                     merge_statement += f", 'collection_id': '{collection_id}'"
                     merge_statement += '])'
                     merge_statement += '.option(onMatch, ['
@@ -193,7 +191,7 @@ class EntityExtraction(Pipeline):
                         key = key.replace('-', '_').replace(' ', '_').replace("\'", "\\\'")
                         # node[key] = node[key].replace("\'", "\\\'")
                         merge_statement += f"'{key}': '{node[key]}',"
-                    merge_statement += f" 'from_file': '{ing_status.doc_id}'"
+                    merge_statement += f" 'from_file': '{new_image['doc_id']['S']}'"
                     merge_statement += f", 'collection_id': '{collection_id}'"
                     merge_statement = merge_statement.strip(',') + '])' + '\n'
                     gremlin_statements += merge_statement
@@ -207,7 +205,7 @@ class EntityExtraction(Pipeline):
                     edge['source'] = edge['source'].replace('-', '_').replace(' ', '_').replace("\'", "\\\'")
                     edge['target'] = edge['target'].replace('-', '_').replace(' ', '_').replace("\'", "\\\'")
                     edge['type'] = edge['type'].replace('-', '_').replace(' ', '_').replace("\'", "\\\'")
-                    edge_id = f"{ing_status.doc_id}::{edge['source'].split('::')[1]}::{edge['type']}::{edge['target'].split('::')[1]}"
+                    edge_id = f"{new_image['doc_id']['S']}::{edge['source'].split('::')[1]}::{edge['type']}::{edge['target'].split('::')[1]}"
                     edge_id = edge_id.replace('-', '_').replace(' ', '_').replace('/', '_').replace("\'", "\\\'")
                     merge_statement += f"g.mergeE([(id): '{edge_id}'])"
                     merge_statement += f".option(onCreate, [(from): '{edge['source']}', (to): '{edge['target']}', (T.label): '{edge['type']}', weight: 1.0])"
@@ -234,16 +232,21 @@ class EntityExtraction(Pipeline):
                 #     neptune_response = json.loads(neptune_response)
 
                 if errors == False:
-                    ing_status.progress_status = 'ENRICHMENT_COMPLETE'
-                    # print()
-                    if not ing_status.doc_id.startswith(collection_id):
-                        ing_status.doc_id = f"{collection_id}/{ing_status.doc_id}"
-                    self.ingestion_status_provider.set_ingestion_status(ing_status)
+                    new_image['progress-status']['S'] = 'ENRICHMENT_COMPLETE'
+
                 else:
-                    ing_status.progress_status = 'ENRICHMENT_FAILED'
-                    self.ingestion_status_provider.set_ingestion_status(ing_status)
-                    raise Exception(f"Error processing {ing_status.doc_id}")
-                
+                    new_image['progress_status']['S'] = 'ENRICHMENT_FAILED'
+                    # raise Exception(f"Error processing {new_image['doc_id']['S']}")
+                if not new_image['doc_id']['S'].startswith(collection_id):
+                    new_image['doc_id']['S'] = f"{collection_id}/{new_image['doc_id']['S']}"
+                self.utils.set_ingestion_status(
+                    new_image['user_id']['S'],
+                    new_image['doc_id']['S'],
+                    new_image['etag']['S'],
+                    new_image['lines_processed']['N'],
+                    new_image['progress_status']['S'],
+                    self.my_origin
+                )
                 schema_query = f"""
                     g.V()
                     .has(id, startingWith("{collection_id}"))
@@ -291,12 +294,14 @@ class EntityExtraction(Pipeline):
                                             schema[node_label][last_value_name].append(subval)
                     # print(f"Got schema: {schema}")
                     collection.graph_schema = schema
-                    collection_save_result = self.document_collections_handler.upsert_doc_collection(collection, dch_evt)
+                    collection_save_result = self.utils.upsert_doc_collection(collection, dch_evt)
                     # print(f"Updated collections result {collection_save_result}")
 
 def handler(event, context):
-    print(f"entity_extraction_handler received: {event}")
-    e = EntityExtraction("Entity Extraction")
-    result = e.process(event)
-    # print(f"entity_extraction.handler returning {result}")
+    global entity_extraction
+    if not entity_extraction:
+        # print(f"entity_extraction_handler received: {event}")
+        entity_extraction = EntityExtraction("Entity Extraction")
+    result = entity_extraction.process(event)
+    print(f"entity_extraction.handler returning {result}")
     return result

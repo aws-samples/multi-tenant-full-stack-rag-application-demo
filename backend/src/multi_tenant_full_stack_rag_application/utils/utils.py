@@ -42,6 +42,32 @@ stack_name = os.getenv('STACK_NAME')
 #         else:
 #             raise Exception(f'Error occurred while deleting message: {e.args[0]}')
 
+def update_document_collection(collection, origin, *, account_id=None, lambda_client=None):
+    if not account_id:
+        account_id = os.getenv('AWS_ACCOUNT_ID')
+
+    doc_collections_fn_name = get_ssm_params('document_collections_handler_function_name')
+    response = invoke_lambda(
+        doc_collections_fn_name,
+        {
+            "requestContext": {
+                "accountId": account_id,
+            }, 
+            "headers": {
+                "origin": origin
+            },
+            "routeKey": "POST /document_collections",
+            "body": {
+                "collection": collection,
+                "user_id": collection.user_id
+            }
+        },
+        lambda_client=lambda_client
+    )
+    print(f"responses = {response}")
+    return response
+
+
 def delete_ingestion_status(user_id, doc_id, origin, *, delete_from_s3=False):
     return invoke_lambda(
         get_ssm_params('ingestion_status_provider_function_name'),
@@ -55,6 +81,7 @@ def delete_ingestion_status(user_id, doc_id, origin, *, delete_from_s3=False):
             }
         }
     )
+
 
 def embed_text(text, origin, *, dimensions=1024, lambda_client=None):
     print(f'utils.embed_text got text {text}, origin {origin}')
@@ -513,3 +540,20 @@ def set_ingestion_status(user_id, doc_id, etag, lines_processed, progress_status
             }
         }
     )
+
+
+def vector_store_query(collection_id, query, origin, *, lambda_client=None):
+    response = invoke_lambda(
+        get_ssm_params('vector_store_provider_function_name'),
+        {
+            "operation": "query",
+            "origin": origin,
+            "args": {
+                "collection_id": collection_id,
+                "query": query
+            }
+        },
+        lambda_client=lambda_client
+    )
+    print(f"vector_store_query got response {response}")
+    return response

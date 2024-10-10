@@ -166,9 +166,12 @@ function ChatPlayground(props) {
       
       let llmsOptions = []
       modelIds.forEach( modelId => {
+        let model = response['model_default_params'][modelId]
+        console.log("Got model")
+        console.dir(model)
         if (!modelId.includes('embed')){
           llmsOptions.push({
-            label: modelId, 
+            label: model.display_name, 
             value: modelId
           });
         }

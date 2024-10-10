@@ -16,7 +16,7 @@ import '@aws-amplify/ui-react/styles.css';
 Amplify.configure(awsExports);
 const tmpBreadcrumbs = [
     {
-      text: 'Gen AI Accelerator',
+      text: 'Multi-tenant full-stack RAG app demo',
       href: '#',
     }
 ];
