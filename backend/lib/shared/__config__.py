@@ -42,12 +42,12 @@ config = {
          "py_path": "multi_tenant_full_stack_rag_application.embeddings_provider.bedrock_embeddings_provider.BedrockEmbeddingsProvider"
       }
    },
-   "enrichment_pipelines_handler": {
+   "enrichment_pipelines_provider": {
       "entity_extraction": {
          "name": "Entity Extraction Pipeline",
-         "py_path": 'multi_tenant_full_stack_rag_application.enrichment_pipelines_handler.EntityExtraction',
+         "py_path": 'multi_tenant_full_stack_rag_application.enrichment_pipelines_provider.EntityExtraction',
          "requirements_paths": [
-            "enrichment_pipelines_handler/entity_extraction/entity_extraction_requirements.txt",
+            "enrichment_pipelines_provider/entity_extraction/entity_extraction_requirements.txt",
             "bedrock_provider/bedrock_provider_requirements.txt"
          ],
          "extraction_model_id": "anthropic.claude-3-haiku-20240307-v1:0",

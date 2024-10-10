@@ -27,11 +27,13 @@ class IngestionStatus:
 
     @staticmethod
     def from_ddb_record(rec):
+        print(f"from_ddb_record got rec {rec}")
         lines_processed = rec['lines_processed']['N']
-        if '.' in lines_processed:
-            lines_processed = float(lines_processed)
-        else:
-            lines_processed = int(lines_processed)
+        if isinstance(lines_processed, str):
+            if '.' in str(lines_processed):
+                lines_processed = float(lines_processed)
+            else:
+                lines_processed = int(lines_processed)
 
         return IngestionStatus(
             rec['user_id']['S'],

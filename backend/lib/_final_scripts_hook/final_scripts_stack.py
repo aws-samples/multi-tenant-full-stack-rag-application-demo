@@ -62,6 +62,7 @@ class FinalScriptsStack(NestedStack):
         )
 
         extraction_function.add_event_source(enrichment_evt_source)
+        ingestion_status_table.grant_read_write_data(extraction_function.role)
         
         # self.bucket_to_queue_trigger = BucketToQueueNotification(self, 'IngestionBucketNotifications',
         #     bucket_name=ingestion_bucket.bucket_name,
@@ -87,8 +88,10 @@ class FinalScriptsStack(NestedStack):
         bedrock_provider_function.grant_invoke(embeddings_provider_function.grant_principal)
 
         bedrock_provider_function.grant_invoke(extraction_principal)
+        doc_collections_handler_function.grant_invoke(extraction_principal)
         graph_store_provider_function.grant_invoke(extraction_principal)
         ingestion_status_provider_function.grant_invoke(extraction_principal)
+        prompt_templates_handler_function.grant_invoke(extraction_principal)
         vector_store_provider_function.grant_invoke(extraction_principal)
     
         bedrock_provider_function.grant_invoke(inference_principal)

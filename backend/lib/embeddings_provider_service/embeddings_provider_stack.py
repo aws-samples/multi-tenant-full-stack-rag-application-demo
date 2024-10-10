@@ -70,7 +70,7 @@ class EmbeddingsProviderStack(Stack):
                     ]
                 )
             ),
-            memory_size=512,
+            memory_size=256,
             runtime=lambda_.Runtime.PYTHON_3_11,
             architecture=lambda_.Architecture.X86_64,
             handler='multi_tenant_full_stack_rag_application.embeddings_provider.bedrock_embeddings_provider.handler',

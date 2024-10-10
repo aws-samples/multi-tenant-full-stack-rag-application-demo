@@ -130,10 +130,9 @@ def get_canonical_uri_and_payload(query_type, query, method):
         payload = {}
 
     else:
-        # print(
-            'Third parameter should be from ["gremlin", "sparql", "sparqlupdate", "loader", "status] but is "' + query_type + '".')
-        sys.exit()
+        raise Exception("Invalid query type: " + query_type)
     ## return output as tuple
+
     return canonical_uri, payload
 
 def make_signed_request(host, method, query_type, query):
@@ -186,8 +185,8 @@ def make_signed_request(host, method, query_type, query):
             request.headers['Content-type'] = 'application/json'
         r = requests.post(request_url, headers=request.headers, verify=False, data=data, timeout=60)
 
-    else:
-        # print('Request method is neither "GET" nor "POST", something is wrong here.')
+    # else:
+    #     print('Request method is neither "GET" nor "POST", something is wrong here.')
 
     if r is not None:
         # print()
