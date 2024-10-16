@@ -1,7 +1,7 @@
 //  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 //  SPDX-License-Identifier: MIT-0
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Api from './commons/api';
 import { Button, Container, Form, FormField, Header, Input, SpaceBetween, Spinner, Tabs } from '@cloudscape-design/components';
 import { json, useParams } from 'react-router-dom';
@@ -10,9 +10,8 @@ import DocumentCollection from './DocumentCollection'
 import DocumentCollectionEnrichmentPipelines from './DocumentCollectionEnrichmentPipelines'
 import DocumentCollectionSharingList from './DocumentCollectionSharingList'
 import DocumentCollectionUploadedDocumentsTable from './DocumentCollectionUploadedDocumentsTable'
-import { atom, useRecoilState, useResetRecoilState, RecoilEnv } from 'recoil'
+import { atom, useRecoilState, useRecoilValue /*useResetRecoilState,*/ } from 'recoil'
 
-RecoilEnv.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = false
 
 const api = new Api();
 
@@ -34,141 +33,57 @@ const deleteModalMessageTemplate = `Are you sure you want to delete document col
 const filePageSize = 20
 
 
-// function createVectorOption(val) {
-//   console.log("createVectorOption val:")
-//   console.dir(val)
-//   let parts = val.split('_')
-//   let label = parts[0][0].toUpperCase() + parts[0].slice(1) + ' ' +
-//     parts[1][0].toUpperCase() + parts[1].slice(1)
-//   return {
-//     "label": label,
-//     "value": val
-//   }
-// }
+export const currentCollectionState = atom({
+  key: 'currentCollectionState',
+  default: {},
+})
 
 export const urlCollectionIdState = atom({
-  key: 'DocumentCollectionForm.urlCollectionIdState',
-  default: null
-})
-
-const newDocCollection = new DocumentCollection(
-  '',
-  '',
-  ''
-)
-
-export const currentCollectionState = atom({
-  key: 'DocumentCollectionForm.currentCollectionState',
-  default: newDocCollection
-})
-
-export const addUserModalState = atom({
-  key: 'DocumentCollectionForm.addUserModalState',
-  default: null
-})
-
-export const addUserModalVisibleState = atom({
-  key: 'DocumentCollectionForm.addUserModalVisibleState',
-  default: false
-})
-
-export const collectionIsLoadingState = atom({
-  key: 'DocumentCollectionForm.collectionIsLoadingState',
-  default: true
-})
-
-export const collectionIsDeletingState = atom({
-  key: 'DocumentCollectionForm.collectionIsDeletingState',
-  default: false
-})
-
-export const collectionShareListState = atom({
-  key: 'DocumentCollectionForm.collectionShareListState',
-  default: null
-})
-
-export const confirmationModalState = atom({
-  key: 'DocumentCollectionForm.confirmationModalState',
-  default: null
-})
-
-export const currentPageIndexState = atom({
-  key:  'DocumentCollectionForm.currentPageIndexState',
-  default: 0
+  key: 'urlCollectionIdState',
+  default: undefined,
 })
 
 const defaultDeleteConfirmationMessage = `Are you sure you want to delete this document collection?
 
-{currentCollection.name}
+    {currentCollection.name}
 `
-export const deleteConfirmationMessageState = atom({
-  key: 'DocumentCollectionForm.deleteConfirmationMessageState',
-  default: defaultDeleteConfirmationMessage
-})
-
-export const deleteModalVisibleState = atom({
-  key: 'DocumentCollectionForm.deleteModalVisibleState',
-  default: false
-})
 
 export const filesValState = atom({
   key: 'DocumentCollectionForm.filesValState',
   default: []
 })
 
+
 export const filesValIsLoadingState = atom({
   key: 'DocumentCollectionForm.filesValIsLoadingState',
   default: true
 })
 
-export const lastEvalKeyState = atom({
-  key: 'DocumentCollectionForm.lastEvalKeyState',
-  default: '' 
-})
-
-export const paramsState = atom({
-  key: 'DocumentCollectionForm.paramsState',
-  default: null
-})
-
-// export const selectedVectorEngineState = atom({
-//   key: 'DocumentCollectionForm.selectedVectorEngineState',
-//   default: createVectorOption(defaultEngine)
-// })
-
-export const submitDisabledState = atom({
-  key: 'DocumentCollectionForm.submitDisabledState',
-  default: true
-})
 
 export const uploadedFilesState = atom({
   key: 'DocumentCollectionForm.uploadedFilesState',
   default: []
 })
 
-// useResetRecoilState(currentCollectionState)();
-// useResetRecoilState(deleteModalVisibleState)();
-// useResetRecoilState(paramsState)();
-// useResetRecoilState(urlCollectionIdState)();
 
 function DocumentCollectionForm() {
   let tmpParams = useParams()
   const [urlCollectionId, setUrlCollectionId] = useRecoilState(urlCollectionIdState)
-  const [currentCollection, setCurrentCollection ] = useRecoilState(currentCollectionState)
-  const [addUserModal, setAddUserModal] = useRecoilState(addUserModalState)
-  const [addUserModalVisible, setAddUserModalVisible] = useRecoilState(addUserModalVisibleState)
-  const [collectionShareList, setCollectionShareList] = useRecoilState(collectionShareListState)
-  const [confirmationModal, setConfirmationModal] = useRecoilState(confirmationModalState)
-  const [currentPageIndex, setCurrentPageIndex] = useRecoilState(currentPageIndexState)
-  const [deleteConfirmationMessage, setDeleteConfirmationMessage] = useRecoilState(deleteConfirmationMessageState)
-  const [deleteModalVisible, setDeleteModalVisible] = useRecoilState(deleteModalVisibleState)
+  const [currentCollection, setCurrentCollection] = useRecoilState(currentCollectionState)
+  // const [addUserModal, setAddUserModal] = useRecoilState(addUserModalState)
+  // const [addUserModalVisible, setAddUserModalVisible] = useRecoilState(addUserModalVisibleState)
+  // const [collectionShareList, setCollectionShareList] = useRecoilState(collectionShareListState)
+  const [confirmationModal, setConfirmationModal] = useState(null)
+  const [currentPageIndex, setCurrentPageIndex] = useState(0)
+  const [deleteConfirmationMessage, setDeleteConfirmationMessage] = useState('')
+  // const [deleteModalVisible, setDeleteModalVisible] = useRecoilState(deleteModalVisibleState)
   const [filesVal, setFilesVal] = useRecoilState(filesValState)
-  const [isLoading, setIsLoading] = useRecoilState(collectionIsLoadingState)
-  const [isDeleting, setIsDeleting] = useRecoilState(collectionIsDeletingState)
-  const [lastEvalKey, setLastEvalKey] = useRecoilState(lastEvalKeyState)
-  const [params, setParams] = useRecoilState(paramsState)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [lastEvalKey, setLastEvalKey] = useState(null)
+  const [params, setParams] = useState({})
   // const [selectedVectorEngine, setSelectedVectorEngine] = useRecoilState(selectedVectorEngineState)
-  const [submitDisabled, setSubmitDisabled] = useRecoilState(submitDisabledState)
+  const [submitDisabled, setSubmitDisabled] = useState(true)
   const [uploadedFiles, setUploadedFiles] = useRecoilState(uploadedFilesState)
   
   useEffect(() => {
@@ -232,7 +147,7 @@ function DocumentCollectionForm() {
               })
             })
             setCurrentCollection(tmpCollectionObj)
-            setCollectionShareList(sharedList)
+            // setCollectionShareList(sharedList)
             console.log('tmpCollectionObj')
             console.dir(tmpCollectionObj)
             break;
@@ -529,22 +444,4 @@ function DocumentCollectionForm() {
 }
 
 export default DocumentCollectionForm;
-// export const atoms = {
-//   urlCollectionIdState,
-//   currentCollectionState,
-//   addUserModalState,
-//   addUserModalVisibleState,
-//   collectionIsDeletingState,
-//   collectionIsLoadingState,
-//   collectionShareListState,
-//   confirmationModalState,
-//   currentPageIndexState,
-//   deleteConfirmationMessageState,
-//   deleteModalVisibleState,
-//   filesValState,
-//   filesValIsLoadingState,
-//   lastEvalKeyState,
-//   paramsState,
-//   selectedVectorEngineState,
-//   submitDisabledState
-// }
+

@@ -84,7 +84,9 @@ class DocumentCollectionsHandlerEvent:
                 self.last_eval_key = self.path_parameters['last_eval_key']
             if 'limit' in self.path_parameters:
                 self.limit = self.path_parameters['limit']
-                
+            if 'user_id' in self.path_parameters:
+                self.user_id = self.path_parameters['user_id']
+                self.document_collection['user_id'] = self.user_id
 
         if hasattr(self, 'document_collection') and \
             'user_email' in self.document_collection and \

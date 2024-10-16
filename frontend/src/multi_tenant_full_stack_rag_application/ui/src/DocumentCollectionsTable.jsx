@@ -6,59 +6,98 @@ import { DOCUMENT_COLLECTIONS_COLUMN_DEFINITIONS } from './commons/details-confi
 import { logsTableAriaLabels } from './commons/commons';
 import Api from './commons/api'
 import { Box, Button, ButtonDropdown, Container, FileUpload, FormField, Header, SpaceBetween, Spinner, Table } from '@cloudscape-design/components';
-import { atom, useRecoilState, useResetRecoilState } from 'recoil';
-import { currentCollectionState, deleteModalVisibleState, paramsState, urlCollectionIdState } from './DocumentCollectionForm';
+import { atom, useRecoilState, useResetRecoilState, useRecoilValue } from 'recoil';
+import { currentCollectionState } from './DocumentCollectionForm'
+
 import "./documentCollectionsTable.css"
 
+export const docCollectionsState = atom({
+  key: 'DocumentCollectionsTable.docCollectionsState',
+  default: []
+})
+
+export const addDocShareUserModalState = atom({
+  key: 'DocumentCollectionForm.addDocShareUserModalState',
+  default: null
+})
+
+
+export const addDocShareUserModalVisibleState = atom({
+  key: 'DocumentCollectionForm.addDocShareUserModalVisibleState',
+  default: false
+})
+
+
+export const isLoadingState = atom({
+  key: 'DocumentCollectionForm.isLoadingState',
+  default: true
+})
+
+
+export const isDeletingState = atom({
+  key: 'DocumentCollectionForm.isDeletingState',
+  default: false
+})
+
+
+export const shareListState = atom({
+  key: 'DocumentCollectionForm.shareListState',
+  default: null
+})
+
+
+export const confirmationModalState = atom({
+  key: 'DocumentCollectionForm.confirmationModalState',
+  default: null
+})
+
+
+export const currentPageIndexState = atom({
+  key:  'DocumentCollectionForm.currentPageIndexState',
+  default: 0
+})
 
 async function getTableProvider() {
   const api = new Api()
   return await api.getDocCollections();
 }
 
-export const collectionIsLoadingState = atom({
-  key: 'DocumentCollectionsTable.iIsLoadingState',
-  default: true
-})
 
 function DocumentCollectionsTable() {
   useResetRecoilState(currentCollectionState)();
-  useResetRecoilState(deleteModalVisibleState)();
-  useResetRecoilState(paramsState)();
-  useResetRecoilState(urlCollectionIdState)();
-  const [docCollections, setDocCollections] = useState();
-  const [files, setFiles] = useState([]);
+  const [docCollections, setDocCollections] = useRecoilState(docCollectionsState);
+  // const [files, setFiles] = useState([]);
   const [selectedItem, setSelectedItem] = useState({});
   const [currentCollection, setCurrentCollection] = useRecoilState(currentCollectionState);
   // const [currentCollectionContents, setCurrentCollectionContents] = useState();
   // const atLeastOneSelected = selectedItem ? true :  false;
+  const [tableData, setTableData] = useState([])
   const [tableLoadingState, setTableLoadingState] = useState(true)
 
   useEffect(() => {
     (async () => {
       setTableLoadingState(true)
       let collections = await getTableProvider()
-      let tableData = []
+      let tmpTableData = []
+      let tmpDocCollections = []
       console.log("Got docCollections:")
       console.dir(collections)
+      
       collections.forEach(collection => {
-        if (collection) {
           let disabled = false
+          let cn = (' ' + collection.collection_name).slice(1)
           // console.log("Got collection:")
           // console.dir(collection)
-          let cn = collection.collection_name
           // console.log(`vector_db_type = ${collection.vector_db_type}`)
           if (collection.vector_db_type != 'shared') {
             cn = <a title={cn} href={`/#/document-collections/${collection.collection_id}/edit`}>{cn}</a>
-            // console.log("vector db != 'shared'. cn is now:")
-            // console.dir(cn)
           }
           else {
             // console.log("shared collection...disabling row.")
             disabled = true
           }
           // console.log(`should this row be disabled? ${disabled}`)
-          let newCollection = {
+          let newTableRow = {
             collection_id: collection.collection_id,
             collection_name: cn,
             description: collection.description,
@@ -68,25 +107,27 @@ function DocumentCollectionsTable() {
           }
           // console.log("got newCollection:")
           // console.dir(newCollection)
-          tableData.push(newCollection)
-        }
+          tmpTableData.push(newTableRow)
+          let newCollection = {...newTableRow}
+          // remove the link from the collection name and save it
+          // for use in drop-downs elsewhere, like ChatPlayground.jsx
+          newCollection.collection_name = (' ' + collection.collection_name).slice(1)
+          tmpDocCollections.push(newCollection)
       })
-        // if (tableData.length > 0) {
-        //   setDocCollections(tableData)
-        // }
-      setDocCollections(tableData)
+      setTableData(tmpTableData)
+      setDocCollections(tmpDocCollections)
     })()
   }, [])
 
   useEffect(() =>{
-    if (docCollections) {
+    if (tableData) {
       // console.log("docCollections changed")
       // console.dir(docCollections)
       setTableLoadingState(false)
     }
     // setTableLoadingState(false)
     // // console.log("set tableLoadingState to false")
-  }, [docCollections])
+  }, [tableData])
 
   function showDetails(selected) {
     // // console.log("ShowDetails got selected");
@@ -111,7 +152,7 @@ function DocumentCollectionsTable() {
         <Table
           className="documentCollectionsTable"
           columnDefinitions={DOCUMENT_COLLECTIONS_COLUMN_DEFINITIONS}
-          items={docCollections}
+          items={tableData}
           wrapLines='true'
           loadingText="Loading document collections"
           loading={tableLoadingState}
@@ -130,7 +171,6 @@ function DocumentCollectionsTable() {
           }}
           header={
             <Header
-              //counter={!docCollectionsLoading && getHeaderCounterText(docCollections, selectedItems)}
               actions={
                 <SpaceBetween direction="horizontal" size="xs">
                   <ButtonDropdown

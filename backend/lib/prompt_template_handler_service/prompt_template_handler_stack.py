@@ -147,14 +147,30 @@ class PromptTemplateHandlerStack(Stack):
             path='/prompt_templates',
             methods=[
                 apigw.HttpMethod.GET,
-                apigw.HttpMethod.POST,
-                apigw.HttpMethod.PUT,
-                apigw.HttpMethod.DELETE
+                apigw.HttpMethod.POST
             ],
             authorizer=authorizer,
             integration=prompt_template_handler_integration_fn
         )
 
+        self.http_api.add_routes(
+            path='/prompt_templates/{template_id}',
+            methods=[
+                apigw.HttpMethod.GET
+            ],
+            authorizer=authorizer,
+            integration=prompt_template_handler_integration_fn
+        )
+
+        # self.http_api.add_routes(
+        #     path='/prompt_templates/{collection_id}',
+        #     methods=[
+        #         apigw.HttpMethod.DELETE
+        #     ],
+        #     authorizer=authorizer,
+        #     integration=prompt_template_handler_integration_fn
+        # )
+        
         self.http_api.add_routes(
             path='/{proxy+}',
             methods=[

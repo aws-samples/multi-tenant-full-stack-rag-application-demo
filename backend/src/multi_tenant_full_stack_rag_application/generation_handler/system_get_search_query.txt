@@ -43,14 +43,19 @@ Property-> bought_by -> Dave
 <OUTPUT_INSTRUCTIONS>
 If you find matches, output like this:
 <selected_document_collections>
-  {
-    "id": "id of relevant collection", 
-    "collection_name": "name of the relevant collection",
-    "vector_database_search_terms": "all relevant keywords from the user prompt or conversation history, including but not limited to the filename (if specified in the user prompt or conversation history), but excluding the document collection name if it was specified.",
-    "graph_result_type_requested": [list of subjects | list of subjects with edge criteria | list of edges | list of objects],
-    "graph_result_reasoning": "provide the detailed thought process for the graph query response.",
-    "graph_database_query": "The opencypher graph query. Always deduplicate results. Always add the uuid of the document collection being searched as a prefix for node and edge IDs.",
-  }
+  [
+    {
+      "id": "id string of relevant document collection, as passed in.", 
+      "collection_name": "name of the relevant collection",
+      "vector_database_search_terms": "all relevant keywords from the user prompt or conversation history, including but not limited to the filename (if specified in the user prompt or conversation history), but excluding the document collection name if it was specified.",
+      "graph_result_type_requested": [list of subjects | list of subjects with edge criteria | list of edges | list of objects],
+      "graph_result_reasoning": "provide the detailed thought process for the graph query response.",
+      "graph_database_query": "The opencypher graph query. Always deduplicate results. Always add the uuid of the document collection being searched as a prefix for node and edge IDs.",
+    },
+    {
+      (other recommended collections if more than one recommendation, but don't hallucinate extras.)
+    }
+  ]
 </selected_document_collections>
 
 Remember to remove the document collection name from the search terms. Always output only

@@ -178,6 +178,15 @@ class DocumentCollectionsHandlerStack(Stack):
         self.http_api.add_routes(
             path='/document_collections/{collection_id}',
             methods=[
+                apigw.HttpMethod.GET
+            ],
+            authorizer=authorizer,
+            integration=doc_collections_integration_fn
+        )
+
+        self.http_api.add_routes(
+            path='/document_collections/{collection_id}',
+            methods=[
                 apigw.HttpMethod.DELETE
             ],
             authorizer=authorizer,

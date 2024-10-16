@@ -160,6 +160,12 @@ class OpenSearchManagedStack(NestedStack):
                 resources=[auth_fn.function_arn],
             )
         )
+        
+        OpenSearchAccessPolicy(self, "OpenSearchVectorServiceAccess",
+            self.domain,
+            self.vector_store_provider.grant_principal,
+            True, True, True, True
+        )
 
         self.vector_store_provider.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,

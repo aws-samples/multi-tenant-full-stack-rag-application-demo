@@ -2,10 +2,11 @@
 //  SPDX-License-Identifier: MIT-0
 
 
-import { useEffect } from 'react'   
+import { useEffect, useState } from 'react'   
 import Api from './commons/api'
-import { Button, Checkbox, Drawer, ExpandableSection, Form, Header, RadioGroup, SpaceBetween, Table } from '@cloudscape-design/components'
-import { atom, selector, useRecoilState } from 'recoil'
+import { templatesState } from './PromptTemplatesTable'
+import { Checkbox, Drawer, ExpandableSection, Header, RadioGroup, Table } from '@cloudscape-design/components'
+import { atom, useRecoilState } from 'recoil'
 import  { currentCollectionState } from './DocumentCollectionForm'
 import './documentCollectionEnrichmentPipelines.css'
 import awsExports from './aws-exports'
@@ -19,16 +20,6 @@ const enrichmentTableState = atom({
     default: []
 })
 
-const promptTemplatesState = atom({
-    key: 'DocumentCollectionEnrichmentPipelines.promptTemplatesState',
-    default: {}
-})
-
-const promptTemplateOptionsState = atom({
-    key: 'DocumentCollectionEnrichmentPipelines.promptTemplateOptionsState',
-    default: []
-})
-
 const tableIsLoadingState = atom({
     key: 'DocumentCollectionEnrichmentPipelines.tableIsLoading',
     default: true
@@ -37,9 +28,9 @@ const tableIsLoadingState = atom({
 function DocumentCollectionEnrichmentPipelines() {
     const [currentCollection, setCurrentCollection ] = useRecoilState(currentCollectionState)
     const [enrichmentTable, setEnrichmentTable] = useRecoilState(enrichmentTableState)
-    const [promptTemplates, setPromptTemplates] = useRecoilState(promptTemplatesState)
-    const [promptTemplateOptions, setPromptTemplateOptions] = useRecoilState(promptTemplateOptionsState)
-    const [tableLoading, setTableLoading] = useRecoilState(tableIsLoadingState)
+    const [promptTemplates, setPromptTemplates] = useRecoilState(templatesState)
+    const [promptTemplateOptions, setPromptTemplateOptions] = useState([])
+    const [tableLoading, setTableLoading] = useState(true)
 
     useEffect(() => {
         console.log("useEffect got changed current collection. Updating table rows to ")

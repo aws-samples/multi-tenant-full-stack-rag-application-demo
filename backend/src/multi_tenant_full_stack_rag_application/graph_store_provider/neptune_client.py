@@ -136,6 +136,7 @@ def get_canonical_uri_and_payload(query_type, query, method):
     return canonical_uri, payload
 
 def make_signed_request(host, method, query_type, query):
+    print(f"Neptune client.make_signed_request received {host}, {method}, {query_type}, {query}")
     service = 'neptune-db'
 
     endpoint = 'https://' + host
@@ -237,8 +238,6 @@ def exit_and_print_help():
     exit()
 
 def parse_input_and_query_neptune():
-
-
     parser = ArgumentParser(description=help_msg, formatter_class=RawTextHelpFormatter)
     group_host = parser.add_mutually_exclusive_group()
     group_host.add_argument("-ho", "--host", type=str)

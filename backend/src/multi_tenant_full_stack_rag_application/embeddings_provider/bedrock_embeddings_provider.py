@@ -2,6 +2,7 @@
 #  SPDX-License-Identifier: MIT-0
 
 import boto3 
+import os
 from botocore.config import Config
 from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider import EmbeddingsProvider, EmbeddingType
 from multi_tenant_full_stack_rag_application.embeddings_provider.embeddings_provider_event import EmbeddingsProviderEvent
@@ -145,7 +146,11 @@ def handler(event, context):
     global bedrock_embeddings_provider
     if not bedrock_embeddings_provider:
         print(f'bedrock_embeddings_provider.handler got event {event}')
-        model_id = event['args']['model_id']
+        if 'model_id' not in event['args'] or event['args']['model_id'] == '':
+            model_id = os.getenv('EMBEDDINGS_MODEL_ID')
+        else:
+            model_id = event['args']['model_id']
+
         dimensions = 1024 if not 'dimensions' \
             in event['args'] \
             else event['args']['dimensions']

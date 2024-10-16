@@ -50,16 +50,37 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
     
     def create_index(self, collection_id):
         os_vector_db = self.get_vector_store(collection_id)
+        
+    # "settings": {
+    #     "index": {
+    #     "knn": true
+    #     }
+    # },
+    # "mappings": {
+    #     "properties": {
+    #     "my_vector": {
+    #         "type": "knn_vector",
+    #         "dimension": 3,
+    #         "space_type": "l2",
+    #         "method": {
+    #         "name": "hnsw",
+    #         "engine": "faiss"
+        response = self.utils.get_model_dimensions(self.my_origin)
+        dims = json.loads(response['body'])['response']
+        print(f"Creating vector index with dims {dims}")
+        # {'statusCode': '200', 'headers': {'Access-Control-Allow-Headers': 'Authorization, Content-Type, x-csrf-token, X-Api-Key, *', 'Access-Control-Allow-Credentials': 'true', 'Access-Control-Allow-Origin': 'dmtfsradbVectorStoreProvi-VectorStoreProviderFunct-ADohbMUuwwWz', 'Access-Control-Allow-Methods': 'DELETE,OPTIONS,GET,POST,PUT', 'Vary': 'Origin'}, 'body': '{"response": 1024}'}
         index_body = {
             "settings": {
-                "index.knn": True
+                "index": {
+                    "knn": True
+                }
             },
             "mappings": {
                 "properties": {
                     "content": {"type": "text"},
                     "vector": {
                         "type": "knn_vector",
-                        "dimension": self.utils.get_model_dimensions(self.my_origin)
+                        "dimension": dims,
                     },
                     "metadata": {"type": "object"}
                 }

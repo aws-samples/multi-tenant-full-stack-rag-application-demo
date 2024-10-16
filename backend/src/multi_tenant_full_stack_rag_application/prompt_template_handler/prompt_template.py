@@ -50,6 +50,7 @@ class PromptTemplate:
         return template
 
     def to_ddb_record(self): 
+        print(f"to_ddb_record got self with stop_seqs {self.stop_sequences}, type {type(self.stop_sequences)}")
         rec = {
             'user_id': {'S': self.user_id},
             'sort_key': {'S': self.sort_key},
@@ -62,17 +63,21 @@ class PromptTemplate:
             'updated_date': {'S': self.updated_date}
         }
         
-        if hasattr(self, 'stop_sequences') and \
-            len(self.stop_sequences) > 0:
-            rec['stop_sequences']: {'SS': self.stop_sequences}
+        if len(self.stop_sequences) > 0:
+            print("stop_seqs exist...adding to rec")
+            rec['stop_sequences'] = {'SS': self.stop_sequences}
+        else:
+            print(f"len(self.stop_sequences) !> 0: {len(self.stop_sequences)}")
+
+        print(f"to_ddb_record returning {rec}")
         return rec
 
     def __dict__(self):
-        stop_seqs = []
-        if hasattr(self, 'stop_sequences') and \
-            isinstance(self.stop_sequences, list) and \
-            len(self.stop_sequences) > 0:
-            stop_seqs = self.stop_sequences
+        # stop_seqs = []
+        # if hasattr(self, 'stop_sequences') and \
+        #     isinstance(self.stop_sequences, list) and \
+        #     len(self.stop_sequences) > 0:
+        #     stop_seqs = self.stop_sequences
         # print(f"stop_seqs = {stop_seqs}")
         return {
             'user_id': self.user_id,
@@ -82,7 +87,7 @@ class PromptTemplate:
             'template_name': self.template_name,
             'template_text': self.template_text,
             'model_ids': self.model_ids,
-            'stop_sequences': stop_seqs,
+            'stop_sequences': self.stop_sequences,
             'created_date': self.created_date,
             'updated_date': self.updated_date
         }

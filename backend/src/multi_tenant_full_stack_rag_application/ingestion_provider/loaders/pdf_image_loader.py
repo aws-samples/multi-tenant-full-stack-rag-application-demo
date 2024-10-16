@@ -228,6 +228,8 @@ class PdfImageLoader(Loader):
             self.utils.get_ssm_params('origin_ingestion_provider')
         )
         try:
+            print(f"Loading path {path}")
+            print(f"does path exist? {os.path.exists(path)}")
             local_file = self.load(path)
             split_results = self.split_pages(local_file)
             docs: [VectorStoreDocument] = self.llm_ocr(split_results['splits'], source, extra_header_text, extra_metadata)

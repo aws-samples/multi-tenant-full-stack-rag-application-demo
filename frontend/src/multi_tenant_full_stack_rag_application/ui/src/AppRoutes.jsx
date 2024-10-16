@@ -5,11 +5,11 @@ import { Component } from 'react';
 import ChatPlayground from './ChatPlayground';
 import DocumentCollectionForm from './DocumentCollectionForm';
 import DocumentCollectionsTable from './DocumentCollectionsTable';
+import GraphVisualization from './GraphVisualization';
 import LogOut from './LogOut';
 import PromptTemplateForm from './PromptTemplateForm'
 import PromptTemplatesTable from './PromptTemplatesTable';
 import { HashRouter, Route, Routes} from 'react-router-dom';
-
 
 class AppRoutes extends Component {
     constructor(props) {
@@ -28,6 +28,7 @@ class AppRoutes extends Component {
             <Route path='/document-collections/create' element={<DocumentCollectionForm className="documentCollectionsForm"/>}/>
             <Route path='/document-collections/:id/edit' element={<DocumentCollectionForm className="documentCollectionsForm"/>}/>
             {/* <Route path='/logout' element={<LogOut signout={this.signOut}/>}/> */}
+            <Route path='/graph-visualization' element={<GraphVisualization className="graphVisualization"/>}/>
             <Route path='/prompt-templates' element={<PromptTemplatesTable className="promptTemplatesTable"/>}/>
             <Route path='/prompt-templates/create' element={<PromptTemplateForm className="promptTemplatesForm"/>}/>
             <Route path='/prompt-templates/:id/edit' element={<PromptTemplateForm className="promptTemplatesForm"/>}/>
