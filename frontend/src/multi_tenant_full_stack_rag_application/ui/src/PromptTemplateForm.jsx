@@ -6,9 +6,14 @@ import Api from './commons/api';
 import { Button, Container, Form, FormField, Header, Input, Multiselect, SpaceBetween, Textarea } from '@cloudscape-design/components';
 import { useParams } from 'react-router-dom';
 import DeleteConfirmationModal from './DeleteConfirmationModal'
+import { atom, useRecoilState, useRecoilValue } from 'recoil'
+import PromptTemplate from './PromptTemplate'
+import { templatesState } from './PromptTemplatesTable'
+
 
 
 const api = new Api();
+
 
 function createLlmOptions(names) {
   let options = []
@@ -23,112 +28,197 @@ function createLlmOptions(names) {
   return options;
 }
 
+
+export const urlTemplateIdState = atom({
+  key: 'PromptTemplateForm.urlTemplateId',
+  default: null
+})
+
+
+const newTemplate = new PromptTemplate(
+  '',
+  ''
+)
+
+export const currentTemplateState = atom({
+  key: 'PromptTemplateForm.currentTemplateState',
+  default: newTemplate
+})
+
+export const promptTemplateIsLoadingState = atom({
+  key: 'PromptTemplateForm.promptTemplateIsLoadingState',
+  default: false
+})
+
+export const promptTemplateIsDeletingState = atom({
+  key: 'PromptTemplateForm.promptTemplateIsDeletingState',
+  default: false
+})
+
+export const confirmationModalState = atom({
+  key: 'PromptTemplateForm.confirmationModalState',
+  default: null
+})
+
+const defaultDeleteConfirmationMessage = `Are you sure you want to delete this prompt template?
+
+{currentPromptTemplate.name}
+`
+
+export const deleteConfirmationMessage = atom({
+  key: 'PromptTemplateForm.deleteConfirmationMessage',
+  default: defaultDeleteConfirmationMessage
+})
+
+export const deleteModalVisibleState = atom({
+  key: 'PromptTemplateForm.deleteModalVisibleState',
+  default: false
+})
+
+export const submitDisabledState = atom({
+  key: 'PromptTemplateForm.submitDisabledState',
+  default: true
+})
+
 function PromptTemplateForm() {
-  let params = useParams();
-  const urlTemplateId = params.hasOwnProperty('id') ? params.id : null;
-  const [isLoading, setIsLoading] = useState(false)
+  const params = useParams()
+  const templates = useRecoilValue(templatesState)
+  // const urlTemplateId = params.hasOwnProperty('id') ? params.id : null;
+  const [currentTemplate, setCurrentTemplate] = useRecoilState(currentTemplateState)
+  const [urlTemplateId, setUrlTemplateId] = useState('')
+  const [isLoading, setIsLoading] = useRecoilState(promptTemplateIsLoadingState)
   const [llms, setLlms] = useState([]);
   const [llmDefaultParams, setLlmDefaultParams] = useState({});
-  const [templateId] = useState(urlTemplateId);
-  const [templateName, setTemplateName] = useState('');
-  const [templateText, setTemplateText] = useState('');
   const [selectedLlms, setSelectedLlms] = useState([])
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
   const [llmsLoadingStatus, setLlmsLoadingStatus] = useState('loading')
-  const [stopSequences, setStopSequences] = useState([])
+  // const [stopSeqs, setStopSequences] = useState([])
   const [submitDisabled, setSubmitDisabled] = useState(true)
   const [deleteConfirmationMessage, setDeleteConfirmationMessage] = useState('')
   const [confirmationModal, setConfirmationModal] = useState(null)
 
-  useEffect( () => {
-    setDeleteConfirmationMessage(`Are you sure you want to delete this prompt template?
-      ${templateName}
-    `)
-    checkEnableSubmit()
-  }, [templateName])
-
   useEffect(() => {
     (async () => {
-      let response = await api.getLlms()
-      setLlmDefaultParams(response['model_default_params']);
-      let llmsOptions = []
-      response['models'].forEach( modelId => {
-        llmsOptions.push({
-          label: modelId, 
-          value: modelId
+      if (urlTemplateId) {
+        let result = await api.getPromptTemplate(urlTemplateId)
+        console.log("Got result from api.getPromptTemplate:")
+        console.dir(result)
+        console.log(`got stop seqs ${result['stop_sequences']}`)
+        console.log(`got model ids ${result['model_ids']}`)
+        let template = new PromptTemplate(
+          result['template_name'],
+          result['template_text'],
+          result['template_id'],
+          Object.keys(result).includes('stop_sequences') ? 
+            result['stop_sequences'] : 
+            [],
+          result['model_ids'],
+          result['createdDate']
+        )
+        setCurrentTemplate(template)
+        let selectedLlmOptions = createLlmOptions(result['model_ids'])
+        setSelectedLlms(selectedLlmOptions)
+        let response =  api.getLlms()
+        setLlmDefaultParams(response['model_default_params']);
+        let llmsOptions = []
+        response['models'].forEach( modelId => {
+          llmsOptions.push({
+            label: modelId, 
+            value: modelId
+          });
         });
-      });
-      // // console.log("Setting llmsOptions to:");
-      // // console.dir(llmsOptions);
-      setLlms(llmsOptions);
-      setLlmsLoadingStatus('finished');
-    })();
-    (async () => {  
-      if (templateId) {
-        if (templateId.startsWith('default_')) {
-          window.location.href = '/#/prompt-templates'
-        }
-        // console.log("Fetching details for template " + templateId)
-        let result = await api.getPromptTemplates('prompt_templates')
-        // console.log(`Got prompt templates from server: `)
-        // console.dir(result)
-        let templateNames = Object.keys(result);
-        for (let i = 0; i < templateNames.length; i++) {
-          let template = result[templateNames[i]]
-          // console.log(`does template_id ${template.template_id} === templateId ${templateId}?`)
-          if (template.template_id === templateId) {
-            // console.log(`Got match for template `)
-            // console.dir(template)
-            let stopSeqs = []
-            if (template.hasOwnProperty('stop_sequences')) {
-              stopSeqs = template.stop_sequences
-            }
-            setTemplateName(template.template_name);
-            setTemplateText(template.template_text);
-            setStopSequences(stopSeqs.join(', '));
-            const selectedLlmList = createLlmOptions(template.model_ids);
-            setSelectedLlms(selectedLlmList);
-            // console.log(`selectedLlms is now ${selectedLlmList}`)
-            break;
-          }
-        }
+        // // console.log("Setting llmsOptions to:");
+        // // console.dir(llmsOptions);
+        setLlms(llmsOptions);
+        setLlmsLoadingStatus('finished');
       }
-      checkEnableSubmit()
-      // console.log('selectedLlms: ' + selectedLlms);
-    })();
+    })()
+  }, [urlTemplateId])
+
+  useEffect(() => {
+    setUrlTemplateId(params['id'])
+  }, [params])
+  
+  useEffect( () => {
+    setDeleteConfirmationMessage(`Are you sure you want to delete this prompt template?
+      ${currentTemplate.name}
+    `)
+    checkEnableSubmit()
+  }, [currentTemplate.name])
+
+  useEffect(() => {
+    // (async () => {
+    //   let response =  api.getLlms()
+    //   setLlmDefaultParams(response['model_default_params']);
+    //   let llmsOptions = []
+    //   response['models'].forEach( modelId => {
+    //     llmsOptions.push({
+    //       label: modelId, 
+    //       value: modelId
+    //     });
+    //   });
+    //   // // console.log("Setting llmsOptions to:");
+    //   // // console.dir(llmsOptions);
+    //   setLlms(llmsOptions);
+    //   setLlmsLoadingStatus('finished');
+    // })();
+    // (async () => {  
+    //   if (currentTemplate.templateId) {
+    //     if (currentTemplate.templateId.startsWith('default_')) {
+    //       window.location.href = '/#/prompt-templates'
+    //     }
+    //     // console.log("Fetching details for template " + templateId)
+    //     let result = await api.getPromptTemplates('prompt_templates')
+    //     // console.log(`Got prompt templates from server: `)
+    //     // console.dir(result)
+    //     let templateNames = Object.keys(result);
+    //     for (let i = 0; i < templateNames.length; i++) {
+    //       let template = result[templateNames[i]]
+    //       // console.log(`does template_id ${template.template_id} === templateId ${templateId}?`)
+    //       if (template.template_id === currentTemplate.templateId) {
+    //         // console.log(`Got match for template `)
+    //         // console.dir(template)
+    //         let stopSeqs = []
+    //         if (template.hasOwnProperty('stop_sequences')) {
+    //           stopSeqs = template.stop_sequences
+    //         }
+    //         setCurrentTemplate(template);
+    //         const selectedLlmList = createLlmOptions(template.model_ids);
+    //         setSelectedLlms(selectedLlmList);
+    //         // console.log(`selectedLlms is now ${selectedLlmList}`)
+    //         break;
+    //       }
+    //     }
+    //   }
+    //   checkEnableSubmit()
+    //   // console.log('selectedLlms: ' + selectedLlms);
+    // })();
   }, [])
 
   useEffect( () => {
-    setDeleteConfirmationMessage(`Are you sure you want to delete this prompt template?
-      ${templateName}
-    `)
     checkEnableSubmit()
-  }, [templateName])
-
-  useEffect( () => {
-    checkEnableSubmit()
-  }, [templateText])
+  }, [currentTemplate.text])
 
   useEffect( () => {
     checkEnableSubmit()
   }, [selectedLlms])
 
   function checkEnableSubmit() {
-    if (templateName !== '' && 
-      templateText !== '' &&
+    if (currentTemplate.name !== '' && 
+      currentTemplate.text !== '' &&
       selectedLlms.length > 0) {
       setSubmitDisabled(false);
     }
   }
 
   function confirmDeletePrompt(evt) {
-    // console.log(`confirming delete prompt ${templateId}`)
+    // console.log(`confirming delete prompt ${currentTemplate.templateId}`)
     setConfirmationModal(
       <DeleteConfirmationModal
         message={deleteConfirmationMessage}
         deleteFn={api.deletePromptTemplate}
         deleteRedirectLocation={'#/prompt-templates' }
-        resourceId={templateId}
+        resourceId={currentTemplate.templateId}
         visible={true}
       />
     )
@@ -141,19 +231,27 @@ function PromptTemplateForm() {
       modelIds.push(selection.value);
     })
     let stopSeqs = []
-    if (stopSequences.length > 0) {
-      stopSeqs = stopSequences.split(', ')
+    if (currentTemplate.stopSeqs.length > 0) {
+      if (typeof currentTemplate.stopSeqs == 'string') {
+        stopSeqs = currentTemplate.stopSeqs.split(',')
+      }
+      else stopSeqs = currentTemplate.stopSeqs
+      console.log("Got stopSeqs ")
+      console.dir(stopSeqs)
+      // for (let i = 0; i < stopSeqs.length; i++) {
+      //   stopSeqs[i] = stopSeqs[i].trim()
+      // }
     }
     const postObject = {
       "prompt_template": {
-        "template_name": templateName,
-        "template_text": templateText,
+        "template_name": currentTemplate.name,
+        "template_text": currentTemplate.text,
         "stop_sequences": stopSeqs,
         "model_ids": modelIds
       },
     }
-    if (templateId) {
-      postObject['prompt_template']['template_id'] = templateId
+    if (currentTemplate.templateId) {
+      postObject['prompt_template']['template_id'] = currentTemplate.templateId
     }
     setIsLoading(true)
     // console.log("Posting data");
@@ -163,21 +261,38 @@ function PromptTemplateForm() {
     // console.log(`result from postData:`)
     // console.dir(result)
     setIsLoading(false)
-    location.hash = '#/prompt-templates';
+    // location.hash = '#/prompt-templates';
   }
 
-  function updateSelectedLlms(llms) {
-    // console.log("updateSelectedLlms got");
-    // console.dir(llms);
-    let tmpList = []
-    llms.forEach(llm => {
-      tmpList.push(llm.value)
-    })
-    setSelectedLlms(tmpList);
-    // console.log("selected LLMs list is now: ");
-    // console.dir(tmpList);
-    llmDropDownRef({selectedLlmOptions: tmpList});
+  const updateCurrentTemplate = (field, value) => {
+    let tmp = {...currentTemplate}
+    if (field == 'stopSeqs') {
+      let list = value.split(',')
+      let stopSeqs = []
+      list.forEach(item => {
+        stopSeqs.push(item.trim())
+      })
+      tmp.stopSeqs = stopSeqs
+    }
+    else {
+      if (['name', 'text'].includes(field)) {
+        tmp[field] = value
+      }
+    }
+    setCurrentTemplate(tmp)
   }
+  // function updateSelectedLlms(llms) {
+  //   // console.log("updateSelectedLlms got");
+  //   // console.dir(llms);
+  //   let tmpList = []
+  //   llms.forEach(llm => {
+  //     tmpList.push(llm.value)
+  //   })
+  //   setSelectedLlms(tmpList);
+  //   // console.log("selected LLMs list is now: ");
+  //   // console.dir(tmpList);
+  //   llmDropDownRef({selectedLlmOptions: tmpList});
+  // }
 
   return (
     <form onSubmit={e => {
@@ -207,16 +322,16 @@ function PromptTemplateForm() {
         <Container
           header={
             <Header variant="h2">
-              {templateId ? "Edit" : "New"} Prompt Template
+              {currentTemplate.templateId ? "Edit" : "New"} Prompt Template
             </Header>
           }
         >
           <SpaceBetween direction="vertical" size="l">
             <FormField label="Template Name">
               <Input
-                onChange={({ detail }) => setTemplateName(detail.value)}
-                value={templateName}
-                disabled={templateId}
+                onChange={({ detail }) => updateCurrentTemplate('name', detail.value)}
+                value={currentTemplate.name}
+                disabled={currentTemplate.templateId}
                 ariaRequired
               />
             </FormField>
@@ -224,23 +339,16 @@ function PromptTemplateForm() {
               label="Prompt template"
             >
               <Textarea 
-                onChange={({ detail }) => setTemplateText(detail.value)} 
-                value={templateText} 
+                onChange={({ detail }) => updateCurrentTemplate('text',detail.value)} 
+                value={currentTemplate.text} 
                 placeholder="This is a placeholder" 
                 ariaRequired
               />
             </FormField>
             <FormField label="Please enter comma-separated stop sequences for this prompt:">
                 <Input
-                onChange={({ detail }) => {
-                  let list = detail.value.split(',')
-                  let stopSeqs = []
-                  list.forEach(item => {
-                    stopSeqs.push(item.trim())
-                  })
-                  setStopSequences(stopSeqs.join(', '))
-                }}
-                value={stopSequences}
+                onChange={({ detail }) => updateCurrentTemplate('stopSeqs')}
+                value={currentTemplate.stopSeqs}
               />
             </FormField>
             <FormField label="Select LLMs this prompt  applies to:">

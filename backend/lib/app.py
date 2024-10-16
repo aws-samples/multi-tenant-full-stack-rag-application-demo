@@ -136,6 +136,7 @@ class MultiTenantRagStack(Stack):
         )
         
         generation_handler_stack = GenerationHandlerStack(self, 'GenerationHandlerApiStack',
+            app_security_group=vpc_stack.app_security_group,
             auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
             auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
             parent_stack_name=self.stack_name,

@@ -58,11 +58,17 @@ class GraphStoreProviderStack(Stack):
             memory_size=128,
             runtime=lambda_.Runtime.PYTHON_3_11,
             architecture=lambda_.Architecture.X86_64,
-            handler='multi_tenant_full_stack_rag_application.graph_store_provider.graph_store_provider.handler',
+            handler='multi_tenant_full_stack_rag_application.graph_store_provider.neptune_graph_store_provider.handler',
             timeout=Duration.seconds(60),
             environment={
                 "STACK_NAME": parent_stack_name,
-            }
+                "SERVICE_REGION": self.region,
+            },
+            vpc=vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PRIVATE_ISOLATED,
+            ),
+            security_groups=[app_security_group]
         )
 
         gs_fn_name = ssm.StringParameter(self, 'GraphStoreProviderFunctionName',
@@ -99,4 +105,5 @@ class GraphStoreProviderStack(Stack):
             removal_policy=RemovalPolicy(self.node.get_context('removal_policy')),
             vpc=vpc
         )        
-        
+        self.neptune_stack.cluster.grant_connect(self.graph_store_provider.grant_principal) # Grant the role neptune-db:* access to the DB
+        self.neptune_stack.cluster.grant(self.graph_store_provider.grant_principal, "neptune-db:ReadDataViaQuery", "neptune-db:WriteDataViaQuery")

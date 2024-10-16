@@ -154,13 +154,27 @@ class VectorIngestionProvider:
         print(f"Ingesting {s3_key}")
         
         verified_doc_collection = self.verify_collection(file_dict)
+        print(f"Got verified_doc_collection {verified_doc_collection}, type {type(verified_doc_collection)}")
         if not verified_doc_collection:
             print(f"Collection {collection_id} not found for user {user_id}")
             return
         
         local_path = self.download_s3_file(file_dict['bucket'], s3_key)
 
-        result = self.ingest_file(local_path, file_dict)  
+        result = self.ingest_file(local_path, file_dict)
+        print(f"Got result {result}")
+
+        if 'enrichment_pipelines' in verified_doc_collection and \
+            verified_doc_collection['enrichment_pipelines'] not in [{}, "{}"]:
+            self.utils.set_ingestion_status(
+                user_id,
+                f"{collection_id}/{filename}",
+                file_dict['etag'],
+                0,
+                "AWAITING_ENRICHMENT",
+                self.my_origin
+            )
+        
         return result
                
     def handler(self, event, context):
@@ -272,7 +286,7 @@ class VectorIngestionProvider:
                 f"{file_dict['collection_id']}/{file_dict['filename']}",
                 file_dict['etag'],
                 0,
-                f"ERROR: {e['args'][0]}",
+                f"ERROR: {e}",
                 self.my_origin
             )
             raise e
@@ -393,14 +407,14 @@ class VectorIngestionProvider:
         user_id = collection_dict['user_id']
         collection_id = collection_dict['collection_id']
         
-        verified_collection = self.utils.get_document_collection(
-            collection_id, 
+        verified_collection = self.utils.get_document_collections(
             user_id,
+            collection_id, 
             lambda_client=lambda_client
         )
 
-        # print(f"Got verified collection: {verified_collection}")
-
+        print(f"Got verified collection: {verified_collection}, type {type(verified_collection)}")
+        # {'real estate documents': {'sort_key': 'collection::real estate documents', 'user_email': 'davetbo@amazon.com', 'collection_id': 'ea85934edaaa4270bac14b4e7c69bce9', 'collection_name': 'real estate documents', 'description': 'Use this collection to answer questions about real estate documents or related concepts like buyers, sellers, properties, agents, contingencies, etc.', 'vector_db_type': 'opensearch_managed', 'created_date': '2024-10-06T22:08:14.108927Z', 'shared_with': [], 'updated_date': '2024-10-06T22:08:14.108927Z', 'enrichment_pipelines': '{"entity_extraction": {"templateIdSelected": "636dcdbe750840a58dcf31db4d97ebb1", "templateNameSelected": "real estate entity extraction", "enabled": true}}', 'graph_schema': '{}'}}
         if not verified_collection or \
             verified_collection['collection_id'] != collection_id:
             # print(f"Error: Invalid document collection {collection_id} received for user {user_id}")

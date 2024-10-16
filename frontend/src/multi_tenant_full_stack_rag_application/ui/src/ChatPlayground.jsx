@@ -8,7 +8,8 @@ import Api from './commons/api';
 import { v4 as uuidv4 } from 'uuid';
 import ReactSlider from 'react-slider';
 import sanitizeHtml from 'sanitize-html';
-
+import { docCollectionsState } from './DocumentCollectionsTable'
+import { useRecoilValue } from 'recoil';
 // import modelDefaultParams from './model_default_params.json'
 import './chatPlayground.css';
 // import awsExports from './aws-exports';
@@ -47,31 +48,6 @@ const aiUser = {
   name: "Assistant"
 }
 
-// async function callBrStableDiffusion(messageObj) {
-//   const {...msg} = messageObj;
-//   let response = api.postData('br_sdxl_image', msg);
-//   if (response.status_code === 200) {
-//     return response.content;
-//   }
-//   else {
-//     console.error("Error processing feedback");
-//     console.error(response);
-//   }
-// }
-
-
-// async function callModel(messageObj) {
-//   const {...msg} = messageObj;
-//   const payload = {
-//     messageObj: messageObj
-//   }
-//   let response = await api.postData('generation', payload)
-//   // // console.log("callModel got response:");
-//   // // console.dir(response);
-//   return response;
-// }
-
-
 function getTextFromMessages(messages) {
   let returnText = ''
   messages.forEach(msg => {
@@ -83,33 +59,17 @@ function getTextFromMessages(messages) {
   return returnText;
 }
 
-
-// async function provideFeedback(userChatId, messageId, feedback) {
-//   let postObj = {
-//     "user_chat_id": userChatId,
-//     "message_id": messageId,
-//     "feedback": feedback
-//   }
-//   let response = api.postData('feedback', postObj);
-//   if (response.status_code === 200) {
-//     return response.content;
-//   }
-//   else {
-//     console.error("Error processing feedback");
-//     console.error(response);
-//   }
-// }
-
 const initLlmValue = {"label":"select an LLM", "value": ""}
 const initPromptValue = {"label": "select a prompt template", "value": ""}
 
 function ChatPlayground(props) {
-  const [docCollections, setDocCollections] = useState([]);
+  const docCollections = useRecoilValue(docCollectionsState);
   const [
     selectedDocCollection,
     setSelectedDocCollection
   ] = useState({"label": "Auto: search all relevant collections", "value": ""});
-  const [docCollectionsLoadingStatus, setDocCollectionsLoadingStatus] = useState('loading')
+  // const [docCollectionsLoadingStatus, setDocCollectionsLoadingStatus] = useState('loading')
+  const [docCollectionsOptions, setDocCollectionsOptions] = useState([]);
   const [llms, setLlms] = useState([]);
   const [llmsLoadingStatus, setLlmsLoadingStatus] = useState('loading') 
   const [
@@ -138,30 +98,36 @@ function ChatPlayground(props) {
   
   useEffect(() => {
     // load list of doc collections
+    console.log("docCollections: ")
+    console.dir(docCollections)
+    let tmpDocCollectionsOptions = []
+    docCollections.forEach( collection => {
+      tmpDocCollectionsOptions.push({
+        label: collection.collection_name, 
+        value: collection.collection_id
+      });
+    });
+    console.log("docCollectionsOptions: ")
+    console.dir(tmpDocCollectionsOptions)
+    setDocCollectionsOptions(tmpDocCollectionsOptions);
+  },[docCollections])
+
+  useEffect(() => {
+    // load list of doc collections
     (async () => {
       // set up current Auth
-      setCurrentAuth(await api.getCurrentAuth);
+      setCurrentAuth(await api.getCurrentAuth());
       setCurrentUser({
         id: currentAuth.userId,
         name: 'Chat User'
       })
-      // load list of doc collections
-      const docCollectionsTmp = await api.getDocCollections();
-      let docCollectionsOptions = []
-      docCollectionsTmp.forEach( collection => {
-        docCollectionsOptions.push({
-          label: collection.collection_name, 
-          value: collection.collection_id
-        });
-      });
-      setDocCollections(docCollectionsOptions);
-      setDocCollectionsLoadingStatus('finished');
+
     })();
     // load list of LLMs
     (async () => {
       let response = api.getLlms()
       let modelIds = response['models'];
-      // console.log("getLlms response:", JSON.stringify(response))
+      console.log("getLlms response:", JSON.stringify(response))
       setDefaultParams(response['model_default_params']);
       
       let llmsOptions = []
@@ -469,7 +435,6 @@ function ChatPlayground(props) {
           checked={param.default}
           step={param.type == 'int'? 1 : 0.1}
         />
-        
       </Grid>
     )
   }
@@ -761,10 +726,9 @@ function ChatPlayground(props) {
             onChange={({ detail }) =>
               setSelectedDocCollection(detail.selectedOption)
             }
-            options={docCollections}
-            loadingText="Loading doc collections"
-            statusType={docCollectionsLoadingStatus}
-            disabled
+            options={docCollectionsOptions}
+            // loadingText="Loading doc collections"
+            // statusType={docCollectionsLoadingStatus}
           />
         </div>
         <div>

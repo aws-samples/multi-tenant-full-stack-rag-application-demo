@@ -25,6 +25,7 @@ from constructs import Construct
 
 class GenerationHandlerStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, 
+        app_security_group: ec2.ISecurityGroup,
         auth_fn: lambda_.IFunction,
         auth_role_arn: str,
         parent_stack_name: str,
@@ -40,8 +41,9 @@ class GenerationHandlerStack(Stack):
         bundling_cmds = [
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/generation_handler",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
-            "cp /asset-input/generation_handler/*.py /asset-output/multi_tenant_full_stack_rag_application/generation_handler/",
+            "cp /asset-input/generation_handler/*.{py,txt} /asset-output/multi_tenant_full_stack_rag_application/generation_handler/",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
+            "pip3 install -r /asset-input/generation_handler/generation_handler_requirements.txt -t /asset-output",
             "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output"
         ]
 
@@ -61,12 +63,15 @@ class GenerationHandlerStack(Stack):
             handler='multi_tenant_full_stack_rag_application.generation_handler.generation_handler.handler',
             timeout=Duration.seconds(120),
             environment={
+                'STACK_NAME': parent_stack_name,
             },
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PRIVATE_ISOLATED,
-            )
+            ),
+            security_groups=[app_security_group]
         )
+        
         self.generation_handler_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
             actions=['ssm:GetParameter','ssm:GetParametersByPath'],

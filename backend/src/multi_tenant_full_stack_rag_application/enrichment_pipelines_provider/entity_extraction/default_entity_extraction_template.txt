@@ -10,98 +10,82 @@ lower case with underscores instead of spaces, like "acme_corp" instead of "Acme
 information, add it as a property on the node or edge. Also add the full name of the company as an attribute 
 of the node.
 
-Each node should have at least the fields `id`, `collection_id`, `name`, and `type`. The `id` is the unique identifier, 
+Each node should have at least the fields `id`, `name`, and `type`. The `id` is the unique identifier, 
 and the `type` is the type of entity, like 'company' or 'executive'. You can include other properties 
-if you find them. Make sure to preface all node and edge IDs with the collection ID for this collection, and also
-store collection_id as a property on all nodes and edges.
+if you find them. 
 
-For example, if the COLLECTION_ID was 'asdf1234' then the example output might be:
+The source node always acts on the target node in the way described by the edge label.
+For example, if the document talks about Dave buying a property at 1234 Any st, Anytown, Anystate 1111 
+from John Doe, Dave could be a source node with an edge "buys from" and a target John. Dave could be a
+source, with an edge "buys" and a target for the property node.
+
+So the example output might be:
 <example_only>
 <json>
 {
   "nodes": [
       {
-          "id": "asdf1234::1234_any_st_anytown_anystate_11111",
-          "collection_id": "asdf1234",
+          "id": "1234_any_st_anytown_anystate_11111",
           "type": "property",
           "name": "1234 Any St, Anytown, Anystate 11111",
           "address": "1234 Any St, Anytown, Anystate 11111",
       },
       {
-          "id": "asdf1234::dave",,
-          "collection_id": "asdf1234",
+          "id": "dave",,
           "type": "person",
           "name": "Dave"
       },
       {
-          "id": "asdf1234::john_doe",,
-          "collection_id": "asdf1234",
+          "id": "john_doe",,
           "type": "person",
           "name": "John Doe"
-      },
-      {
-          "id": "asdf1234::mold_remediation",,
-          "collection_id": "asdf1234",
-          "type": "contingency",
-          "name": "mold remediation"
-      },
-      {
-          "id": "asdf1234::financing",,
-          "collection_id": "asdf1234",
-          "type": "contingency",
-          "name": "financing"
       }
   ],
   "edges": [
       {
-          "source": "asdf1234::dave",
-          "target": "asdf1234::1234_any_st_anytown_anystate_11111",
-          "collection_id": "asdf1234",
-          "type": "buys"
+          "source": "dave",
+          "edge_label": "buys",
+          "target": "1234_any_st_anytown_anystate_11111",
       },
       {
-          "source": "asdf1234::john_doe",
-          "target": "asdf1234::1234_any_st_anytown_anystate_11111",
-          "collection_id": "asdf1234",
-          "type": "sells"
+          "source": "john_doe",
+          "edge_label": "sells"
+          "target": "1234_any_st_anytown_anystate_11111",
       },
       {
-          "source": "asdf1234::1234_any_st_anytown_anystate_11111",
-          "target": "asdf1234::mold_remediation",
-          "collection_id": "asdf1234",
-          "type": "has_contingency"
+          "source": "dave",
+          "edge_label": "buys_from"
+          "target": "john_doe",
       },
       {
-          "source": "asdf1234::1234_any_st_anytown_anystate_11111 ",
-          "target": "asdf1234::financing",
-          "collection_id": "asdf1234",
-          "type": "has_contingency"
-      }
+          "source": "john_doe",
+          "edge_label": "sells_to"
+          "target": "dave",
+      },
   ]
 }
 </json>
 </example_only>
 
-Note that there may be many other types of nodes or edges in the documents, not 
-just the examples given above. 
+Note that there may be other types of nodes or edges in the documents, not 
+just the examples given above. First think about the document's most important
+points, then output one node record for each of the main subject or target concepts that the page is about.
+Then create one edge record for each of the edge connections between the connected source and target nodes. 
+Don't get too verbose creating nodes and edges, but cover the main concepts in the given text.
 
-Here are the existing node and edge types found in other documents in this collection
-so far. If possible, reuse these rather than creating new ones that are semantically similar, 
-but please add new ones if there are edges or nodes discovered that are not semantically
-similar to these.
+Here is the graph schema found in other documents in this collection
+so far. If possible, reuse these node and edge labels rather than creating new ones that are semantically similar, but please add new ones if there are newly discovered nodes or edges.
 
-<EXISTING_NODE_TYPES>
-{existing_node_types}
-</EXISTING_NODE_TYPES>
-
-<EXISTING_EDGE_TYPES>
-{existing_edge_types}
-</EXISTING_EDGE_TYPES>
+<GRAPH_DATABASE_SCHEMA>
+{graph_schema}
+</GRAPH_DATABASE_SCHEMA>
 
 Here's the document you need to process:
 <DOCUMENT>
 {document_content}
 </DOCUMENT>
+
+Limit your output to only the important nodes in the text.
 
 You must output only valid JSON. Be concise - do not provide any extra text before or after the JSON.
 

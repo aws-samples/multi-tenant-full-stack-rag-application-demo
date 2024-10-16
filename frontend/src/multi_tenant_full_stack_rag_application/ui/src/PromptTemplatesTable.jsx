@@ -6,7 +6,36 @@ import { PROMPT_TEMPLATES_COLUMN_DEFINITIONS } from './commons/details-config';
 import { logsTableAriaLabels } from './commons/commons';
 import Api from './commons/api'
 import { Box, Button, ButtonDropdown, Header, SpaceBetween, Spinner, Table } from '@cloudscape-design/components';
+import { atom, useRecoilState, useResetRecoilState } from 'recoil';
 import "./promptTemplatesTable.css"
+
+
+export const templatesState = atom({
+  key: 'PromptTemplates.promptTemplates',
+  default: []
+})
+
+// export const addTemplateShareUserModalState = atom({
+//   key: 'PromptTemplates.addTemplateShareUserModalState',
+//   default: null
+// })
+
+
+// export const addTemplateShareUserModalVisibleState = atom({
+//   key: 'PromptTemplates.addTemplateShareUserModalVisibleState',
+//   default: false
+// })
+
+// export const shareListState = atom({
+//   key: 'PromptTemplates.shareListState',
+//   default: null
+// })
+
+
+// export const currentPageIndexState = atom({
+//   key:  'PromptTemplates.currentPageIndexState',
+//   default: 0
+// })
 
 
 async function getTableProvider() {
@@ -25,12 +54,10 @@ async function getTableProvider() {
 
 
 function PromptTemplatesTable() {
-  const [promptTemplates, setPromptTemplates] = useState([]);
+  const [promptTemplates, setPromptTemplates] = useRecoilState(templatesState);
   const [selectedItem, setSelectedItem] = useState({});
-  const [currentTemplate, setCurrentTemplate] = useState();
-  const [currentTemplateContents, setCurrentTemplateContents] = useState();
-  const atLeastOneSelected = selectedItem ? true :  false;
   const [tableLoadingState, setTableLoadingState] = useState(true)
+  
   useEffect(() => {
     (async () => {
       let promptTemplates = await getTableProvider()
@@ -80,7 +107,6 @@ function PromptTemplatesTable() {
     // console.log("ShowDetails got selected");
     // console.dir(selected)
     setSelectedItem(selected)
-    setCurrentTemplate(selected)
   }
 
   if (tableLoadingState) {
@@ -134,9 +160,9 @@ function PromptTemplatesTable() {
                     items={[
                       {
                         id: "edit",
-                        disabled: !currentTemplate,
+                        disabled: !selectedItem,
                         text: "Edit or delete template",
-                        href: `/#/prompt-templates/${currentTemplate ? currentTemplate.template_id : 'none'}/edit`,
+                        href: `/#/prompt-templates/${selectedItem ? selectedItem.template_id : 'none'}/edit`,
                       }
                     ]}
                   >

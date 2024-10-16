@@ -54,10 +54,9 @@ class FinalScriptsStack(NestedStack):
             ingestion_status_table,
             starting_position=lambda_.StartingPosition.LATEST,
             batch_size=1,
-            retry_attempts=0,
+            retry_attempts=2,
             filters=[
-                lambda_.FilterCriteria.filter({"event_name": lambda_.FilterRule.is_equal("MODIFY")}),
-                # lambda_.FilterCriteria.filter({"dynamodb": lambda_.FilterRule.filter({"new_image": lambda_.FilterRule.is_equal({"progress_status": lambda_.FilterRule.or_(["ENRICHMENT_FAILED", "INGESTED"])})})})
+                lambda_.FilterCriteria.filter({"eventName": lambda_.FilterRule.is_equal("MODIFY")}),
             ]
         )
 
@@ -98,6 +97,7 @@ class FinalScriptsStack(NestedStack):
         doc_collections_handler_function.grant_invoke(inference_principal)
         embeddings_provider_function.grant_invoke(inference_principal)
         ingestion_status_provider_function.grant_invoke(inference_principal)
+        prompt_templates_handler_function.grant_invoke(inference_principal)
         vector_store_provider_function.grant_invoke(inference_principal)
 
         bedrock_provider_function.grant_invoke(ingestion_principal)

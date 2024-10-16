@@ -8,10 +8,8 @@ import { UPLOADED_DOCUMENTS_COLUMN_DEFINITIONS } from './commons/details-config'
 import { atom, selector, useRecoilState, useRecoilValue} from 'recoil'
 import { 
   currentCollectionState,
-  deleteModalVisibleState, 
   filesValState,
   filesValIsLoadingState,
-  lastEvalKeyState,
   uploadedFilesState,
   urlCollectionIdState,
 } from './DocumentCollectionForm'
@@ -44,13 +42,12 @@ function DocumentCollectionUploadedDocumentsTable() {
 
   const [confirmationModal, setConfirmationModal] = useRecoilState(confirmationModalState)
   const currentCollection = useRecoilValue(currentCollectionState)
-  const [deleteModalVisible, setDeleteModalVisible] = useRecoilState(deleteModalVisibleState)
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false)
   const [filesVal, setFilesVal] = useRecoilState(filesValState)
   const [isLoading, setIsLoading] = useRecoilState(filesValIsLoadingState)
-  const [lastEvalKey, setLastEvalKey] = useRecoilState(lastEvalKeyState)
+  const [lastEvalKey, setLastEvalKey] = useState(null)
   const [selectedFileUpload, setSelectedFileUpload] = useRecoilState(selectedFileUploadState)
   const [uploadedFiles, setUploadedFiles] = useRecoilState(uploadedFilesState)
-  const urlCollectionId = useRecoilValue(urlCollectionIdState)
   
   const deleteConfirmationMessageState = atom({
     key: 'UploadedDocumentsTable.deleteConfirmationMessageState',

@@ -392,14 +392,14 @@ class DocumentCollectionsHandler:
         elif method == 'GET' and path == '/document_collections':
             # print(f"Getting all doc collections for user_id {handler_evt.user_id}")
             doc_collections_response = self.get_doc_collections(handler_evt.user_id, include_shared=True)
-            # print(f"Got doc_collections_response {doc_collections_response}")
+            print(f"Got doc_collections_response {doc_collections_response}")
             result = {
                 "response":  {},
                 "last_eval_key": doc_collections_response['last_eval_key']
             }
             if len(doc_collections_response["response"]) > 0:
                 result["response"] = self.collections_to_dict(doc_collections_response["response"])
-            # print(f"GET /document_collections returning {result}") 
+            print(f"GET /document_collections returning {result}") 
 
         elif method == 'GET' and path.startswith('/document_collections/'):
             if not hasattr(handler_evt, 'path_parameters') or \
@@ -422,7 +422,7 @@ class DocumentCollectionsHandler:
             if not collection:
                 result = None
             else:
-                # print(f"GET /document_collections got {collection.__dict__()}")
+                print(f"GET /document_collections got {collection.__dict__()}")
                 collection_obj = None
                 if collection:
                     collection_obj = self.collections_to_dict([collection])
@@ -465,7 +465,7 @@ class DocumentCollectionsHandler:
                     })
                 # print(f"file_list is now {file_list}")
                 result = { 
-                    "collection": collection_obj,
+                    "response": collection_obj,
                     "files": json.dumps(file_list)
                 }
 

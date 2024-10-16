@@ -32,11 +32,8 @@ class NeptuneStack(Construct):
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             instance_type=neptune.InstanceType.of(instance_type),
             iam_authentication=True,
-            security_groups=[app_security_group]
-        )
-
-        self.cluster.apply_removal_policy(
-            removal_policy
+            security_groups=[app_security_group],
+            removal_policy=removal_policy,
         )
 
         # self.graph_provider_function = lambda_.Function(self, 'GraphStoreProviderFunction',
@@ -68,9 +65,9 @@ class NeptuneStack(Construct):
         self.cluster.grant(allowed_role.grant_principal, "neptune-db:ReadDataViaQuery", "neptune-db:WriteDataViaQuery")
         self.endpoint_address = self.cluster.cluster_endpoint.socket_address
         
-        # ssm.StringParameter(self, 'NeptuneEndpointAddressParameter',
-        #     string_value=self.cluster.cluster_endpoint.socket_address,
-        #     parameter_name=f'/{parent_stack_name}/neptune_endpoint_address',
-        # )
+        ssm.StringParameter(self, 'NeptuneEndpointAddressParameter',
+            string_value=self.cluster.cluster_endpoint.socket_address,
+            parameter_name=f'/{parent_stack_name}/neptune_endpoint_address',
+        )
 
         CfnOutput(self, 'NeptuneEndpointAddress', value=self.cluster.cluster_endpoint.socket_address)

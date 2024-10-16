@@ -42,10 +42,10 @@ stack_name = os.getenv('STACK_NAME')
 #         else:
 #             raise Exception(f'Error occurred while deleting message: {e.args[0]}')
 
-def update_document_collection(collection, origin, *, account_id=None, lambda_client=None):
+def upsert_doc_collection(collection, origin, *, account_id=None, lambda_client=None):
     if not account_id:
         account_id = os.getenv('AWS_ACCOUNT_ID')
-
+    print(f"upsert_doc_collection got collection {collection}")
     doc_collections_fn_name = get_ssm_params('document_collections_handler_function_name')
     response = invoke_lambda(
         doc_collections_fn_name,
@@ -58,8 +58,8 @@ def update_document_collection(collection, origin, *, account_id=None, lambda_cl
             },
             "routeKey": "POST /document_collections",
             "body": {
-                "collection": collection,
-                "user_id": collection.user_id
+                "document_collection": collection,
+                "user_id": collection['user_id']
             }
         },
         lambda_client=lambda_client
@@ -169,45 +169,50 @@ def get_bedrock_runtime_client():
 #     body = json.loads(response['body'])
 #     return body['creds']
 
-def get_document_collection(collection_id, user_id, *, account_id=None, lambda_client=None):
-    global lambda_client_singleton
+def get_document_collections(user_id, collection_id=None, *, account_id=None, lambda_client=None):
     if not account_id:
         account_id = os.getenv('AWS_ACCOUNT_ID')
-    if not lambda_client:
-        if not lambda_client_singleton:
-            lambda_client_singleton = BotoClientProvider.get_client('lambda')
-        lambda_client = lambda_client_singleton
     doc_collections_fn_name = get_ssm_params('document_collections_handler_function_name')
-    response = lambda_client.invoke(
-        FunctionName=doc_collections_fn_name, 
-        InvocationType='RequestResponse',
-        Payload=json.dumps({
+    route_key = 'GET /document_collections'
+
+    if collection_id:
+        route_key += f'/{collection_id}'
+
+    response = invoke_lambda(
+        doc_collections_fn_name,
+        {
             "requestContext": {
                 "accountId": account_id,
-            }, 
+            },
             "headers": {
-                # "authorization": f"Bearer {jwt}",
                 "origin": get_ssm_params('origin_frontend')
             },
-            "routeKey": "GET /document_collections",
-            "body": {
+            "routeKey": route_key,
+            "pathParameters": {
                 "collection_id": collection_id,
                 "user_id": user_id
             }
-        }).encode('utf-8')
+        },
+        lambda_client=lambda_client
     )
-    # print(f"get_document_collection got response {response}")
-    payload = json.loads(response['Payload'].read().decode('utf-8'))
-    # print(f"Got payload {payload}")
-    result = None
-    dcs = json.loads(payload['body'])['response']
     
-    for dc_name in list(dcs.keys()):
-        collection = dcs[dc_name]
-        if collection['collection_id'] == collection_id:
-            result = collection
-            break
-    return result
+    print(f"get_document_collections got response {response}")
+    dcs = json.loads(response['body'])['response']
+    result = None
+    print(f"Got dcs {dcs}, type {type(dcs)}")
+    if isinstance(dcs, str):
+        dcs = json.loads(dcs)
+
+    if collection_id:
+        for dc_name in list(dcs.keys()):
+            collection = dcs[dc_name]
+            print()
+            if collection['collection_id'] == collection_id:
+                result = collection
+                break
+        return result
+    else:
+        return dcs
         
 
 def get_identity_pool_id():
@@ -261,7 +266,7 @@ def get_prompt_template(template_id, user_id, origin, *, account_id=None, lambda
                 "origin": origin,
             },
             "routeKey": "GET /prompt_templates",
-            "body": {
+            "pathParameters": {
                 "template_id": template_id,
                 "user_id": user_id
             }
@@ -397,13 +402,15 @@ def invoke_lambda(function_name, payload={}, *, lambda_client=None):
 
     # print(f"Invoking {function_name}")
     print(f"Payload keys: {payload.keys()}")
-    print(f"args keys: {payload['args'].keys()}")
-    if 'messages' in payload['args'].keys():
-        print(f"message keys: {payload['args']['messages'][0].keys()}")
-        msg = payload['args']['messages'][0]
-        if msg['mime_type'] == 'image/jpeg':
-            print(f"Type of content is {type(msg['content'])}")
- 
+    if 'args' in payload.keys():
+        print(f"args keys: {payload['args'].keys()}")
+        if 'messages' in payload['args'].keys():
+            print(f"message keys: {payload['args']['messages'][0].keys()}")
+            msg = payload['args']['messages'][0]
+            if msg['mime_type'] == 'image/jpeg':
+                print(f"Type of content is {type(msg['content'])}")
+    elif 'body' in payload.keys():
+        print(f"body keys: {payload['body'].keys()}")
     # print(f"Payload is {payload}")
 
     response = lambda_client.invoke(
@@ -418,73 +425,62 @@ def invoke_lambda(function_name, payload={}, *, lambda_client=None):
     return response
 
 
-def invoke_service(method, url, user_creds, *, body={}):
-    # print(f"Using user_creds {user_creds}")
-    service_url = '/'.join(url.split('/')[2])
-    auth = AWSRequestsAuth(aws_access_key=user_creds['AccessKeyId'],
-        aws_secret_access_key=user_creds['SecretKey'],
-        aws_token=user_creds['SessionToken'],
-        aws_host=service_url,
-        aws_region=os.getenv('AWS_REGION'),
-        aws_service='execute-api'
+# def invoke_service(method, url, user_creds, *, body={}):
+#     # print(f"Using user_creds {user_creds}")
+#     service_url = '/'.join(url.split('/')[2])
+#     auth = AWSRequestsAuth(aws_access_key=user_creds['AccessKeyId'],
+#         aws_secret_access_key=user_creds['SecretKey'],
+#         aws_token=user_creds['SessionToken'],
+#         aws_host=service_url,
+#         aws_region=os.getenv('AWS_REGION'),
+#         aws_service='execute-api'
+#     )
+#     # print(f"Got auth {dir(auth)}")
+#     # print(f"Got auth {auth.__dict__}")
+#     # print(f"about to {method} {url}")
+#     headers = {
+#         'User-Agent': 'MTFSRAD-utils-invoke_service',
+#         'Accept': '*/*',
+#         'Accept-Encoding': 'gzip, deflate, br',
+#         'Connection': 'keep-alive',
+#         'Origin': get_ssm_params('origin_frontend'),
+#     }
+
+#     # print(f"Invoking {method} on {url} with headers {headers} and creds {user_creds}")
+
+#     if method == 'GET':
+#         response = requests.get(
+#             url,
+#             headers=headers,
+#             auth=auth
+#         )
+    
+#     elif method == 'POST':
+#         # print(f"and body {body}")
+#         response = requests.post(
+#             url,
+#             headers=headers,
+#             json=body,
+#             auth=auth
+#         )
+#     # print(f"Got response {response}")
+#     return response
+
+
+def neptune_statement(collection_id, statement, statement_type, origin):
+    response = invoke_lambda(
+        get_ssm_params('graph_store_provider_function_name'),
+        {
+            "operation": "execute_statement",
+            "origin": origin,
+            "args": {
+                "collection_id": collection_id,
+                "statement": statement,
+                "statement_type": statement_type
+            }
+        }
     )
-    # print(f"Got auth {dir(auth)}")
-    # print(f"Got auth {auth.__dict__}")
-    # print(f"about to {method} {url}")
-    headers = {
-        'User-Agent': 'MTFSRAD-utils-invoke_service',
-        'Accept': '*/*',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Origin': get_ssm_params('origin_frontend'),
-    }
-
-    # print(f"Invoking {method} on {url} with headers {headers} and creds {user_creds}")
-
-    if method == 'GET':
-        response = requests.get(
-            url,
-            headers=headers,
-            auth=auth
-        )
-    
-    elif method == 'POST':
-        # print(f"and body {body}")
-        response = requests.post(
-            url,
-            headers=headers,
-            json=body,
-            auth=auth
-        )
-    # print(f"Got response {response}")
     return response
-
-# max_download_attempts = 3
-# def s3_download(bucket, s3_key, attempts=0, *, s3_client=None):
-#     global s3_client_singleton
-#     if not s3_client:
-#         if not s3_client_singleton:
-#             s3_client_singleton = BotoClientProvider.get_client('s3')
-#         s3_client = s3_client_singleton
-    
-#     if attempts >= max_download_attempts:
-#         raise Exception(f"Failed to download {s3_key} after {max_download_attempts} attempts.")
-#     try:
-#         parts = s3_key.split('/')
-#         collection_id = parts[-2]
-#         filename = parts[-1]
-#         local_path = self.get_tmp_path(collection_id, filename)
-#         self.s3.download_file(bucket, s3_key, local_path)
-#         return local_path
-#     except:
-#         s3_prefix = '/'.join(s3_key.split('/')[:-1])
-#         s3_key = f"{s3_prefix}/{unquote_plus(filename)}"
-#         if attempts + 1 < max_download_attempts:
-#             # print(f"Retrying download of {s3_key} (attempt {attempts + 1})")
-#             return download_s3_file(bucket, s3_key, attempts + 1)
-#         else:
-#             raise Exception(f"ERROR: Failed to download s3://{bucket}/{s3_key} in {max_download_attempts} attempts.")
-
 def sanitize_response(body, *, dont_sanitize_fields=[]):
     # # print(f"Sanitize_response received body {body}")
     if isinstance(body, dict):
@@ -522,6 +518,25 @@ def save_vector_docs(docs, collection_id, origin):
     )
     print(f"save_vector_docs got response {response}")
     return len(converted_docs)
+
+
+def search_vector_docs(search_recommendations, top_k, origin):
+    print(f"utils.search_vector_docs called with {search_recommendations}, {top_k}, {origin}")
+    evt = {
+        "operation": "semantic_query",
+        "origin": origin,
+        "args": {
+            "search_recommendations": search_recommendations,
+            "top_k": top_k
+        }
+    }
+    print(f"utils.search_vector_docs sending event {evt}")
+    response = invoke_lambda(
+        get_ssm_params('vector_store_provider_function_name'),
+        evt
+    )
+    print(f"search_vector_docs got response {response}")
+    return response
 
 
 def set_ingestion_status(user_id, doc_id, etag, lines_processed, progress_status, origin):

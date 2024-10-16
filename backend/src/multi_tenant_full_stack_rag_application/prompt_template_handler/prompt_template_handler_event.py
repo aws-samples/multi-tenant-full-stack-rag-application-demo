@@ -11,6 +11,7 @@ class PromptTemplateHandlerEvent:
         auth_token='',
         template_id='',
         template_text='',
+        stop_sequences=[],
         method='',
         path='',
         user_email='',
@@ -26,8 +27,10 @@ class PromptTemplateHandlerEvent:
         self.user_email = user_email
         self.user_id = user_id
         self.origin = origin
+        self.stop_sequences = stop_sequences
 
     def from_lambda_event(self, event):
+        print(f"prompt_template_handler_evet.from_lambda_event got {event}")
         self.account_id = event['requestContext']['accountId']
         [self.method, self.path] = event['routeKey'].split(' ')
         if 'authorizer' in event['requestContext']:
@@ -42,23 +45,40 @@ class PromptTemplateHandlerEvent:
                 body = json.loads(event['body'])
             else:
                 body = event['body']
-
-            template = body['prompt_template']
-            if 'template_name' in template:
-                self.template_name = template['template_name']
-            if 'template_text' in template:
-                self.template_text = template['template_text']
-            if 'model_ids' in template:
-                self.model_ids = template['model_ids']
-            if 'template_id' in template:
-                self.template_id = template['template_id']
-            if 'stop_sequences' in template:
-                self.stop_sequences = template['stop_sequences']    
+            print(f"Body is {body}")
+            if 'prompt_template' in body:
+                self.prompt_template = body['prompt_template']
+                template = body['prompt_template']
+                if 'template_name' in template:
+                    self.template_name = template['template_name']
+                if 'template_text' in template:
+                    self.template_text = template['template_text']
+                if 'model_ids' in template:
+                    self.model_ids = template['model_ids']
+                if 'template_id' in template:
+                    self.template_id = template['template_id']
+                if 'stop_sequences' in template:
+                    tmp = []
+                    if isinstance(template['stop_sequences'], str):
+                        tmp = template['stop_sequences'].split(',')
+                    else:
+                        tmp = template['stop_sequences']
+                    for seq in tmp:
+                        self.stop_sequences.append(seq.strip())  
+                        
         if 'pathParameters' in event:
             self.path_parameters = event['pathParameters']
+            user_id = ''
+            template_id = ''
             if 'template_id' in self.path_parameters:
-                self.template_id = self.path_parameters['template_id']
-        # print(f'from_lambda_event returning {self.__dict__}')      
+                template_id = self.path_parameters['template_id']
+            if 'user_id' in self.path_parameters:
+                user_id = self.path_parameters['user_id']
+            self.prompt_template = {
+                'template_id': template_id,
+                'user_id': user_id
+            }
+        print(f'from_lambda_event returning {self.__dict__}')      
         return self
 
     def __str__(self):

@@ -171,7 +171,7 @@ export default class Api {
         this.idToken = this.getIdToken(this.session);
       }
       // TODO delete this next line later
-      console.log(`JWT = ${this.idToken}`)
+      // console.log(`JWT = ${this.idToken}`)
  
       this.currentAuth = {
         userId: this.userId,
@@ -290,6 +290,16 @@ export default class Api {
         models: modelsFinal,
         model_default_params: bedrockModelParams
       }
+    }
+    
+    async getPromptTemplate(templateId) {
+      let url = this.apiUrls['prompt_templates']
+      url = `${url}/${templateId}`
+      let template = await this.getData(url)
+      if (typeof(template) == 'string') {
+        template = JSON.parse(template)
+      }
+      return template
     }
     
     async getPromptTemplates(queryParams={}) {
@@ -465,8 +475,8 @@ export default class Api {
   }
 
   async upsertPromptTemplate(promptTemplateObj) {
-    // console.log('upsertPromptTemplate received')
-    // console.dir(promptTemplateObj)
+    console.log('upsertPromptTemplate received')
+    console.dir(promptTemplateObj)
     let url = this.apiUrls['prompt_templates']
     const updatedTemplates = await this.postData(url, promptTemplateObj)
     return updatedTemplates

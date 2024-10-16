@@ -5,5 +5,5 @@ from abc import ABC, abstractmethod
 
 class GraphStoreProvider(ABC):
     @abstractmethod
-    def execute_query(self, collection_id):
+    def execute_statement(self, collection_id, statement, statement_type='gremlin'):
         pass
