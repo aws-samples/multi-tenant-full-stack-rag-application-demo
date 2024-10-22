@@ -60,9 +60,15 @@ class EntityExtraction(Pipeline):
             account_id = record['eventSourceARN'].split(':')[4]
             user_id = new_image['user_id']['S']
 
-            collection = self.utils.get_document_collections(user_id, collection_id)
-            print(f"Got collection {collection}")
-            if not collection or 'entity_extraction' not in collection['enrichment_pipelines']:
+            response = self.utils.get_document_collections(user_id, collection_id)
+            print(f"Got response {response}")
+            enrichment_pipelines = {}
+            collection_name = list(response.keys())[0]
+            collection = response[collection_name]
+            if collection and 'enrichment_pipelines' in collection:
+                enrichment_pipelines = json.loads(collection['enrichment_pipelines'])
+            print(f"enrichment pipelines is now {enrichment_pipelines}")
+            if not ('entity_extraction' in enrichment_pipelines and enrichment_pipelines['entity_extraction']['enabled'] == True):
                 print(f"Skipping entity extraction for doc collection {collection} because it doesn't have entity extraction enabled.")
                 return None
             # now fetch all the text chunks from this doc in the vector

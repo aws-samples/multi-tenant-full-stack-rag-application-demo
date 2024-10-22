@@ -165,6 +165,11 @@ function App({user, signOut}) {
                                 // }         
                             ]        
                         },
+                        // {
+                        //     type: "link",
+                        //     text: "Log out", 
+                        //     href: "#/logout"    
+                        // },
                     ]}
                 />}
                 splitPanel={splitPanel}

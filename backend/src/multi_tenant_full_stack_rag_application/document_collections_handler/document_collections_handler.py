@@ -8,6 +8,7 @@ from os import getenv
 from uuid import uuid4
 from .document_collection import DocumentCollection
 from .document_collections_handler_event import DocumentCollectionsHandlerEvent
+from .document_collection_share import DocumentCollectionShare
 from multi_tenant_full_stack_rag_application import utils
 from urllib.parse import quote_plus
 
@@ -16,6 +17,7 @@ API calls served by this function (via API Gateway):
 GET /document_collections: list all document collections to which a user has access (either owned or shared)
 GET /document_collections/{collection_id}: get a specific doc collection, with paged files.
 POST /document_collections: create or update document collections
+PUT /document_collections/{collection_id}/{share_with_user_email}: share a collection with a user.
 DELETE /document_collections/{collection_id}: delete a doc collection
 DELETE /document_collections/{collection_id}/{file_name}: delete a file from a doc collection
 """
@@ -141,7 +143,7 @@ class DocumentCollectionsHandler:
         self.ddb.delete_item(
             TableName=self.doc_collections_table,
             Key={
-                'user_id': {'S': user_id},
+                'partition_key': {'S': user_id},
                 'sort_key': {'S': f'collection::{collection_name}'}
             },
             ConditionExpression="#collection_id = :collection_id",
@@ -197,12 +199,12 @@ class DocumentCollectionsHandler:
             return None
         
         # print(f"get_doc_collections received user_id {user_id}")
-        projection_expression = "#user_id, #sort_key, #user_email," + \
+        projection_expression = "#partition_key, #sort_key, #user_email," + \
             " #collection_name, #description, #vector_db_type," + \
             " #collection_id, #shared_with, #created_date, #updated_date," + \
             " #enrichment_pipelines, #graph_schema"
         expression_attr_names = {
-            "#user_id": "user_id",
+            "#partition_key": "partition_key",
             "#sort_key": "sort_key", 
             "#user_email": "user_email",
             "#collection_name": "collection_name",
@@ -220,7 +222,7 @@ class DocumentCollectionsHandler:
         kwargs = {
             'TableName': self.doc_collections_table,
             'KeyConditions': {
-                'user_id': {
+                'partition_key': {
                     'AttributeValueList': [
                         {"S": user_id},
                     ],
@@ -429,9 +431,10 @@ class DocumentCollectionsHandler:
                 if not collection_obj or len(list(collection_obj.keys())) == 0:
                     return utils.format_response(404, {"Error": "Collection not found."}, handler_evt.origin)
             
-                ingestion_prefix = quote_plus(
-                    f'{collection_obj[list(collection_obj.keys())[0]]["collection_id"]}'
-                )
+                # ingestion_prefix = quote_plus(
+                #     f'{collection_obj[list(collection_obj.keys())[0]]["collection_id"]}'
+                # )
+                # print(f"Ingestion prefix is {ingestion_prefix}")
                 # TODO change this to call to ingestion_status_provider
                 # file_statuses = self.ingestion_status_provider.get_ingestion_status(user_id, ingestion_prefix, True, limit, last_eval_key)
                 # base_url = f"{self.services['ingestion_status_provider']}/ingestion_status"
@@ -451,7 +454,7 @@ class DocumentCollectionsHandler:
                     lambda_client=self.lambda_
                 )
                 file_statuses = json.loads(response['body'])
-                # print(f"Ingestion_status_provider returned file_statuses {file_statuses}")
+                print(f"Ingestion_status_provider returned file_statuses {file_statuses}")
                 file_list = []
                 
                 for file_status in file_statuses:
@@ -483,6 +486,18 @@ class DocumentCollectionsHandler:
                 result = {"Error": "Failed to create collection."}
                 status = 500        
         
+        elif method == 'PUT' and path.startswith('/document_collections/'):
+            if not hasattr(handler_evt, 'path_parameters') or \
+                'collection_id' not in handler_evt.path_parameters or \
+                not handler_evt.path_parameters['collection_id'] or \
+                'share_with_user_email' not in handler_evt.path_parameters or \
+                not handler_evt.path_parameters['share_with_user_email']:
+                status = 400
+                result = {"Error": "Missing collection_id and/or share_with_user_email parameter."}
+            else:
+                collection_id = handler_evt.path_parameters['collection_id']
+                share_with_user_email = handler_evt.path_parameters['share_with_user_email']
+                
         # DELETE /document_collections/{collection_id}: deletes a collection
         # DELETE /document_collections/{collection_id}/{file_name}: deletes a file
         elif method == 'DELETE' and path.startswith('/document_collections/'):
@@ -501,6 +516,17 @@ class DocumentCollectionsHandler:
                     result = self.delete_doc_collection(handler_evt)
 
         return utils.format_response(status, result, handler_evt.origin)
+
+    def share_create(self, collection_id, share_with_user_email):
+        share = DocumentCollectionShare(
+            collection_id,
+            share_with_user_email,
+        )
+        self.ddb.put_item(
+            TableName=self.doc_collections_table,
+            Item=share.to_ddb_record()
+        )
+
 
     def upsert_doc_collection(self, new_collection: DocumentCollection, handler_evt):
         # print(f"upsert_doc_collection got new_collection {new_collection}")

@@ -229,7 +229,7 @@ function DocumentCollectionForm() {
         <Form className="documentCollectionForm"
           actions={
             <SpaceBetween key="sb0" direction="horizontal" size="xs">
-              <Button href='#/document-collections' formAction="none" variant="link">
+              <Button href='#/document-collections' formAction="cancel" variant="link">
                 Cancel
               </Button>
               <Button 
