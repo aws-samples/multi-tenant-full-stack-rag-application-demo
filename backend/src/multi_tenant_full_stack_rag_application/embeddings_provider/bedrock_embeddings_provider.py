@@ -37,7 +37,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
     ):
         self.utils = utils
         self.model_id = model_id
-        
+        print(f"Intialized bedrock_embeddings_provider with model {self.model_id}")
         if not br_client:
             self.bedrock_rt = self.utils.BotoClientProvider.get_client('bedrock-runtime')
         else: 
@@ -68,7 +68,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
             },
             self.utils.get_ssm_params('embeddings_provider_function_name')
         )
-        # print(f"Got response from embed_text: {response}")
+        print(f"Got response from embed_text: {response}")
         return response
 
     def get_model_dimensions(self, model_id=None):
@@ -87,6 +87,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
     def get_model_max_tokens(self, model_id=None):
         if model_id == None:
             model_id = self.model_id
+        print(f"Getting model max tokens for {model_id}")
         response = self.utils.invoke_bedrock(
             "get_model_max_tokens",
             {
@@ -106,7 +107,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
         if not hasattr(handler_evt,'model_id') or handler_evt.model_id == '':
             handler_evt.model_id = self.model_id
             
-        # print(f"handler_evt is {handler_evt.__dict__}")
+        print(f"handler_evt is {handler_evt.__dict__}")
         status = 200
         result = {}
 
@@ -146,11 +147,11 @@ def handler(event, context):
     global bedrock_embeddings_provider
     if not bedrock_embeddings_provider:
         print(f'bedrock_embeddings_provider.handler got event {event}')
-        if 'model_id' not in event['args'] or event['args']['model_id'] == '':
+        if 'model_id' not in event['args'] or not event['args']['model_id']:
             model_id = os.getenv('EMBEDDINGS_MODEL_ID')
         else:
             model_id = event['args']['model_id']
-
+        print(f"loading with embeddings model {model_id}")
         dimensions = 1024 if not 'dimensions' \
             in event['args'] \
             else event['args']['dimensions']

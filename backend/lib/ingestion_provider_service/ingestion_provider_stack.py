@@ -83,6 +83,7 @@ class IngestionProviderStack(Stack):
             timeout=Duration.seconds(60),
             environment={
                 "AWS_ACCOUNT_ID": self.account,
+                "EMBEDDING_MODEL_ID": self.node.get_context('embeddings_model_id'),
                 "INGESTION_BUCKET": self.ingestion_bucket.bucket.bucket_name,
                 "INGESTION_STATUS_TABLE": self.ingestion_status_table.table.table_name,
                 "STACK_NAME": parent_stack_name,

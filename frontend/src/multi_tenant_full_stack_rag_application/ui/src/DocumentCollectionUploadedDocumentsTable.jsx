@@ -151,12 +151,13 @@ function DocumentCollectionUploadedDocumentsTable() {
     evt.preventDefault()
   }
 
-  function deleteFile(resourceId, evt) {
-    api.deleteFile(
+  async function deleteFile(resourceId, evt) {
+    await api.deleteFile(
       currentCollection.collectionId, 
       resourceId
     )
     setDeleteModalVisible(false)
+    setConfirmationModal('')
     setSelectedFileUpload('')
     // setIsLoading(true)
     reloadTable(evt)
@@ -165,10 +166,10 @@ function DocumentCollectionUploadedDocumentsTable() {
 
   function reloadTable(evt) {
     (async () => {
-      setIsLoading(false)
+      setIsLoading(true)
       let tmpFiles = await getTableProvider(currentCollection.collectionId, filePageSize, lastEvalKey)
       setUploadedFiles(tmpFiles)
-      setIsLoading(true)
+      setIsLoading(false)
     })()
     // evt.preventDefault()
   }
@@ -181,6 +182,7 @@ function DocumentCollectionUploadedDocumentsTable() {
       files[i].key = `uploaded_file ${i}`
     }
     setFilesVal(files);
+    reloadTable()
     // // console.log("filesVal is now");
     // // console.dir(files)
     // setIsLoading(false)
@@ -188,6 +190,8 @@ function DocumentCollectionUploadedDocumentsTable() {
 
   async function uploadFiles() {
     setIsLoading(true)
+    console.log("filesVal before uploadFiles")
+    console.dir(filesVal)
     let result = await api.uploadFiles(currentCollection.collectionId, filesVal);
     if (result) {
       // // console.log("uploadFiles result:")

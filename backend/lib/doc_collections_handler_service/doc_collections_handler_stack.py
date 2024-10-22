@@ -56,17 +56,32 @@ class DocumentCollectionsHandlerStack(Stack):
         # must be one of "DESTROY", "RETAIN", "RETAIN_ON_UPDATE_OR_DELETE", or "SNAPSHOT"
         removal_policy = self.node.get_context('removal_policy')
 
-        self.doc_collections_table_stack = DynamoDbTable(self, 'DocCollectionsTable',
+        # self.doc_collections_table_stack = DynamoDbTable(self, 'DocCollectionsTable',
+        #     parent_stack_name=parent_stack_name,
+        #     partition_key='user_id',
+        #     partition_key_type=ddb.AttributeType.STRING,
+        #     removal_policy=RemovalPolicy(removal_policy),
+        #     resource_name='DocCollectionsTable',
+        #     sort_key='sort_key',
+        #     sort_key_type=ddb.AttributeType.STRING,
+        # )
+        
+        # self.doc_collections_table_stack.table.add_global_secondary_index(
+        #     index_name='by_collection_id',
+        #     partition_key=ddb.Attribute(name='collection_id', type=ddb.AttributeType.STRING),
+        # )
+
+        self.doc_collections_table_stack2 = DynamoDbTable(self, 'DocCollectionsTable2',
             parent_stack_name=parent_stack_name,
-            partition_key='user_id',
+            partition_key='partition_key',
             partition_key_type=ddb.AttributeType.STRING,
             removal_policy=RemovalPolicy(removal_policy),
-            resource_name='DocCollectionsTable',
+            resource_name='DocCollectionsTable2',
             sort_key='sort_key',
             sort_key_type=ddb.AttributeType.STRING,
         )
         
-        self.doc_collections_table_stack.table.add_global_secondary_index(
+        self.doc_collections_table_stack2.table.add_global_secondary_index(
             index_name='by_collection_id',
             partition_key=ddb.Attribute(name='collection_id', type=ddb.AttributeType.STRING),
         )
@@ -87,7 +102,7 @@ class DocumentCollectionsHandlerStack(Stack):
             handler='multi_tenant_full_stack_rag_application.document_collections_handler.document_collections_handler.handler',
             timeout=Duration.seconds(60),
             environment={
-                "DOCUMENT_COLLECTIONS_TABLE": self.doc_collections_table_stack.table.table_name,
+                "DOCUMENT_COLLECTIONS_TABLE": self.doc_collections_table_stack2.table.table_name,
                 "STACK_NAME": parent_stack_name,
             },
             vpc=vpc,
@@ -110,7 +125,7 @@ class DocumentCollectionsHandlerStack(Stack):
         )
         doc_collection_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
         
-        self.doc_collections_table_stack.table.grant_read_write_data(self.doc_collections_function.grant_principal)
+        self.doc_collections_table_stack2.table.grant_read_write_data(self.doc_collections_function.grant_principal)
 
         self.doc_collections_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
@@ -202,6 +217,15 @@ class DocumentCollectionsHandlerStack(Stack):
             integration=doc_collections_integration_fn
         )
 
+        self.http_api.add_routes(
+            path='/document_collections/{collection_id}/{share_with_user_email}',
+            methods=[
+                apigw.HttpMethod.PUT
+            ],
+            authorizer=authorizer,
+            integration=doc_collections_integration_fn
+        )
+        
         self.http_api.add_routes(
             path='/{proxy+}',
             methods=[

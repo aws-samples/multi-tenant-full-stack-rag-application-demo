@@ -26,7 +26,7 @@ event {
     "args": 
         for embed_text:
             "model_id": str,
-            "text": str,
+            "input_text": str,
             "dimensions": int=1024,
             "input_type": str="search_query",
 
@@ -93,7 +93,7 @@ class BedrockProvider():
         bedrock_agent_client  = None,
         bedrock_agent_rt_client = None,
         bedrock_rt_client = None,
-        cognito_identity_client = None,
+        # cognito_identity_client = None,
         ssm_client = None
     ):
         self.utils = utils
@@ -121,11 +121,11 @@ class BedrockProvider():
             # print("Used brt client passed in.")
             self.bedrock_rt = bedrock_rt_client
         
-        if not cognito_identity_client:
-            self.cognito = utils.BotoClientProvider.get_client('cognito-identity')
-        else:
-            # print("Used cognito identity client passed in")
-            self.cognito = cognito_identity_client
+        # if not cognito_identity_client:
+        #     self.cognito = utils.BotoClientProvider.get_client('cognito-identity')
+        # else:
+        #     # print("Used cognito identity client passed in")
+        #     self.cognito = cognito_identity_client
 
         if not ssm_client:
             self.ssm = utils.BotoClientProvider.get_client('ssm')
@@ -135,13 +135,13 @@ class BedrockProvider():
 
         self.model_params = bedrock_model_params
         self.stack_name = os.getenv('STACK_NAME')
-        self.ssm_params = utils.get_ssm_params(ssm_client=ssm_client)
-        # print(f"BedrockProvider now initialized with ssm_params {self.ssm_params}")
-        # frontend origins initialized lazily
-        self.allowed_origins = None
-
+        print(f"Bedrock_provider loaded with stack_name {self.stack_name}")
+        self.ssm_params = self.utils.get_ssm_params(ssm_client=ssm_client)
+        self.allowed_origins = self.utils.get_allowed_origins()
+        print(f"Got allowed_origins {self.allowed_origins}")
+    
     def embed_text(self, text, model_id, input_type='search_query', *, dimensions=1024):
-        # print(f"Embedding text with model {model_id} and dimensions {dimensions}")
+        print(f"Embedding text with model {model_id} and dimensions {dimensions}")
         if model_id.startswith('cohere'):
             kwargs = {'input_type': input_type}
             if dimensions: 
@@ -180,6 +180,9 @@ class BedrockProvider():
             return 0
 
     def get_model_max_tokens(self, model_id):
+        if not model_id:
+            raise Exception("bedrock_provider.get_model_max_tokens received null model_id.")
+        
         if model_id.startswith('ai21.') or \
             model_id.startswith('amazon.titan-image-generator') or \
             model_id.startswith('amazon.titan-embed'): 

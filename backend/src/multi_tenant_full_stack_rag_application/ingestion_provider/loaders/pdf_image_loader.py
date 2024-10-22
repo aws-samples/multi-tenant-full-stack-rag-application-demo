@@ -49,9 +49,10 @@ class PdfImageLoader(Loader):
             self.s3 = s3
 
         if max_tokens_per_chunk == 0:
-            response = self.utils.get_model_max_tokens(self.my_origin, default_embedding_model, )   
+            response = self.utils.get_model_max_tokens(self.my_origin, default_embedding_model)   
             print(f"Got response for model max tokens : {response}")     
             self.max_tokens_per_chunk = json.loads(response['body'])['response']
+            # self.max_tokens_per_chunk = response['response']
         else:
             self.max_tokens_per_chunk = max_tokens_per_chunk
         

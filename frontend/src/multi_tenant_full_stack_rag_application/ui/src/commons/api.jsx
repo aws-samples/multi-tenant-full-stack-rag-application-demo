@@ -171,7 +171,7 @@ export default class Api {
         this.idToken = this.getIdToken(this.session);
       }
       // TODO delete this next line later
-      // console.log(`JWT = ${this.idToken}`)
+      console.log(`JWT = ${this.idToken}`)
  
       this.currentAuth = {
         userId: this.userId,

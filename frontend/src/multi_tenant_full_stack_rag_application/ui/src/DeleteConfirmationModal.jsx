@@ -42,7 +42,7 @@ function DeleteConfirmationModal(props) {
               <Box float="right">
                 <SpaceBetween direction="horizontal" size="xs">
                   <Button 
-                    // onClick={() => setDeleteModalVisible(false)}
+                    onClick={() => setDeleteModalVisible(false)}
                     variant="link"
                   >Cancel</Button>
                   <Button 

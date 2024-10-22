@@ -191,28 +191,38 @@ def get_document_collections(user_id, collection_id=None, *, account_id=None, la
             "pathParameters": {
                 "collection_id": collection_id,
                 "user_id": user_id
+            },
+            "body": {
+                "user_id": user_id
             }
         },
         lambda_client=lambda_client
     )
     
     print(f"get_document_collections got response {response}")
-    dcs = json.loads(response['body'])['response']
+    body = response['body']# )['response']
+    dcs = {}
     result = None
-    print(f"Got dcs {dcs}, type {type(dcs)}")
-    if isinstance(dcs, str):
-        dcs = json.loads(dcs)
+    if body:
+        try:
+            response = json.loads(body)
+            if 'response' in response:
+                dcs = response['response']
+                print(f"Got dcs {dcs}, type {type(dcs)}")
+                if isinstance(dcs, str):
+                    dcs = json.loads(dcs)
 
-    if collection_id:
-        for dc_name in list(dcs.keys()):
-            collection = dcs[dc_name]
-            print()
-            if collection['collection_id'] == collection_id:
-                result = collection
-                break
-        return result
-    else:
-        return dcs
+                if collection_id:
+                    for dc_name in list(dcs.keys()):
+                        collection = dcs[dc_name]
+                        print()
+                        if collection['collection_id'] == collection_id:
+                            result = collection
+                            break
+        except Exception as e:
+            raise Exception(f"Error: failed to retrieve doc collections: {e}")
+
+    return dcs
         
 
 def get_identity_pool_id():
@@ -232,7 +242,7 @@ def get_model_dimensions(origin, model_id=None):
         }
     )
 
-def  get_model_max_tokens(origin, model_id=None):
+def  get_model_max_tokens(origin, model_id):
     fn_name = get_ssm_params('embeddings_provider_function_name')
     return invoke_lambda(
         fn_name,
@@ -296,12 +306,12 @@ def get_ssm_params(param=None,*, ssm_client=None):
     global ssm_params
     if not ssm_client:
         ssm_client = get_ssm_client()
-    # print(f"Stack name is {stack_name}")
+    print(f"Stack name is {stack_name}")
     if not ssm_params:  
         ssm_params = {}
         next_token = ''
         path =  f"/{stack_name}"
-        # print(f"Getting all params with prefix {path}")
+        print(f"Getting all params with prefix {path}")
         while next_token != None:
             args = {
                 "Path": path,
@@ -310,8 +320,9 @@ def get_ssm_params(param=None,*, ssm_client=None):
             }
             if next_token != '':
                 args['NextToken'] = next_token
+            print(f"Calling get_parameters_by_path with arg {args}")
             response = ssm_client.get_parameters_by_path(**args)
-            # print(f"get_parameters_by_path response = {response}")
+            print(f"get_parameters_by_path response = {response}")
             for p in response['Parameters']:
                 name = p['Name'].replace(f'/{stack_name}/', '')
                 if name == 'origin_frontend' and \
@@ -322,7 +333,7 @@ def get_ssm_params(param=None,*, ssm_client=None):
                 next_token = response['NextToken']
             else:
                 next_token = None
-    # print(f"Params are now {ssm_params}")
+    print(f"Params are now {ssm_params}")
     if param:
         # print(f"Got here and param is {param}")
         return_vals = {}
@@ -404,6 +415,7 @@ def invoke_lambda(function_name, payload={}, *, lambda_client=None):
     print(f"Payload keys: {payload.keys()}")
     if 'args' in payload.keys():
         print(f"args keys: {payload['args'].keys()}")
+        # print(f"model_id is {payload['args']['model_id']}")
         if 'messages' in payload['args'].keys():
             print(f"message keys: {payload['args']['messages'][0].keys()}")
             msg = payload['args']['messages'][0]

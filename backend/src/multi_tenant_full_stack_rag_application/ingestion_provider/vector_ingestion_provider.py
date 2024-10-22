@@ -71,6 +71,7 @@ class VectorIngestionProvider:
         else:
             self.sqs = sqs_client
         
+        print(f"vector_ingestion_provider getting max tokens for {default_ocr_model}")
         self.max_tokens_per_chunk = self.utils.invoke_lambda(
             self.utils.get_ssm_params('embeddings_provider_function_name'),
             {
@@ -81,7 +82,7 @@ class VectorIngestionProvider:
                 }
             }
         )
-        
+        print(f"Got max_tokens_per_chunk {self.max_tokens_per_chunk}")
         self.splitter = OptimizedParagraphSplitter(
             max_tokens_per_chunk=self.max_tokens_per_chunk
         )
@@ -403,18 +404,22 @@ class VectorIngestionProvider:
     #     out_queue.put(None)
 
     def verify_collection(self, collection_dict, *, lambda_client=None): 
-        # print(f"Verifying collection for file dict {collection_dict}")
+        print(f"Verifying collection for file dict {collection_dict}")
         user_id = collection_dict['user_id']
         collection_id = collection_dict['collection_id']
-        
-        verified_collection = self.utils.get_document_collections(
+        # collection_name = collection_dict['collection_name']
+        print(f"Getting doc collection {collection_id} for user_id {user_id}")
+        response = self.utils.get_document_collections(
             user_id,
             collection_id, 
             lambda_client=lambda_client
         )
 
-        print(f"Got verified collection: {verified_collection}, type {type(verified_collection)}")
-        # {'real estate documents': {'sort_key': 'collection::real estate documents', 'user_email': 'davetbo@amazon.com', 'collection_id': 'ea85934edaaa4270bac14b4e7c69bce9', 'collection_name': 'real estate documents', 'description': 'Use this collection to answer questions about real estate documents or related concepts like buyers, sellers, properties, agents, contingencies, etc.', 'vector_db_type': 'opensearch_managed', 'created_date': '2024-10-06T22:08:14.108927Z', 'shared_with': [], 'updated_date': '2024-10-06T22:08:14.108927Z', 'enrichment_pipelines': '{"entity_extraction": {"templateIdSelected": "636dcdbe750840a58dcf31db4d97ebb1", "templateNameSelected": "real estate entity extraction", "enabled": true}}', 'graph_schema': '{}'}}
+        print(f"Got verified collection: {response}, type {type(response)}")
+        collection_name = list(response.keys())[0]
+        verified_collection = response[collection_name]
+        print(f"Verfiied collection result {verified_collection}")
+
         if not verified_collection or \
             verified_collection['collection_id'] != collection_id:
             # print(f"Error: Invalid document collection {collection_id} received for user {user_id}")

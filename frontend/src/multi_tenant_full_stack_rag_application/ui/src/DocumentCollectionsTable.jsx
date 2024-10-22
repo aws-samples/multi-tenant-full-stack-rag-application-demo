@@ -120,7 +120,7 @@ function DocumentCollectionsTable() {
   }, [])
 
   useEffect(() =>{
-    if (tableData) {
+    if (tableData.length > 0) {
       // console.log("docCollections changed")
       // console.dir(docCollections)
       setTableLoadingState(false)

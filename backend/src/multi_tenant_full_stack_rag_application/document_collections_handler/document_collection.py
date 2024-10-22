@@ -57,7 +57,7 @@ class DocumentCollection:
     def from_ddb_record(rec):
         # print(f"document_collection.from_ddb_record received rec {rec}, type {type(rec)}")
         return DocumentCollection(
-            rec['user_id']['S'],
+            rec['partition_key']['S'],
             rec['user_email']['S'],
             rec['collection_name']['S'],
             rec['description']['S'],
@@ -72,7 +72,7 @@ class DocumentCollection:
 
     def to_ddb_record(self): 
         record = {
-            'user_id': {'S': self.user_id},
+            'partition_key': {'S': self.user_id},
             'user_email': {'S': self.user_email},
             'sort_key': {'S': f"collection::{self.collection_name}"},
             'collection_name': {'S': self.collection_name},

@@ -23,12 +23,16 @@ default_top_k = 5
 generation_handler = None
 
 class GenerationHandler:
-    def __init__(self):
+    def __init__(self,
+        search_template_path=None
+    ):
+        if not search_template_path:
+            search_template_path = "multi_tenant_full_stack_rag_application/generation_handler/system_get_search_query.txt"
         self.utils = utils
         self.my_origin = self.utils.get_ssm_params('origin_generation_handler')
         self.allowed_origins = self.utils.get_allowed_origins()
         
-        with open(f"multi_tenant_full_stack_rag_application/generation_handler/system_get_search_query.txt", 'r') as f_in:
+        with open(search_template_path, 'r') as f_in:
             self.search_query_template = f_in.read()
             
         self.llms = None
@@ -117,6 +121,7 @@ class GenerationHandler:
     def handler(self, event, context):
         print(f"Got event {event}")
         handler_evt = GenerationHandlerEvent().from_lambda_event(event)
+        print(f"Got generationHandlerEvent {handler_evt.__dict__()}, type {type(handler_evt)}")
         method = handler_evt.method
         path = handler_evt.path
         # if event.origin not in self.allowed_origins.values():

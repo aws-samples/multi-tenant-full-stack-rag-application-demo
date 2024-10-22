@@ -18,6 +18,7 @@ class GenerationHandlerEvent:
                 self.origin = event['headers']['origin']
         if 'body' in event:
             self.message_obj = json.loads(event['body'])['messageObj']
+        print(f"GenerationHandlerEvent returning evt {self.__dict__()}")
         return self
 
     def __dict__(self):
