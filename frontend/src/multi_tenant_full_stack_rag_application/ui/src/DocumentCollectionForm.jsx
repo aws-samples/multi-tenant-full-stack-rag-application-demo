@@ -296,16 +296,16 @@ function DocumentCollectionForm() {
                         ></DocumentCollectionEnrichmentPipelines>
                       )
                     },
-                    {
-                      label: 'Sharing',
-                      id: 'sharing',
-                      key: 'sharing',
-                      content: (<DocumentCollectionSharingList
-                          // urlCollectionId={urlCollectionId}
-                          // sharedWith={collectionShareList}
-                        ></DocumentCollectionSharingList>
-                      )
-                    }
+                    // {
+                    //   label: 'Sharing',
+                    //   id: 'sharing',
+                    //   key: 'sharing',
+                    //   content: (<DocumentCollectionSharingList
+                    //       // urlCollectionId={urlCollectionId}
+                    //       // sharedWith={collectionShareList}
+                    //     ></DocumentCollectionSharingList>
+                    //   )
+                    // }
                   ]}
                 /></SpaceBetween> : ''
               }
