@@ -1,0 +1,9 @@
+{
+    "Parameters": {
+        "AllowedEmailDomains": "your email domain here",
+        "AppName": "Multi-tenant, full-stack RAG application demo",
+        "RemovalPolicy": "DESTROY",
+        "SignUpVerificationEmailBody": "Your verification code is {####}.",
+        "SignUpVerificationEmailSubject": "Verification code for multi-tenant, full-stack RAG application demo"
+    }
+}
