@@ -174,9 +174,22 @@ function DocumentCollectionUploadedDocumentsTable() {
     // evt.preventDefault()
   }
 
+  function checkInUploadedFiles(file) {
+    console.log("Checking if file is in uploaded files:")
+    console.dir(file)
+    console.dir(uploadedFiles)
+    for (let i = 0; i < uploadedFiles.length; i++) {
+      if (uploadedFiles[i]['file_name'] == file.name) {
+        return true
+      }
+    }
+    return false
+  }
+
   function updateFilesVal(files) {
     setIsLoading(true)
     console.log('Update files received:')
+    let tmpUploadedFiles = [...uploadedFiles]
     console.dir(files)
     for (let i = 0; i < files.length; i++) {
       files[i].key = `uploaded_file ${i}`
@@ -188,23 +201,23 @@ function DocumentCollectionUploadedDocumentsTable() {
     // setIsLoading(false)
   }
 
-  async function uploadFiles() {
-    setIsLoading(true)
-    console.log("filesVal before uploadFiles")
-    console.dir(filesVal)
-    let result = await api.uploadFiles(currentCollection.collectionId, filesVal);
-    if (result) {
-      // // console.log("uploadFiles result:")
-      // // console.dir(result)
-      setFilesVal([])
-      // setUploadedFiles([])
-      let tmpFiles = await getTableProvider(currentCollection.collectionId, filePageSize, lastEvalKey)
-      console.log("Got tmpFiles")
-      console.dir(tmpFiles)
-      setUploadedFiles(tmpFiles['files'])
-    }
-    setIsLoading(false)
-  }
+  // async function uploadFiles() {
+  //   setIsLoading(true)
+  //   console.log("filesVal before uploadFiles")
+  //   console.dir(filesVal)
+  //   let result = await api.uploadFiles(currentCollection.collectionId, filesVal);
+  //   if (result) {
+  //     // // console.log("uploadFiles result:")
+  //     // // console.dir(result)
+  //     setFilesVal([])
+  //     // setUploadedFiles([])
+  //     let tmpFiles = await getTableProvider(currentCollection.collectionId, filePageSize, lastEvalKey)
+  //     console.log("Got tmpFiles")
+  //     console.dir(tmpFiles)
+  //     setUploadedFiles(tmpFiles['files'])
+  //   }
+  //   setIsLoading(false)
+  // }
 
   return (
     <>

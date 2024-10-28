@@ -7,6 +7,7 @@ import yaml
 
 from aws_cdk import (
     CfnOutput,
+    CfnParameter,
     Duration,
     Stack,
     aws_dynamodb as ddb,
@@ -33,6 +34,74 @@ from lib.shared.vpc import VpcStack
 class MultiTenantRagStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+        # intialize parameters:
+        param_stack_name = CfnParameter(self, 'ParamStackName',
+            default=self.node.get_context('stack_name_backend')
+        )
+        param_removal_policy = CfnParameter(self, 'ParamRemovalPolicy',
+            default=self.node.get_context('removal_policy')
+        )
+        param_app_name = CfnParameter(self, 'ParamAppName',
+            default=self.node.get_context('app_name')
+        )
+        param_embeddings_model_id = CfnParameter(self, 'ParamEmbeddingsModelId',
+            default=self.node.get_context('embeddings_model_id')
+        )
+        param_entity_extraction_model_id = CfnParameter(self, 'ParamEntityExtractionModelId',
+            default=self.node.get_context('extraction_model_id')
+        )
+        param_ocr_model_id = CfnParameter(self, 'ParamOcrModelId',
+            default=self.node.get_context('ocr_model_id')
+        )
+        param_allowed_email_domains = CfnParameter(self, 'ParamAllowedEmailDomains',
+            default=self.node.get_context('allowed_email_domains')
+        )
+        param_verification_email_subject = CfnParameter(self, 'ParamVerificationEmailSubject',
+            default=self.node.get_context('verification_email_subject')
+        )
+        param_verification_email_body = CfnParameter(self, 'ParamVerificationEmailBody',
+            default=self.node.get_context('verification_email_body')
+        )
+        param_opensearch_data_node_ct = CfnParameter(self, 'ParamOpenSearchDataNodeCt',
+            default=self.node.get_context('os_data_instance_ct')
+        )
+        param_opensearch_data_node_type = CfnParameter(self, 'ParamOpenSearchDataNodeType',
+            default=self.node.get_context('os_data_instance_type')
+        )
+        param_opensearch_data_node_volume_size_gb = CfnParameter(self, 'ParamOpenSearchDataNodeVolSizeGb',
+            default=self.node.get_context('os_data_instance_volume_size_gb')
+        )
+        param_opensearch_master_node_ct = CfnParameter(self, 'ParamOpenSearchMasterNodeCt',
+            default=self.node.get_context('os_master_instance_ct')
+        )
+        param_opensearch_master_node_type = CfnParameter(self, 'ParamOpenSearchMasterNodeType',
+            default=self.node.get_context('os_master_instance_type')
+        )
+        param_opensearch_multiaz_standby_enabled = CfnParameter(self, 'ParamOpenSearchMultiAzStandbyEnabled',
+            default=self.node.get_context('os_multiaz_with_standby_enabled')
+        )
+        param_opensearch_dashboards_ec2_cert_country = CfnParameter(self, 'ParamOsDashboardsCertCountry',
+            default=self.node.get_context('os_dashboards_ec2_cert_country')
+        )
+        param_opensearch_dashboards_ec2_cert_state = CfnParameter(self, 'ParamOsDashboardsCertState',
+            default=self.node.get_context('os_dashboards_ec2_cert_state')
+        )
+        param_opensearch_dashboards_ec2_cert_city = CfnParameter(self, 'ParamOsDashboardsCertCity',
+            default=self.node.get_context('os_dashboards_ec2_cert_city')
+        )
+        param_opensearch_dashboards_ec2_cert_hostname = CfnParameter(self, 'ParamOsDashboardsCertHostname',
+            default=self.node.get_context('os_dashboards_ec2_cert_hostname')
+        )
+        param_opensearch_dashboards_ec2_cert_email_address = CfnParameter(self, 'ParamOsDashboardsCertEmailAddress',
+            default=self.node.get_context('os_dashboards_ec2_cert_email_address')
+        )
+        param_opensearch_dashboards_ec2_enable_traffic_from_ip = CfnParameter(self, 'ParamOsDashboardsEnableTrafficFromIpCidr',
+            default=self.node.get_context('os_dashboards_ec2_enable_traffic_from_ip')
+        )
+        param_neptune_instance_type = CfnParameter(self, 'NeptuneDbInstanceType',
+            default=self.node.get_context('neptune_instance_type')
+        )
 
         vpc_stack = VpcStack(self, 'Vpc')
 

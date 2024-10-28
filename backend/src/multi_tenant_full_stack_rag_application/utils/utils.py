@@ -333,7 +333,6 @@ def get_ssm_params(param=None,*, ssm_client=None):
                 next_token = response['NextToken']
             else:
                 next_token = None
-    print(f"Params are now {ssm_params}")
     if param:
         # print(f"Got here and param is {param}")
         return_vals = {}

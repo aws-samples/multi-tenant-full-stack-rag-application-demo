@@ -1,0 +1,71 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Root stack that creates two nested stacks for frontend and backend",
+    "Parameters" : {
+      "RemovalPolicy": {
+        "Type": "String",
+        "Default": "DESTROY",
+        "Description": "Set removal policy for stacks"
+      },
+      "AppName": {
+        "Type": "String",
+        "Default": "Multi-tenant, full-stack RAG application demo",
+        "Description": "Set the app name"
+      },
+      "AllowedEmailDomains": {
+        "Type": "String",
+        "Default": "amazon.com",
+        "Description": "Set the allowed email domains that are allowed to create accounts."
+      },
+      "SignUpVerificationEmailSubject": {
+        "Type": "String",
+        "Default": "Verification code for multi-tenant, full-stack RAG application demo",
+        "Description": "Set the email subject for sign up verification"
+      },
+      "SignUpVerificationEmailBody": {
+        "Type": "String",
+        "Default": "Your verification code is {####}",
+        "Description": "Set the email body for sign up verification"
+      }
+    },
+    "Resources": {
+      "FrontendStack": {
+        "Type": "AWS::CloudFormation::Stack",
+        "Properties": {
+          "TemplateURL": "https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-cfn-stack/frontend/mtfsrad-f-dev.template.json",
+          "Parameters": {
+            "EnvironmentName": "dev"
+          }
+        }
+      },
+      "BackendStack": {
+        "Type": "AWS::CloudFormation::Stack",
+        "Properties": {
+          "TemplateURL": "https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-cfn-stack/frontend/mtfsrad-f-dev.template.json",
+          "Parameters": {
+            "EnvironmentName": "dev"
+          }
+        }
+      }
+    },
+    "Outputs": {
+      "FrontendStackRef": {
+        "Description": "Reference to the frontend stack",
+        "Value": {
+          "Ref": "FrontendStack"
+        },
+        "Export": {
+          "Name": "FrontendStackRef"
+        }
+      },
+      "BackendStackRef": {
+        "Description": "Reference to the backend stack",
+        "Value": {
+          "Ref": "BackendStack"
+        },
+        "Export": {
+          "Name": "BackendStackRef"
+        }
+      }
+    }
+  }
