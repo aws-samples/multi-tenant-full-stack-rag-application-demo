@@ -1,0 +1,1329 @@
+{
+ "Resources": {
+  "IngestionBucket4CBA59AA": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "CorsConfiguration": {
+     "CorsRules": [
+      {
+       "AllowedHeaders": [
+        "*"
+       ],
+       "AllowedMethods": [
+        "PUT",
+        "GET",
+        "POST",
+        "DELETE"
+       ],
+       "AllowedOrigins": [
+        "*"
+       ]
+      }
+     ]
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionBucket/IngestionBucket/Resource"
+   }
+  },
+  "DdbTableIngestionStatusTable32816510": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "user_id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "doc_id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "user_id",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "doc_id",
+      "KeyType": "RANGE"
+     }
+    ],
+    "StreamSpecification": {
+     "StreamViewType": "NEW_IMAGE"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/DdbTable/IngestionStatusTable/Resource"
+   }
+  },
+  "IngestionStatusProviderFunctionServiceRole4982D6C2": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionStatusProviderFunction/ServiceRole/Resource"
+   }
+  },
+  "IngestionStatusProviderFunctionServiceRoleDefaultPolicyAF322013": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParametersByPath"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:aws:ssm:",
+          {
+           "Ref": "AWS::Region"
+          },
+          ":",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":parameter/mtfsrad-b-dev*"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoAuthProviderFunction314FA51DArnCBC57E5D"
+       }
+      },
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:PutItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:UpdateItem"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "DdbTableIngestionStatusTable32816510",
+          "Arn"
+         ]
+        },
+        {
+         "Ref": "AWS::NoValue"
+        }
+       ]
+      },
+      {
+       "Action": "s3:DeleteObject*",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "IngestionBucket4CBA59AA",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "IngestionStatusProviderFunctionServiceRoleDefaultPolicyAF322013",
+    "Roles": [
+     {
+      "Ref": "IngestionStatusProviderFunctionServiceRole4982D6C2"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionStatusProviderFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "IngestionStatusProviderFunctionSecurityGroupBEB94B8C": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Automatic security group for Lambda Function mtfsradbdevIngestionProviderStackIngestionStatusProviderFunction6E8F4298",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "mtfsradbdevVpc39114410:ExportsOutputRefVpc8378EB38272D6E3A"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionStatusProviderFunction/SecurityGroup/Resource"
+   }
+  },
+  "IngestionStatusProviderFunctionE9E064BF": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "x86_64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "8339ce23b125193fa62181fd65bb5a48b7e252b72fcb9d1e9c807b47ffa96665.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "AWS_ACCOUNT_ID": {
+       "Ref": "AWS::AccountId"
+      },
+      "EMBEDDING_MODEL_ID": "amazon.titan-embed-text-v2:0",
+      "INGESTION_BUCKET": {
+       "Ref": "IngestionBucket4CBA59AA"
+      },
+      "INGESTION_STATUS_TABLE": {
+       "Ref": "DdbTableIngestionStatusTable32816510"
+      },
+      "STACK_NAME": "mtfsrad-b-dev",
+      "UPDATED": "2024-09-20T23:02:00Z"
+     }
+    },
+    "Handler": "multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status_provider.handler",
+    "MemorySize": 128,
+    "Role": {
+     "Fn::GetAtt": [
+      "IngestionStatusProviderFunctionServiceRole4982D6C2",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.11",
+    "Timeout": 60,
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::GetAtt": [
+        "IngestionStatusProviderFunctionSecurityGroupBEB94B8C",
+        "GroupId"
+       ]
+      }
+     ],
+     "SubnetIds": [
+      {
+       "Fn::ImportValue": "mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet1SubnetEBF5BB657298517B"
+      },
+      {
+       "Fn::ImportValue": "mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet2Subnet8AADF05A8CCED4C9"
+      }
+     ]
+    }
+   },
+   "DependsOn": [
+    "IngestionStatusProviderFunctionServiceRoleDefaultPolicyAF322013",
+    "IngestionStatusProviderFunctionServiceRole4982D6C2"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionStatusProviderFunction/Resource",
+    "aws:asset:path": "asset.8339ce23b125193fa62181fd65bb5a48b7e252b72fcb9d1e9c807b47ffa96665",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "VectorIngestionFunctionServiceRoleCCAA25E8": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/VectorIngestionFunction/ServiceRole/Resource"
+   }
+  },
+  "VectorIngestionFunctionServiceRoleDefaultPolicy1455DD67": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "IngestionStatusProviderFunctionE9E064BF",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::ImportValue": "mtfsradbdevBedrockProviderStack1AABA887:ExportsOutputFnGetAttBedrockProviderFunction99614D39ArnA074F27C"
+        },
+        {
+         "Fn::ImportValue": "mtfsradbdevDocumentCollectionsHandlerStack7FE01056:ExportsOutputFnGetAttDocCollectionsHandlerFunctionB290B79CArn454F6B72"
+        },
+        {
+         "Fn::ImportValue": "mtfsradbdevEmbeddingsProviderStack3C343CED:ExportsOutputFnGetAttEmbeddingsProviderFunction749E762AArn0A103CE4"
+        },
+        {
+         "Fn::ImportValue": "mtfsradbdevVectorStoreProviderStackD15A38D1:portsOutputFnGetAttOpenSearchManagedStackNestedStackOpenSearchManagedStackNestedStackResource253201F9OutputsmtfsradbdevVectorStoreProviderStackOpenSearchManagedStackVectorStoreProviderFunction71969801Arn911E4BA2"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "IngestionStatusProviderFunctionE9E064BF",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "mtfsradbdevBedrockProviderStack1AABA887:ExportsOutputFnGetAttBedrockProviderFunction99614D39ArnA074F27C"
+           },
+           ":*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "mtfsradbdevDocumentCollectionsHandlerStack7FE01056:ExportsOutputFnGetAttDocCollectionsHandlerFunctionB290B79CArn454F6B72"
+           },
+           ":*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "mtfsradbdevEmbeddingsProviderStack3C343CED:ExportsOutputFnGetAttEmbeddingsProviderFunction749E762AArn0A103CE4"
+           },
+           ":*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "mtfsradbdevVectorStoreProviderStackD15A38D1:portsOutputFnGetAttOpenSearchManagedStackNestedStackOpenSearchManagedStackNestedStackResource253201F9OutputsmtfsradbdevVectorStoreProviderStackOpenSearchManagedStackVectorStoreProviderFunction71969801Arn911E4BA2"
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParametersByPath"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:aws:ssm:",
+          {
+           "Ref": "AWS::Region"
+          },
+          ":",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":parameter/mtfsrad-b-dev*"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:PutItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:UpdateItem"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "DdbTableIngestionStatusTable32816510",
+          "Arn"
+         ]
+        },
+        {
+         "Ref": "AWS::NoValue"
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "IngestionBucket4CBA59AA",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "IngestionBucket4CBA59AA",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "sqs:ChangeMessageVisibility",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl",
+        "sqs:ReceiveMessage"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "IngestionQueueA7BB0414",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "es:ESHttpDelete",
+        "es:ESHttpGet",
+        "es:ESHttpHead",
+        "es:ESHttpPatch",
+        "es:ESHttpPost",
+        "es:ESHttpPut"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "mtfsradbdevVectorStoreProviderStackD15A38D1:ExportsOutputFnGetAttOpenSearchManagedStackNestedStackOpenSearchManagedStackNestedStackResource253201F9OutputsmtfsradbdevVectorStoreProviderStackOpenSearchManagedStackOsDomain26DE6D31Arn48511E48"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "mtfsradbdevVectorStoreProviderStackD15A38D1:ExportsOutputFnGetAttOpenSearchManagedStackNestedStackOpenSearchManagedStackNestedStackResource253201F9OutputsmtfsradbdevVectorStoreProviderStackOpenSearchManagedStackOsDomain26DE6D31Arn48511E48"
+           },
+           "/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "mtfsradbdevVectorStoreProviderStackD15A38D1:ExportsOutputFnGetAttOpenSearchManagedStackNestedStackOpenSearchManagedStackNestedStackResource253201F9OutputsmtfsradbdevVectorStoreProviderStackOpenSearchManagedStackOsDomain26DE6D31Arn48511E48"
+           },
+           "/*/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "VectorIngestionFunctionServiceRoleDefaultPolicy1455DD67",
+    "Roles": [
+     {
+      "Ref": "VectorIngestionFunctionServiceRoleCCAA25E8"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/VectorIngestionFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "VectorIngestionFunction62AAF58F": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "x86_64"
+    ],
+    "Code": {
+     "ImageUri": {
+      "Fn::Sub": "${AWS::AccountId}.dkr.ecr.${AWS::Region}.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-${AWS::AccountId}-${AWS::Region}:72020a573de4665a600ee732bd09717d8e13900c386b7920d8086fc2f8ca57d3"
+     }
+    },
+    "Environment": {
+     "Variables": {
+      "AWS_ACCOUNT_ID": {
+       "Ref": "AWS::AccountId"
+      },
+      "EMBEDDING_MODEL_ID": "amazon.titan-embed-text-v2:0",
+      "STACK_NAME": "mtfsrad-b-dev",
+      "INGESTION_STATUS_TABLE": {
+       "Ref": "DdbTableIngestionStatusTable32816510"
+      },
+      "OCR_MODEL_ID": "anthropic.claude-3-haiku-20240307-v1:0",
+      "UPDATED": "2024-09-20T23:02:00Z"
+     }
+    },
+    "EphemeralStorage": {
+     "Size": 10240
+    },
+    "MemorySize": 4096,
+    "PackageType": "Image",
+    "Role": {
+     "Fn::GetAtt": [
+      "VectorIngestionFunctionServiceRoleCCAA25E8",
+      "Arn"
+     ]
+    },
+    "Timeout": 900,
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::ImportValue": "mtfsradbdevVpc39114410:ExportsOutputFnGetAttAppSecurityGroupC396D536GroupId4ECD26A6"
+      }
+     ],
+     "SubnetIds": [
+      {
+       "Fn::ImportValue": "mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet1SubnetEBF5BB657298517B"
+      },
+      {
+       "Fn::ImportValue": "mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet2Subnet8AADF05A8CCED4C9"
+      }
+     ]
+    }
+   },
+   "DependsOn": [
+    "VectorIngestionFunctionServiceRoleDefaultPolicy1455DD67",
+    "VectorIngestionFunctionServiceRoleCCAA25E8"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/VectorIngestionFunction/Resource",
+    "aws:asset:path": "asset.72020a573de4665a600ee732bd09717d8e13900c386b7920d8086fc2f8ca57d3",
+    "aws:asset:dockerfile-path": "ingestion_provider/Dockerfile.vector_ingestion_provider",
+    "aws:asset:property": "Code.ImageUri"
+   }
+  },
+  "CognitoAuthDocBucketPolicyA449C9AB": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:DeleteObject",
+        "s3:GetObject",
+        "s3:PutObject"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "IngestionBucket4CBA59AA",
+            "Arn"
+           ]
+          },
+          "/private/${cognito-identity.amazonaws.com:sub}/*"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": "s3:ListBucket",
+       "Condition": {
+        "StringLike": {
+         "s3:prefix": [
+          "private/${cognito-identity.amazonaws.com:sub}/",
+          "private/${cognito-identity.amazonaws.com:sub}/*"
+         ]
+        }
+       },
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "IngestionBucket4CBA59AA",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "CognitoAuthDocBucketPolicyA449C9AB",
+    "Roles": [
+     {
+      "Fn::Select": [
+       1,
+       {
+        "Fn::Split": [
+         "/",
+         {
+          "Fn::Select": [
+           5,
+           {
+            "Fn::Split": [
+             ":",
+             {
+              "Fn::ImportValue": "mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoIdentityPoolAuthenticatedRole7703D556Arn606C0A72"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/CognitoAuthDocBucketPolicy/Resource"
+   }
+  },
+  "IngestionQueueIngestionQueueDLQ72DA3DFE": {
+   "Type": "AWS::SQS::Queue",
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionQueue/IngestionQueueDLQ/Resource"
+   }
+  },
+  "IngestionQueueA7BB0414": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "RedrivePolicy": {
+     "deadLetterTargetArn": {
+      "Fn::GetAtt": [
+       "IngestionQueueIngestionQueueDLQ72DA3DFE",
+       "Arn"
+      ]
+     },
+     "maxReceiveCount": 2
+    },
+    "VisibilityTimeout": 900
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionQueue/IngestionQueue/Resource"
+   }
+  },
+  "IngestionQueuePolicyE9B26FBA": {
+   "Type": "AWS::SQS::QueuePolicy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl",
+        "sqs:SendMessage"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "s3.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::GetAtt": [
+         "IngestionQueueA7BB0414",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl",
+        "sqs:SendMessage"
+       ],
+       "Condition": {
+        "ArnLike": {
+         "aws:SourceArn": {
+          "Fn::Join": [
+           "",
+           [
+            "arn:",
+            {
+             "Ref": "AWS::Partition"
+            },
+            ":s3:::",
+            {
+             "Ref": "IngestionBucket4CBA59AA"
+            }
+           ]
+          ]
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "s3.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::GetAtt": [
+         "IngestionQueueA7BB0414",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Queues": [
+     {
+      "Ref": "IngestionQueueA7BB0414"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionQueue/IngestionQueue/Policy/Resource"
+   }
+  },
+  "IngestionQueueIngestionBucketToQueueTriggerStackIngestionEventTriggerNotifications16CF9ED1": {
+   "Type": "Custom::S3BucketNotifications",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691",
+      "Arn"
+     ]
+    },
+    "BucketName": {
+     "Ref": "IngestionBucket4CBA59AA"
+    },
+    "NotificationConfiguration": {
+     "QueueConfigurations": [
+      {
+       "Events": [
+        "s3:ObjectCreated:*"
+       ],
+       "Filter": {
+        "Key": {
+         "FilterRules": [
+          {
+           "Name": "prefix",
+           "Value": "private"
+          }
+         ]
+        }
+       },
+       "QueueArn": {
+        "Fn::GetAtt": [
+         "IngestionQueueA7BB0414",
+         "Arn"
+        ]
+       }
+      }
+     ]
+    },
+    "Managed": false
+   },
+   "DependsOn": [
+    "IngestionQueuePolicyE9B26FBA",
+    "IngestionQueueA7BB0414"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionQueue/IngestionBucketToQueueTriggerStack/IngestionEventTrigger/Notifications/Resource"
+   }
+  },
+  "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/Resource"
+   }
+  },
+  "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetBucketNotification",
+        "s3:PutBucketNotification"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36",
+    "Roles": [
+     {
+      "Ref": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/DefaultPolicy/Resource"
+   }
+  },
+  "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Description": "AWS CloudFormation handler for \"Custom::S3BucketNotifications\" resources (@aws-cdk/aws-s3)",
+    "Code": {
+     "ZipFile": "import boto3  # type: ignore\nimport json\nimport logging\nimport urllib.request\n\ns3 = boto3.client(\"s3\")\n\nEVENTBRIDGE_CONFIGURATION = 'EventBridgeConfiguration'\nCONFIGURATION_TYPES = [\"TopicConfigurations\", \"QueueConfigurations\", \"LambdaFunctionConfigurations\"]\n\ndef handler(event: dict, context):\n  response_status = \"SUCCESS\"\n  error_message = \"\"\n  try:\n    props = event[\"ResourceProperties\"]\n    notification_configuration = props[\"NotificationConfiguration\"]\n    managed = props.get('Managed', 'true').lower() == 'true'\n    stack_id = event['StackId']\n    old = event.get(\"OldResourceProperties\", {}).get(\"NotificationConfiguration\", {})\n    if managed:\n      config = handle_managed(event[\"RequestType\"], notification_configuration)\n    else:\n      config = handle_unmanaged(props[\"BucketName\"], stack_id, event[\"RequestType\"], notification_configuration, old)\n    s3.put_bucket_notification_configuration(Bucket=props[\"BucketName\"], NotificationConfiguration=config)\n  except Exception as e:\n    logging.exception(\"Failed to put bucket notification configuration\")\n    response_status = \"FAILED\"\n    error_message = f\"Error: {str(e)}. \"\n  finally:\n    submit_response(event, context, response_status, error_message)\n\ndef handle_managed(request_type, notification_configuration):\n  if request_type == 'Delete':\n    return {}\n  return notification_configuration\n\ndef handle_unmanaged(bucket, stack_id, request_type, notification_configuration, old):\n  def get_id(n):\n    n['Id'] = ''\n    strToHash=json.dumps(n, sort_keys=True).replace('\"Name\": \"prefix\"', '\"Name\": \"Prefix\"').replace('\"Name\": \"suffix\"', '\"Name\": \"Suffix\"')\n    return f\"{stack_id}-{hash(strToHash)}\"\n  def with_id(n):\n    n['Id'] = get_id(n)\n    return n\n\n  external_notifications = {}\n  existing_notifications = s3.get_bucket_notification_configuration(Bucket=bucket)\n  for t in CONFIGURATION_TYPES:\n    if request_type == 'Update':\n        old_incoming_ids = [get_id(n) for n in old.get(t, [])]\n        external_notifications[t] = [n for n in existing_notifications.get(t, []) if not get_id(n) in old_incoming_ids]      \n    elif request_type == 'Delete':\n        external_notifications[t] = [n for n in existing_notifications.get(t, []) if not n['Id'].startswith(f\"{stack_id}-\")]\n    elif request_type == 'Create':\n        external_notifications[t] = [n for n in existing_notifications.get(t, [])]\n  if EVENTBRIDGE_CONFIGURATION in existing_notifications:\n    external_notifications[EVENTBRIDGE_CONFIGURATION] = existing_notifications[EVENTBRIDGE_CONFIGURATION]\n\n  if request_type == 'Delete':\n    return external_notifications\n\n  notifications = {}\n  for t in CONFIGURATION_TYPES:\n    external = external_notifications.get(t, [])\n    incoming = [with_id(n) for n in notification_configuration.get(t, [])]\n    notifications[t] = external + incoming\n\n  if EVENTBRIDGE_CONFIGURATION in notification_configuration:\n    notifications[EVENTBRIDGE_CONFIGURATION] = notification_configuration[EVENTBRIDGE_CONFIGURATION]\n  elif EVENTBRIDGE_CONFIGURATION in external_notifications:\n    notifications[EVENTBRIDGE_CONFIGURATION] = external_notifications[EVENTBRIDGE_CONFIGURATION]\n\n  return notifications\n\ndef submit_response(event: dict, context, response_status: str, error_message: str):\n  response_body = json.dumps(\n    {\n      \"Status\": response_status,\n      \"Reason\": f\"{error_message}See the details in CloudWatch Log Stream: {context.log_stream_name}\",\n      \"PhysicalResourceId\": event.get(\"PhysicalResourceId\") or event[\"LogicalResourceId\"],\n      \"StackId\": event[\"StackId\"],\n      \"RequestId\": event[\"RequestId\"],\n      \"LogicalResourceId\": event[\"LogicalResourceId\"],\n      \"NoEcho\": False,\n    }\n  ).encode(\"utf-8\")\n  headers = {\"content-type\": \"\", \"content-length\": str(len(response_body))}\n  try:\n    req = urllib.request.Request(url=event[\"ResponseURL\"], headers=headers, data=response_body, method=\"PUT\")\n    with urllib.request.urlopen(req) as response:\n      print(response.read().decode(\"utf-8\"))\n    print(\"Status code: \" + response.reason)\n  except Exception as e:\n      print(\"send(..) failed executing request.urlopen(..): \" + str(e))"
+    },
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.11",
+    "Timeout": 300
+   },
+   "DependsOn": [
+    "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36",
+    "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Resource"
+   }
+  },
+  "QueueToFunctionTriggerIngestionQueueToFunctionTriggerEventSource6B52139A": {
+   "Type": "AWS::Lambda::EventSourceMapping",
+   "Properties": {
+    "BatchSize": 1,
+    "Enabled": true,
+    "EventSourceArn": {
+     "Fn::GetAtt": [
+      "IngestionQueueA7BB0414",
+      "Arn"
+     ]
+    },
+    "FunctionName": {
+     "Ref": "VectorIngestionFunction62AAF58F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/QueueToFunctionTrigger/IngestionQueueToFunctionTriggerEventSource/Resource"
+   }
+  },
+  "IngestionStatusFunctionName27D168C6": {
+   "Type": "AWS::SSM::Parameter",
+   "Properties": {
+    "Name": "/mtfsrad-b-dev/ingestion_status_provider_function_name",
+    "Type": "String",
+    "Value": {
+     "Ref": "IngestionStatusProviderFunctionE9E064BF"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionStatusFunctionName/Resource"
+   }
+  },
+  "IngestionStatusProviderOriginParamFBF77892": {
+   "Type": "AWS::SSM::Parameter",
+   "Properties": {
+    "Name": "/mtfsrad-b-dev/origin_ingestion_status_provider",
+    "Type": "String",
+    "Value": {
+     "Ref": "IngestionStatusProviderFunctionE9E064BF"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionStatusProviderOriginParam/Resource"
+   }
+  },
+  "IngestionProviderFunctionNameBD775DBA": {
+   "Type": "AWS::SSM::Parameter",
+   "Properties": {
+    "Name": "/mtfsrad-b-dev/ingestion_provider_function_name",
+    "Type": "String",
+    "Value": {
+     "Ref": "VectorIngestionFunction62AAF58F"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionProviderFunctionName/Resource"
+   }
+  },
+  "IngestionProviderOriginParam3C5E579F": {
+   "Type": "AWS::SSM::Parameter",
+   "Properties": {
+    "Name": "/mtfsrad-b-dev/origin_ingestion_provider",
+    "Type": "String",
+    "Value": {
+     "Ref": "VectorIngestionFunction62AAF58F"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/IngestionProviderOriginParam/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/2VRy07DMBD8lt5dQxNx4EjLQxwQJeVebZwlmMR28NqgKPK/YzttAfXinX1qZlzw1VXBLxfwTUvRdMte1nzaORAdi6X9RCWf1l506NjmTR/QHNZAGFgzalCmiVuvUPeYpjIIrAdVN8Cne6+Fk0an1gnffaF2O+OtwCcYBqnb1D6vBiZB8aky8+kct6aXYkzpjAKjcg9E6IjfpMBQFFEFCm+lGx+s8UOa/lcIccget25NFGQfFbR4PGB5hYMh6Ywdk1JGn8SnF48+E5lBfn/p/E0zni0iUslTG+VswYJChzazPyYhpPTZu8E7ViFlA1hmEr+iPZhzakS8MbqRycjAtqN7N/qi5KsVv158kJRL67WTCnk1xx/dEatn5AEAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "mtfsrad-b-dev/IngestionProviderStack/CDKMetadata/Default"
+   },
+   "Condition": "CDKMetadataAvailable"
+  }
+ },
+ "Outputs": {
+  "IngestionBucketIngestionBucketBucketNameC8ED07C3": {
+   "Value": {
+    "Ref": "IngestionBucket4CBA59AA"
+   }
+  },
+  "IngestionBucketName": {
+   "Value": {
+    "Ref": "IngestionBucket4CBA59AA"
+   }
+  },
+  "ExportsOutputFnGetAttDdbTableIngestionStatusTable32816510StreamArn439B6DA3": {
+   "Value": {
+    "Fn::GetAtt": [
+     "DdbTableIngestionStatusTable32816510",
+     "StreamArn"
+    ]
+   },
+   "Export": {
+    "Name": "mtfsradbdevIngestionProviderStack7EBE4178:ExportsOutputFnGetAttDdbTableIngestionStatusTable32816510StreamArn439B6DA3"
+   }
+  },
+  "ExportsOutputFnGetAttDdbTableIngestionStatusTable32816510Arn05D791B1": {
+   "Value": {
+    "Fn::GetAtt": [
+     "DdbTableIngestionStatusTable32816510",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "mtfsradbdevIngestionProviderStack7EBE4178:ExportsOutputFnGetAttDdbTableIngestionStatusTable32816510Arn05D791B1"
+   }
+  },
+  "ExportsOutputFnGetAttIngestionStatusProviderFunctionE9E064BFArn2D6E7177": {
+   "Value": {
+    "Fn::GetAtt": [
+     "IngestionStatusProviderFunctionE9E064BF",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "mtfsradbdevIngestionProviderStack7EBE4178:ExportsOutputFnGetAttIngestionStatusProviderFunctionE9E064BFArn2D6E7177"
+   }
+  }
+ },
+ "Conditions": {
+  "CDKMetadataAvailable": {
+   "Fn::Or": [
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "af-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-northwest-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "il-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "sa-east-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-2"
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
