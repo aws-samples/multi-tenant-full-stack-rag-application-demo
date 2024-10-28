@@ -47,6 +47,7 @@ class GenerationHandler:
         return (hist, curr_prompt)
 
     def get_search_query(self, handler_evt): 
+        print(f"get_search_query got handler_evt {handler_evt.__dict__()}")
         msg_obj = handler_evt.message_obj
         (hist, curr_prompt) = self.get_conversation(msg_obj)
         doc_collections = self.utils.get_document_collections(handler_evt.user_id)
@@ -54,8 +55,8 @@ class GenerationHandler:
         doc_collections_dicts = []
         collection_names = list(doc_collections.keys())
         for collection_name in collection_names:
-            if len(handler_evt.document_collections) > 0 and \
-                not collection_name in handler_evt.document_collections:
+            if len(msg_obj['document_collections']) > 0 and \
+                not collection_name in msg_obj['document_collections']:
                 continue
             print(f"get_search_query processing collection {collection_name}")
             collection = doc_collections[collection_name]

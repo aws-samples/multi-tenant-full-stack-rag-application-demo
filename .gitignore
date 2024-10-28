@@ -7,8 +7,9 @@ node_modules
 package-lock.json
 __pycache__
 .venv
-cdk.out
 aws-exports.js
+cdk.out
+tests
 aggregated_results.txt
 env.sh
 tmp
