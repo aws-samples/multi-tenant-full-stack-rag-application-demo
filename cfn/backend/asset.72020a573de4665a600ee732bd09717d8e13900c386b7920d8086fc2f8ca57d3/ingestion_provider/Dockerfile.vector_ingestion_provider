@@ -1,0 +1,19 @@
+FROM public.ecr.aws/lambda/python:3.11
+
+RUN yum install -y poppler poppler-cpp poppler-devel poppler-glib poppler-cpp-devel poppler-utils gcc-c++
+
+RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/loaders
+RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/splitters
+COPY ingestion_provider/* /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/
+RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/vector_store_provider/
+COPY vector_store_provider/vector_store_document.py /var/task/multi_tenant_full_stack_rag_application/vector_store_provider/
+COPY ingestion_provider/loaders/* /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/loaders/
+COPY ingestion_provider/splitters/* /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/splitters/
+RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/utils
+COPY utils/* /var/task/multi_tenant_full_stack_rag_application/utils/
+RUN pip3 install -t /var/task -r /var/task/multi_tenant_full_stack_rag_application/utils/utils_requirements.txt
+RUN pip3 install -t /var/task -r /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/vector_ingestion_requirements.txt
+RUN pip3 install -t /var/task -r /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/loaders/docx_loader_requirements.txt
+RUN pip3 install -t /var/task -r /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/loaders/pdf_image_loader_requirements.txt
+CMD [ "multi_tenant_full_stack_rag_application.ingestion_provider.vector_ingestion_provider.handler" ]
+

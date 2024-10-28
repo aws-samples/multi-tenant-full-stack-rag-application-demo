@@ -1,0 +1,32 @@
+{
+  "version": "36.0.0",
+  "files": {
+    "b5798c2360eda494b7429c4dcda58e5be95bbbec773d6daa5a4b3fe3e2159a2a": {
+      "source": {
+        "path": "mtfsradbdevFinalScriptsStackDF546C00.nested.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-current_region": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "b5798c2360eda494b7429c4dcda58e5be95bbbec773d6daa5a4b3fe3e2159a2a.json",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    },
+    "b9141c9b7278e46899a151174003540ca64c2542c089f85173b840a844282f1a": {
+      "source": {
+        "path": "mtfsrad-b-dev.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-current_region": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "b9141c9b7278e46899a151174003540ca64c2542c089f85173b840a844282f1a.json",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}
