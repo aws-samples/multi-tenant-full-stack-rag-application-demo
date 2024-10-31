@@ -1,0 +1,20 @@
+Resources:
+  OpenSearchManagedStackNestedStackOpenSearchManagedStackNestedStackResource253201F9:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+          - ""
+          - - https://s3.
+            - Ref: AWS::Region
+            - "."
+            - Ref: AWS::URLSuffix
+            - /
+            - Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+            - /582aca4d4d04000b65d7e2ecb0878037a39919bda077ade5d8364f3cfe3e831a.json
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack.NestedStack/OpenSearchManagedStack.NestedStackResource
+      aws:asset:path: mtfsradbdevVectorStoreProviderStackOpenSearchManagedStack3CF7D95B.nested.template.json
+      aws:asset:property: TemplateURL
