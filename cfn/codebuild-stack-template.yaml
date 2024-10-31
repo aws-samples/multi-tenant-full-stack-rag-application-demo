@@ -1,0 +1,23 @@
+Parameters:
+  ParamStackName:
+    Type: String
+    Default: mtfsrad-b-dev
+
+Resources:
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts: 
+        Type: NO_ARTIFACTS
+      Description: CodeBuild Project for Vector Ingestion Provider Lambda function container
+      Environment: 
+        Type: LINUX_CONTAINER
+        Image: "aws/codebuild/standard:5.0"
+        ComputeType: BUILD_GENERAL1_SMALL
+      ResourceAccessRole: String
+      ServiceRole: {mtfsrad-codebuild-role}
+      Source: 
+        Type: S3
+        Location: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+      TimeoutInMinutes: 10
+      Visibility: PRIVATE
