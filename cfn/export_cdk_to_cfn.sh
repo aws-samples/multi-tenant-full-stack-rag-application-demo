@@ -8,8 +8,8 @@ fi
 rm -Rf ../cfn/files/* && \
 cp ../cfn/codebuild-stack-template.yaml ../cfn/files
 
-rm -Rf ../backend/cdk.out && \
-sudo rm -Rf ../frontend/cdk.out && \
+# rm -Rf ../backend/cdk.out && \
+# sudo rm -Rf ../frontend/cdk.out && \
 cd ../backend && \
 
 # previously had cdk synth -e --ci --no-staging but removing for troubleshooting.
