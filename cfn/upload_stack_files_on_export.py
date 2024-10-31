@@ -1,5 +1,6 @@
 import boto3
 import sys
+import json
 import os
 import requests
 
@@ -18,9 +19,7 @@ SOURCE_BUCKET = BUCKET_TO_FIND.replace('${AWS::AccountId}', ACCT).replace('${AWS
 print(f"SOURCE_BUCKET: {SOURCE_BUCKET}")
 print("Updating files...")
 
-
 file_manifest = []
-
 
 def download_file(old_s3_key):
     global file_manifest
@@ -41,7 +40,7 @@ for filename in sys.stdin:
     
     found_bucket = False
     i = 0
-    
+
     while i < len(lines):
         line = lines[i]
         if f"Fn::Sub: {BUCKET_TO_FIND}" in line:
@@ -71,6 +70,7 @@ for filename in sys.stdin:
             found_bucket = False 
         i += 1
     
-    
+    with open('files/file_manifest.txt', 'w') as f_out:
+        f_out.write(json.dumps(file_manifest))
 
     
