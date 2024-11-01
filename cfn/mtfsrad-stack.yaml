@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Root stack that creates two nested stacks for frontend and backend
+Outputs:
+  BackendStackRef:
+    Description: Reference to the backend stack
+    Export:
+      Name: BackendStackRef
+    Value:
+      Ref: BackendStack
+  FrontendStackRef:
+    Description: Reference to the frontend stack
+    Export:
+      Name: FrontendStackRef
+    Value:
+      Ref: FrontendStack
+Parameters:
+  AllowedEmailDomains:
+    Default: amazon.com
+    Description: Set the allowed email domains that are allowed to create accounts.
+    Type: String
+  AppName:
+    Default: Multi-tenant, full-stack RAG application demo
+    Description: Set the app name
+    Type: String
+  RemovalPolicy:
+    Default: DESTROY
+    Description: Set removal policy for stacks
+    Type: String
+  SignUpVerificationEmailBody:
+    Default: Your verification code is {####}
+    Description: Set the email body for sign up verification
+    Type: String
+  SignUpVerificationEmailSubject:
+    Default: Verification code for multi-tenant, full-stack RAG application demo
+    Description: Set the email subject for sign up verification
+    Type: String
+Resources:
+  AuthStack:
+    Properties:
+      Parameters:
+        EnvironmentName: dev
+      TemplateURL: https://{output_bucket}.s3.us-west-2.amazonaws.com/{output_prefix}/auth-stack-template.yaml
+    Type: AWS::CloudFormation::Stack
+  FrontendStack:
+    Properties:
+      Parameters:
+        EnvironmentName: dev
+      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-cfn-stack/mtfsrad-f-dev.template.json
+    Type: AWS::CloudFormation::Stack

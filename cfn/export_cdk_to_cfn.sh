@@ -13,7 +13,7 @@ cp ../cfn/codebuild-stack-template.yaml ../cfn/files
 cd ../backend && \
 
 # previously had cdk synth -e --ci --no-staging but removing for troubleshooting.
-cdk synth mtfsrad-b-dev | sed '/CDKMetadata/,$d' > ../cfn/files/mtfsrad-stack-template.yaml && \
+cdk synth mtfsrad-b-dev | sed '/CDKMetadata/,$d' > ../cfn/files/mtfsrad-final-stack-template.yaml && \
 cdk synth mtfsrad-b-dev/AuthProviderStack | sed '/CDKMetadata/,$d' > ../cfn/files/auth-stack-template.yaml && \
 cdk synth mtfsrad-b-dev/Vpc | sed '/CDKMetadata/,$d' > ../cfn/files/vpc-stack-template.yaml && \
 cdk synth mtfsrad-b-dev/BedrockProviderStack | sed '/CDKMetadata/,$d' > ../cfn/files/bedrock-stack-template.yaml && \

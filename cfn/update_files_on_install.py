@@ -67,12 +67,12 @@ def process_yaml_file(filename):
                 # the next line after finding the bucket line should land here.
                 if 'S3Key: ' in line:
                     old_s3_key = line.split(': ')[1]
-                    s3_key = f"{input_values['output_prefix'] }/{old_s3_key}"
+                    s3_key = f"{input_values['output_prefix'] }/{old_s3_key}".replace('.json','.yaml')
                     output_content += f"S3Key: {s3_key}\n"
                 elif '- /' in line:
                     old_key = line.replace('- /', '').strip()
                     if old_key != '*':
-                        new_key = f"/{input_values['output_prefix'] }/{old_key}"
+                        new_key = f"/{input_values['output_prefix'] }/{old_key}".replace('.json','.yaml')
                         output_content += f"            - {new_key}\n"
                     else:
                         output_content += line
@@ -80,7 +80,7 @@ def process_yaml_file(filename):
                     i += 1
                     while lines[i].startswith('- '):
                         old_key = lines[i].replace('- ', '').strip()
-                        new_key = f"/{input_values['output_prefix'] }/{old_key}"
+                        new_key = f"/{input_values['output_prefix'] }/{old_key}".replace('.json','.yaml')
                         output_content += f"            - {new_key}\n"
                         i += 1
 
