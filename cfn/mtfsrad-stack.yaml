@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Root stack for
+Description: Root stack for mtfsrad
 Parameters:
   AllowedEmailDomains:
     Description: Set the allowed email domains that are allowed to create accounts.
@@ -31,11 +31,11 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        allowedEmailDomains: Ref: AllowedEmailDomains
-        appName: Ref: AppName
-        removalPolicy: Ref: RemovalPolicy
-        signUpVerificationEmailBody: Ref: SignUpVerificationEmailBody
-        signUpVerificationEmailSubject: Ref: SignUpVerificationEmailSubject
+        allowedEmailDomains: !Ref AllowedEmailDomains
+        appName: !Ref AppName
+        removalPolicy: !Ref RemovalPolicy
+        signUpVerificationEmailBody: !Ref SignUpVerificationEmailBody
+        signUpVerificationEmailSubject: !Ref SignUpVerificationEmailSubject
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/auth-stack-template.yaml
   BedrockStack:
     Type: AWS::CloudFormation::Stack
