@@ -56,6 +56,12 @@ def process_yaml_file(filename):
         while i < len(lines):
             line = lines[i].strip("\n")
             print(f"Processing line {line}")
+            if '{region}' in line:
+                line = line.replace('{region}', REGION)
+            
+            if '{output_prefix}' in line:
+                line = line.replace('{output_prefix}', input_values['output_prefix'])
+                
             if ECR_REPO_TO_REPLACE in line:
                 line = f"Location: {repo['repositoryUri']}"
                 output_content += line + "\n"
