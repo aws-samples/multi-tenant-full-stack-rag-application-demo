@@ -4,6 +4,9 @@ import os
 import sys
 import yaml
 
+if not os.path.isdir('.input_values_cache'):
+    os.mkdirs('.input_values_cache')
+
 input_values = {
     'output_bucket': '',
     'output_prefix': '',
@@ -12,8 +15,10 @@ input_values = {
 }
 
 for val in list(input_values.keys()):
-    with open(f'.input_values_cache/{val}', 'r') as f:
-        input_values[val] = f.read().strip().strip('/')
+    filepath = f'.input_values_cache/{val}'
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+            input_values[val] = f.read().strip().strip('/')
 
 print(f"Input values are: {input_values}")
 
