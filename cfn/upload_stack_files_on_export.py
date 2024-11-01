@@ -71,7 +71,8 @@ for filename in sys.stdin:
             found_bucket = False 
         i += 1
     
-    with open('files/file_manifest.json', 'w') as f_out:
-        f_out.write(json.dumps(file_manifest))
+    file_manifest.sort()
+    with open('files/file_manifest.txt', 'w') as f_out:
+        f_out.write("\n".join(file_manifest))
 
     
