@@ -32,7 +32,7 @@
       "FrontendStack": {
         "Type": "AWS::CloudFormation::Stack",
         "Properties": {
-          "TemplateURL": "https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-cfn-stack/frontend/mtfsrad-f-dev.template.json",
+          "TemplateURL": "https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-cfn-stack/mtfsrad-f-dev.template.json",
           "Parameters": {
             "EnvironmentName": "dev"
           }

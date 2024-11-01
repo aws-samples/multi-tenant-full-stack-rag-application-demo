@@ -7,7 +7,7 @@ import os
 import shutil
 import yaml
 
-from aws_cdk import App
+from aws_cdk import App, DefaultStackSynthesizer
 from lib.react_ui import ReactUiStack
 from pathlib import Path
 
@@ -134,6 +134,9 @@ ReactUiStack(app,  config['stack_name_frontend'],
     # sharing_handler_api_url=config['sharing_handler_api_url'],
     user_pool_id=config["user_pool_id"],
     user_pool_client_id=config["user_pool_client_id"],
+    synthesizer=DefaultStackSynthesizer(
+        generate_bootstrap_version_rule=False
+    ),
 )
 
 app.synth()
