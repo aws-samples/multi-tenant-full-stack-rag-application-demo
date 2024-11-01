@@ -12,7 +12,6 @@ files/auth-stack-template.yaml
 files/b5798c2360eda494b7429c4dcda58e5be95bbbec773d6daa5a4b3fe3e2159a2a.json
 files/bedrock-stack-template.yaml
 files/c74147e2a38b5b318115605803f70a0b2d8a5ae157ca16a8ea191c1b4116dd4b.zip
-files/codebuild-stack-template.yaml
 files/d026b1578058ad2793e5acf313e7a775db6ac28ccfd6e8eb9f628cefa13038d5.json
 files/doc-collections-stack-template.yaml
 files/ee7de53d64cc9d6248fa6aa550f92358f6c907b5efd6f3298aeab1b5e7ea358a.zip

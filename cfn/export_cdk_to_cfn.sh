@@ -35,5 +35,5 @@ cd ../cfn && \
 find ./files -name '*.yaml' | xargs grep cdk-hnb659fds-assets | cut -d ' ' -f 1 | uniq | python upload_stack_files_on_export.py && \
 git add ../cfn && \
 git commit -m 'cloudformation export' && \
-git push origin main && \
+git push && \
 echo "Export complete."
