@@ -10,7 +10,7 @@ if not os.path.isdir('.input_values_cache'):
 input_values = {}
 input_values_files = os.listdir('.input_values_cache')
 
-for filename in input_values_files:
+for val in input_values_files:
     filepath = f'.input_values_cache/{val}'
     if os.path.exists(filepath):
         with open(filepath, 'r') as f:
