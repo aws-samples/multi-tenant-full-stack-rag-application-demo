@@ -39,11 +39,11 @@ Resources:
     Properties:
       Parameters:
         EnvironmentName: dev
-      TemplateURL: https://{output_bucket}.s3.us-west-2.amazonaws.com/{output_prefix}/auth-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/auth-stack-template.yaml
     Type: AWS::CloudFormation::Stack
   FrontendStack:
     Properties:
       Parameters:
         EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-cfn-stack/mtfsrad-f-dev.template.json
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/mtfsrad-f-dev.template.json
     Type: AWS::CloudFormation::Stack

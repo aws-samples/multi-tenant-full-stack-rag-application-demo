@@ -22,6 +22,7 @@ files/generation-handler-stack-template.yaml
 files/graph-store-stack-template.yaml
 files/ingestion-stack-template.yaml
 files/mtfsrad-final-stack-template.yaml
+files/mtfsrad-stack.yaml
 files/prompt-templates-stack-template.yaml
 files/ui-stack-template.yaml
 files/vector-store-stack-template.yaml

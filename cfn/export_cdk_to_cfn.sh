@@ -32,7 +32,7 @@ cdk synth mtfsrad-f-dev | sed '/CDKMetadata/,$d' > ../cfn/files/ui-stack-templat
 export OUTPUT_BUCKET=ws-assets-us-east-1 && \
 export S3_PREFIX=e03d64e5-c828-4f3b-8143-98a7e3dd7978 && \
 cd ../cfn && \
-cp mtfsrad-stack.yaml files/
+cp mtfsrad-stack.yaml files/ && \
 find ./files -name '*.yaml' | xargs grep cdk-hnb659fds-assets | cut -d ' ' -f 1 | uniq | python upload_stack_files_on_export.py && \
 git add ../cfn && \
 git commit -m 'cloudformation export' && \
