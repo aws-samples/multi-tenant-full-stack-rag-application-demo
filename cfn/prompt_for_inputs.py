@@ -45,12 +45,9 @@ def get_variable(prompt_text, value_file, *, default=None, null_ok=False):
             last_variable_val = f.read().strip()
     while variable_val == '':
         text = prompt_text.format(last_variable_val)
-        print(text)
-        variable_val = input()
+        variable_val = input(text)
         if last_variable_val and not variable_val:
             variable_val = last_variable_val
-        if not variable_val and default:
-            variable_val = default
         if null_ok:
             break
     with open(f".input_values_cache/{value_file}", 'w') as f:
