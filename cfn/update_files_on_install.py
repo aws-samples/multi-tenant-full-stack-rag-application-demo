@@ -117,15 +117,15 @@ for filename in sys.stdin:
     if filename == './cfn_templates':
         continue
 
-    elif filename.endswith('.json'):
-        with open(filename, 'r') as f:
-            content = f.read()
-        template_js = json.loads(content)
-        template_yaml = yaml.dump(template_js)
-        filename = filename.replace('.json', '.yaml')
-        with open(filename, 'w') as f:
-            f.write(template_yaml)
-        process_yaml_file(filename)
+    # elif filename.endswith('.json'):
+    #     with open(filename, 'r') as f:
+    #         content = f.read()
+    #     template_js = json.loads(content)
+    #     template_yaml = yaml.dump(template_js)
+    #     filename = filename.replace('.json', '.yaml')
+    #     with open(filename, 'w') as f:
+    #         f.write(template_yaml)
+    #     process_yaml_file(filename)
     
     elif filename.endswith('.yaml'):
         process_yaml_file(filename)
