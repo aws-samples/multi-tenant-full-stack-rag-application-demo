@@ -34,7 +34,7 @@ def download_file(old_s3_key):
 
 for filename in sys.stdin:
     filename = filename.strip().replace(':', '')
-    print("\n\n{}\n\n".format(filename))
+    print("\n\nGOT FILE {}\n\n".format(filename))
     file_manifest.append(f"files/{filename.split('/')[-1]}")
     with open(filename, 'r') as f:
         lines = f.readlines()
@@ -44,7 +44,7 @@ for filename in sys.stdin:
 
     while i < len(lines):
         line = lines[i]
-        if f"Fn::Sub: {BUCKET_TO_FIND}" in line:
+        if BUCKET_TO_FIND in line:
             found_bucket = True
         elif found_bucket ==True:
             # the next line after finding the bucket line should land here.
