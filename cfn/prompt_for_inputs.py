@@ -38,9 +38,7 @@ if not os.path.isdir('.input_values_cache'):
     os.makedirs('.input_values_cache')
 
 def get_variable(prompt_text, value_file, *, default=None, null_ok=False):
-    last_variable_val = None
-    if last_variable_val == None:
-        last_variable_val = default
+    last_variable_val = default
     variable_val = ''
     if os.path.exists(f".input_values_cache/{value_file}"):
         with open(f".input_values_cache/{value_file}", 'r') as f:
