@@ -7,14 +7,10 @@ import yaml
 if not os.path.isdir('.input_values_cache'):
     os.mkdirs('.input_values_cache')
 
-input_values = {
-    'output_bucket': '',
-    'output_prefix': '',
-    'ecr_repo_name': '',
-    'codebuild_role_arn': ''
-}
+input_values = {}
+input_values_files = os.listdir('.input_values_cache')
 
-for val in list(input_values.keys()):
+for filename in input_values_files:
     filepath = f'.input_values_cache/{val}'
     if os.path.exists(filepath):
         with open(filepath, 'r') as f:
