@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Root stack that creates two nested stacks for frontend and backend
+Description: Root stack for mtfsrad
 Parameters:
   AllowedEmailDomains:
     Description: Set the allowed email domains that are allowed to create accounts.

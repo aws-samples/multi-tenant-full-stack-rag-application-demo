@@ -107,8 +107,7 @@ def process_yaml_file(filename):
     
 for filename in sys.stdin:
     filename = filename.strip().replace(':', '')
-    print("Got filename {}".format(filename))
-    
+   
     if filename == './cfn_templates':
         continue
 
