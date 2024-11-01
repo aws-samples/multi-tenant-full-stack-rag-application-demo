@@ -62,7 +62,7 @@ if [ "$DOWNLOAD" = true ]; then
     else
       . .venv/bin/activate
   fi
-
+  print("Prompting for inputs")
   python3 prompt_for_inputs.py
   find ./cfn_templates | python update_files_on_install.py
 fi
