@@ -65,6 +65,9 @@ if [ "$DOWNLOAD" = true ]; then
   echo "Prompting for inputs" && \
   python prompt_for_inputs.py && \
   find ./cfn_templates | python update_files_on_install.py
+  echo
+  echo Optionally review the templates in cfn_templates, then bash install_cfn.sh -r to install the stack
+  echo
 fi
 
 if [ "$RUN" = true ]; then
