@@ -23,7 +23,7 @@ file_manifest = []
 
 def download_file(old_s3_key):
     global file_manifest
-    local_file = f"./files/{old_s3_key}"
+    local_file = f"files/{old_s3_key}"
     print(f"downloading s3://{SOURCE_BUCKET}/{old_s3_key} to {local_file}")
     file_manifest.append(local_file)
     s3.download_file(
@@ -35,7 +35,7 @@ def download_file(old_s3_key):
 for filename in sys.stdin:
     filename = filename.strip().replace(':', '')
     print("\n\n{}\n\n".format(filename))
-    file_manifest.append(f"./files/{filename.split('/')[-1]}")
+    file_manifest.append(f"files/{filename.split('/')[-1]}")
     with open(filename, 'r') as f:
         lines = f.readlines()
     
@@ -73,6 +73,6 @@ for filename in sys.stdin:
     
     file_manifest.sort()
     with open('files/file_manifest.txt', 'w') as f_out:
-        f_out.write("\n".join(file_manifest))
+        f_out.write("\n".join(file_manifest) + "\n")
 
     
