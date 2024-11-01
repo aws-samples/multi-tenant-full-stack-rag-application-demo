@@ -21,7 +21,7 @@ files/faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip
 files/generation-handler-stack-template.yaml
 files/graph-store-stack-template.yaml
 files/ingestion-stack-template.yaml
-files/mtfsrad-stack-template.yaml
+files/mtfsrad-final-stack-template.yaml
 files/prompt-templates-stack-template.yaml
 files/ui-stack-template.yaml
 files/vector-store-stack-template.yaml
