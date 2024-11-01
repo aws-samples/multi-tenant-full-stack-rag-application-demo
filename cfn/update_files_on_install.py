@@ -55,13 +55,18 @@ def process_yaml_file(filename):
         i = 0
         while i < len(lines):
             line = lines[i].strip("\n")
+            print(f"Processing line {line}")
             if ECR_REPO_TO_REPLACE in line:
                 line = f"Location: {repo['repositoryUri']}"
                 output_content += line + "\n"
+                found_bucket = False
             elif BUCKET_TO_REPLACE in line:
                 found_bucket = True
                 if f"Fn::Sub: {BUCKET_TO_REPLACE}" in line:
                     line = line.replace(f"Fn::Sub: {BUCKET_TO_REPLACE}", input_values['output_bucket'])
+                    output_content += line + "\n"
+                else:
+                    line = line.replace(BUCKET_TO_REPLACE, input_values['output_bucket'])
                     output_content += line + "\n"
             elif found_bucket ==True:
                 # the next line after finding the bucket line should land here.
@@ -83,10 +88,10 @@ def process_yaml_file(filename):
                         new_key = f"/{input_values['output_prefix'] }/{old_key}".replace('.json','.yaml')
                         output_content += f"            - {new_key}\n"
                         i += 1
-
                 found_bucket = False
                 # now copy the file to the output bucket and target s3 key
             else:
+                found_bucket = False
                 output_content += line + "\n"
             i += 1
 
