@@ -10,6 +10,8 @@ __pycache__
 aws-exports.js
 cdk.out
 tests
+cfn_templates
+.input_values_cache
 aggregated_results.txt
 env.sh
 tmp

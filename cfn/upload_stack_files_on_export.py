@@ -49,7 +49,6 @@ for filename in sys.stdin:
         elif found_bucket ==True:
             # the next line after finding the bucket line should land here.
             old_s3_keys = []
-            old_s3_key = ''
             if 'S3Key: ' in line:
                 old_s3_keys.append(line.split('S3Key: ')[1].strip())
             elif '- /' in line:
