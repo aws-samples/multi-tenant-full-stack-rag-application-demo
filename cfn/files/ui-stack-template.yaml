@@ -186,7 +186,7 @@ Resources:
       SourceBucketNames:
         - Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
       SourceObjectKeys:
-        - 4ccdaff350d3aba1cbc5ffa8285793d41479e2c3712e7ffe22abdd7e3246d79e.zip
+        - 9d3384d903684ffc500883742fff37e4d5854915570cc8ed6808a7ddbd7c1ca6.zip
       DestinationBucketName:
         Ref: UiPrivateSiteDeploymentsitebucket1E9AF72D
       RetainOnDelete: false

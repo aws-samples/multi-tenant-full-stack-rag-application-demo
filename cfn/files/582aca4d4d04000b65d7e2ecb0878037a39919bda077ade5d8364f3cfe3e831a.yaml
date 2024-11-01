@@ -1,0 +1,646 @@
+Conditions:
+  CDKMetadataAvailable:
+    Fn::Or:
+    - Fn::Or:
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - af-south-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - ap-east-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - ap-northeast-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - ap-northeast-2
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - ap-south-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - ap-southeast-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - ap-southeast-2
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - ca-central-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - cn-north-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - cn-northwest-1
+    - Fn::Or:
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - eu-central-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - eu-north-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - eu-south-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - eu-west-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - eu-west-2
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - eu-west-3
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - il-central-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - me-central-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - me-south-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - sa-east-1
+    - Fn::Or:
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - us-east-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - us-east-2
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - us-west-1
+      - Fn::Equals:
+        - Ref: AWS::Region
+        - us-west-2
+Outputs:
+  OpenSearchDashboardsHostBastionHostIdCE7B9AB9:
+    Description: Instance ID of the bastion host. Use this to connect via SSM Session
+      Manager
+    Value:
+      Ref: OpenSearchDashboardsHost97A97485
+  mtfsradbdevVectorStoreProviderStackOpenSearchManagedStackOsDomain26DE6D31Arn:
+    Value:
+      Fn::GetAtt:
+      - OsDomain5D09FC6A
+      - Arn
+  mtfsradbdevVectorStoreProviderStackOpenSearchManagedStackVectorStoreProviderFunction71969801Arn:
+    Value:
+      Fn::GetAtt:
+      - VectorStoreProviderFunction70DE08B2
+      - Arn
+Parameters:
+  SsmParameterValueawsserviceamiamazonlinuxlatestamzn2amikernel510hvmx8664gp2C96584B6F00A464EAD1953AFF4B05118Parameter:
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-kernel-5.10-hvm-x86_64-gp2
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+Resources:
+  BastionHostEip:
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/BastionHostEip
+    Properties:
+      Domain: vpc
+      InstanceId:
+        Ref: OpenSearchDashboardsHost97A97485
+      NetworkBorderGroup:
+        Ref: AWS::Region
+    Type: AWS::EC2::EIP
+  CDKMetadata:
+    Condition: CDKMetadataAvailable
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/CDKMetadata/Default
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/1VQQU7DMBB8S++uIak4cKQFRCUEUfqAauts2yWJXXnXQBX579iJIuA0M/ZodjSlLu5KfbuAL16apl12dNDDG7JgsxMwraqRXfAGVXLsB4JeD7XrUG2OdsTKdWSuWf6yrWUBa7Dy7kgdRuUuaBnBmzOj/ySDenh0PZDN7olF1UF/aEAPz8EaITf+zTwqXu2BGYX1Q4ak9TqYFmUNjIo59dqJJ3uqwEOPgn7sNIuo0JR6SOYc9+JYXsmGbzVX/Vs786dtFaMaT6UdTik3v74HuQT5FzwOMW+U+MbZhqbK1VXOzt6sdFHo+8UHEy19sEI96nrCHzyGDdh+AQAA
+    Type: AWS::CDK::Metadata
+  CognitoAuthRoleRefPolicymtfsradbdevVectorStoreProviderStackOpenSearchManagedStackCognitoAuthRoleRef765EB00BD240009B:
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/CognitoAuthRoleRef/PolicymtfsradbdevVectorStoreProviderStackOpenSearchManagedStackCognitoAuthRoleRef765EB00B/Resource
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action: lambda:InvokeFunction
+          Effect: Allow
+          Resource:
+          - Fn::GetAtt:
+            - VectorStoreProviderFunction70DE08B2
+            - Arn
+          - Fn::Join:
+            - ''
+            - - Fn::GetAtt:
+                - VectorStoreProviderFunction70DE08B2
+                - Arn
+              - :*
+        - Action:
+          - es:ESHttpDelete
+          - es:ESHttpGet
+          - es:ESHttpHead
+          - es:ESHttpPatch
+          - es:ESHttpPost
+          - es:ESHttpPut
+          Effect: Allow
+          Resource:
+          - Fn::GetAtt:
+            - OsDomain5D09FC6A
+            - Arn
+          - Fn::Join:
+            - ''
+            - - Fn::GetAtt:
+                - OsDomain5D09FC6A
+                - Arn
+              - /*
+          - Fn::Join:
+            - ''
+            - - Fn::GetAtt:
+                - OsDomain5D09FC6A
+                - Arn
+              - /*/*
+        Version: '2012-10-17'
+      PolicyName: PolicymtfsradbdevVectorStoreProviderStackOpenSearchManagedStackCognitoAuthRoleRef765EB00B
+      Roles:
+      - Fn::Select:
+        - 1
+        - Fn::Split:
+          - /
+          - Fn::Select:
+            - 5
+            - Fn::Split:
+              - ':'
+              - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoIdentityPoolAuthenticatedRole7703D556Arn606C0A72
+    Type: AWS::IAM::Policy
+  OpenSearchDashboardsCognitoRoleDefaultPolicy356519A4:
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/OpenSearchDashboardsCognitoRole/DefaultPolicy/Resource
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+          - es:ESHttpDelete
+          - es:ESHttpGet
+          - es:ESHttpHead
+          - es:ESHttpPatch
+          - es:ESHttpPost
+          - es:ESHttpPut
+          Effect: Allow
+          Resource:
+          - Fn::GetAtt:
+            - OsDomain5D09FC6A
+            - Arn
+          - Fn::Join:
+            - ''
+            - - Fn::GetAtt:
+                - OsDomain5D09FC6A
+                - Arn
+              - /*
+          - Fn::Join:
+            - ''
+            - - Fn::GetAtt:
+                - OsDomain5D09FC6A
+                - Arn
+              - /*/*
+        Version: '2012-10-17'
+      PolicyName: OpenSearchDashboardsCognitoRoleDefaultPolicy356519A4
+      Roles:
+      - Ref: OpenSearchDashboardsCognitoRoleE1C99401
+    Type: AWS::IAM::Policy
+  OpenSearchDashboardsCognitoRoleE1C99401:
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/OpenSearchDashboardsCognitoRole/Resource
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - es.amazonaws.com
+            - opensearchservice.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonOpenSearchServiceCognitoAccess
+    Type: AWS::IAM::Role
+  OpenSearchDashboardsHost97A97485:
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT5M
+    DependsOn:
+    - OpenSearchDashboardsHostInstanceRoleDefaultPolicyA2AACEF5
+    - OpenSearchDashboardsHostInstanceRole54C7DBD5
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          commands:
+            '000':
+              command: amazon-linux-extras install nginx1 -y
+            '001':
+              command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout
+                /etc/nginx/cert.key -out /etc/nginx/cert.crt -config /tmp/ec2_cert_info.cfg
+            '002':
+              command: 'cd /tmp && ifconfig eth0 | grep ''inet '' > inet.txt && export
+                IFS='' '' && read -a strarr <<< `cat inet.txt` && export localIp=`echo
+                ${strarr[1]}` && echo Local IP is: $localIp && export IFS=. && read
+                -a iparr <<< $localIp && export IFS='' '' && read -a iparr <<< ${iparr[*]}
+                && export resolverIp=${iparr[0]}.${iparr[1]}.0.2 && echo Resolver
+                IP is $resolverIp && sed -i "s/<SUBNET_RESOLVER_IP>/${resolverIp}/"
+                /etc/nginx/conf.d/default.conf'
+          files:
+            /etc/nginx/conf.d/default.conf:
+              content:
+                Fn::Join:
+                - ''
+                - - "\n                    server {\n                        listen\
+                    \ 443;\n                        server_name $host;\n         \
+                    \               rewrite ^/$ https://$host/_dashboards redirect;\n\
+                    \                        resolver <SUBNET_RESOLVER_IP> ipv6=off\
+                    \ valid=5s;\n                        set $domain_endpoint "
+                  - Fn::GetAtt:
+                    - OsDomain5D09FC6A
+                    - DomainEndpoint
+                  - ";\n                        set $cognito_host "
+                  - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackUserPoolDomain51B8FBE5Ref23D2F724
+                  - .auth.
+                  - Ref: AWS::Region
+                  - ".amazoncognito.com;\n                        \n             \
+                    \           ssl_certificate           /etc/nginx/cert.crt;\n \
+                    \                       ssl_certificate_key       /etc/nginx/cert.key;\n\
+                    \                        \n                        ssl on;\n \
+                    \                       ssl_session_cache  builtin:1000  shared:SSL:10m;\n\
+                    \                        ssl_protocols  TLSv1 TLSv1.1 TLSv1.2;\n\
+                    \                        ssl_ciphers HIGH:!aNULL:!eNULL:!EXPORT:!CAMELLIA:!DES:!MD5:!PSK:!RC4;\n\
+                    \                        ssl_prefer_server_ciphers on;\n     \
+                    \                   \n                        location ^~ /_dashboards\
+                    \ {\n                        \n                            # Forward\
+                    \ requests to Dashboards\n                            proxy_pass\
+                    \ https://$domain_endpoint;\n                        \n      \
+                    \                      # Handle redirects to Cognito\n       \
+                    \                     proxy_redirect https://$cognito_host https://$host;\n\
+                    \                        \n                            # Handle\
+                    \ redirects to Dashboards\n                            proxy_redirect\
+                    \ https://$domain_endpoint https://$host;\n                  \
+                    \      \n                            # Update cookie domain and\
+                    \ path\n                            proxy_cookie_domain $domain_endpoint\
+                    \ $host;\n                            proxy_cookie_path ~*^/$\
+                    \ /_dashboards/;\n                        \n                 \
+                    \           # Response buffer settings\n                     \
+                    \       proxy_buffer_size 128k;\n                            proxy_buffers\
+                    \ 4 256k;\n                            proxy_busy_buffers_size\
+                    \ 256k;\n                        }\n                        \n\
+                    \                        location ~ \\/(log|sign|fav|forgot|change|saml|oauth2|confirm)\
+                    \ {\n                        \n                            # Forward\
+                    \ requests to Cognito\n                            proxy_pass\
+                    \ https://$cognito_host;\n                        \n         \
+                    \                   # Handle redirects to Dashboards\n       \
+                    \                     proxy_redirect https://$domain_endpoint\
+                    \ https://$host;\n                        \n                 \
+                    \           # Handle redirects to Cognito\n                  \
+                    \          proxy_redirect https://$cognito_host https://$host;\n\
+                    \                        \n                            proxy_cookie_domain\
+                    \ $cognito_host $host;\n                        }\n\n        \
+                    \                location ^~ /_aos {\n                       \
+                    \     # Forward requests to AOS endpoint\n                   \
+                    \         proxy_pass https://$domain_endpoint;\n             \
+                    \           \n                            # Handle redirects to\
+                    \ AOS endpoint\n                            proxy_redirect https://$domain_endpoint\
+                    \ https://$host;\n                        \n                 \
+                    \           # Update cookie domain and path\n                \
+                    \            proxy_cookie_domain $domain_endpoint $host;\n   \
+                    \                         proxy_cookie_path ~*^/$ /_aos/;\n  \
+                    \                      \n                            # Response\
+                    \ buffer settings\n                            proxy_buffer_size\
+                    \ 128k;\n                            proxy_buffers 4 256k;\n \
+                    \                           proxy_busy_buffers_size 256k;\n  \
+                    \                      }\n                    }\n            \
+                    \        "
+              encoding: plain
+              group: root
+              mode: '000644'
+              owner: root
+            /tmp/ec2_cert_info.cfg:
+              content: "[ req ]\n                    prompt                 = no\n\
+                \                    default_bits           = 2048\n             \
+                \       default_keyfile        = privkey.pem\n                   \
+                \ distinguished_name     = req_distinguished_name\n              \
+                \      x509_extensions        = v3_ca\n                    \n    \
+                \                dirstring_type = nobmp\n                    \n  \
+                \                  [ req_distinguished_name ]\n                  \
+                \  countryName                    = US\n                    stateOrProvinceName\
+                \            = California\n                    localityName      \
+                \             = Irvine\n                    commonName           \
+                \          = osdashboard-proxy.mydomain.com\n                    emailAddress\
+                \                   = admin@mydomain.com\n                    \n \
+                \                   \n                    [ v3_ca ]\n            \
+                \        \n                    subjectKeyIdentifier=hash\n       \
+                \             authorityKeyIdentifier=keyid:always,issuer:always\n\
+                \                    basicConstraints = CA:true\n                \
+                \    "
+              encoding: plain
+              group: root
+              mode: '000644'
+              owner: root
+          services:
+            sysvinit:
+              nginx:
+                enabled: true
+                ensureRunning: true
+                files:
+                - /etc/nginx/conf.d/default.conf
+                - /tmp/ec2_cert_info.cfg
+        configSets:
+          default:
+          - config
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/OpenSearchDashboardsHost/Resource/Resource
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - 0
+        - Fn::GetAZs: ''
+      BlockDeviceMappings:
+      - DeviceName: /dev/xvda
+        Ebs:
+          Encrypted: true
+          VolumeSize: 10
+      IamInstanceProfile:
+        Ref: OpenSearchDashboardsHostInstanceProfile86B44DF9
+      ImageId:
+        Ref: SsmParameterValueawsserviceamiamazonlinuxlatestamzn2amikernel510hvmx8664gp2C96584B6F00A464EAD1953AFF4B05118Parameter
+      InstanceType: t3.nano
+      SecurityGroupIds:
+      - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputFnGetAttAppSecurityGroupC396D536GroupId4ECD26A6
+      SubnetId:
+        Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcingressSubnet1Subnet059F22C68B714600
+      Tags:
+      - Key: Name
+        Value: OpenSearchDashboardsProxy
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+          - ''
+          - - "#!/bin/bash\n# fingerprint: feade07795d3974a\n(\n  set +e\n  /opt/aws/bin/cfn-init\
+              \ -v --region "
+            - Ref: AWS::Region
+            - ' --stack '
+            - Ref: AWS::StackName
+            - " --resource OpenSearchDashboardsHost97A97485 -c default\n  /opt/aws/bin/cfn-signal\
+              \ -e $? --region "
+            - Ref: AWS::Region
+            - ' --stack '
+            - Ref: AWS::StackName
+            - " --resource OpenSearchDashboardsHost97A97485\n  cat /var/log/cfn-init.log\
+              \ >&2\n)"
+    Type: AWS::EC2::Instance
+  OpenSearchDashboardsHostInstanceProfile86B44DF9:
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/OpenSearchDashboardsHost/Resource/InstanceProfile
+    Properties:
+      Roles:
+      - Ref: OpenSearchDashboardsHostInstanceRole54C7DBD5
+    Type: AWS::IAM::InstanceProfile
+  OpenSearchDashboardsHostInstanceRole54C7DBD5:
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/OpenSearchDashboardsHost/Resource/InstanceRole/Resource
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+        Version: '2012-10-17'
+      Tags:
+      - Key: Name
+        Value: OpenSearchDashboardsProxy
+    Type: AWS::IAM::Role
+  OpenSearchDashboardsHostInstanceRoleDefaultPolicyA2AACEF5:
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/OpenSearchDashboardsHost/Resource/InstanceRole/DefaultPolicy/Resource
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+          - cloudformation:DescribeStackResource
+          - cloudformation:SignalResource
+          Effect: Allow
+          Resource:
+            Ref: AWS::StackId
+        - Action:
+          - ec2messages:*
+          - ssm:UpdateInstanceInformation
+          - ssmmessages:*
+          Effect: Allow
+          Resource: '*'
+        - Action:
+          - es:ESHttpDelete
+          - es:ESHttpGet
+          - es:ESHttpHead
+          - es:ESHttpPatch
+          - es:ESHttpPost
+          - es:ESHttpPut
+          Effect: Allow
+          Resource:
+          - Fn::GetAtt:
+            - OsDomain5D09FC6A
+            - Arn
+          - Fn::Join:
+            - ''
+            - - Fn::GetAtt:
+                - OsDomain5D09FC6A
+                - Arn
+              - /*
+          - Fn::Join:
+            - ''
+            - - Fn::GetAtt:
+                - OsDomain5D09FC6A
+                - Arn
+              - /*/*
+        Version: '2012-10-17'
+      PolicyName: OpenSearchDashboardsHostInstanceRoleDefaultPolicyA2AACEF5
+      Roles:
+      - Ref: OpenSearchDashboardsHostInstanceRole54C7DBD5
+    Type: AWS::IAM::Policy
+  OsDomain5D09FC6A:
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/OsDomain/Resource
+    Properties:
+      ClusterConfig:
+        DedicatedMasterEnabled: false
+        InstanceCount: 2
+        InstanceType: m6g.large.search
+        MultiAZWithStandbyEnabled: false
+        ZoneAwarenessConfig:
+          AvailabilityZoneCount: 2
+        ZoneAwarenessEnabled: true
+      CognitoOptions:
+        Enabled: true
+        IdentityPoolId:
+          Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoIdentityPoolD10B5D4ERef47C7F94B
+        RoleArn:
+          Fn::GetAtt:
+          - OpenSearchDashboardsCognitoRoleE1C99401
+          - Arn
+        UserPoolId:
+          Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackUserPool42FCA09FRef3D901ACD
+      DomainEndpointOptions:
+        EnforceHTTPS: true
+        TLSSecurityPolicy: Policy-Min-TLS-1-0-2019-07
+      EBSOptions:
+        EBSEnabled: true
+        VolumeSize: 100
+        VolumeType: gp3
+      EncryptionAtRestOptions:
+        Enabled: true
+      EngineVersion: OpenSearch_2.7
+      LogPublishingOptions: {}
+      NodeToNodeEncryptionOptions:
+        Enabled: true
+      SoftwareUpdateOptions:
+        AutoSoftwareUpdateEnabled: true
+      VPCOptions:
+        SecurityGroupIds:
+        - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputFnGetAttAppSecurityGroupC396D536GroupId4ECD26A6
+        SubnetIds:
+        - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet1SubnetEBF5BB657298517B
+        - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet2Subnet8AADF05A8CCED4C9
+    Type: AWS::OpenSearchService::Domain
+    UpdateReplacePolicy: Delete
+  VectorStoreProviderFunction70DE08B2:
+    DependsOn:
+    - VectorStoreProviderFunctionServiceRoleDefaultPolicyD1718851
+    - VectorStoreProviderFunctionServiceRole10C148BE
+    Metadata:
+      aws:asset:is-bundled: true
+      aws:asset:path: asset.b49cdf600b531fb64e41df8ac99a38bb7f1a21efe19869f24f3866a174aea2da
+      aws:asset:property: Code
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/VectorStoreProviderFunction/Resource
+    Properties:
+      Architectures:
+      - x86_64
+      Code:
+        S3Bucket:
+          Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+        S3Key: b49cdf600b531fb64e41df8ac99a38bb7f1a21efe19869f24f3866a174aea2da.zip
+      Environment:
+        Variables:
+          STACK_NAME: mtfsrad-b-dev
+          VECTOR_STORE_ENDPOINT:
+            Fn::GetAtt:
+            - OsDomain5D09FC6A
+            - DomainEndpoint
+      Handler: multi_tenant_full_stack_rag_application.vector_store_provider.opensearch_vector_store_provider.handler
+      MemorySize: 128
+      Role:
+        Fn::GetAtt:
+        - VectorStoreProviderFunctionServiceRole10C148BE
+        - Arn
+      Runtime: python3.11
+      Timeout: 60
+      VpcConfig:
+        SecurityGroupIds:
+        - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputFnGetAttAppSecurityGroupC396D536GroupId4ECD26A6
+        SubnetIds:
+        - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet1SubnetEBF5BB657298517B
+        - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet2Subnet8AADF05A8CCED4C9
+    Type: AWS::Lambda::Function
+  VectorStoreProviderFunctionName029974DC:
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/VectorStoreProviderFunctionName/Resource
+    Properties:
+      Name: /mtfsrad-b-dev/vector_store_provider_function_name
+      Type: String
+      Value:
+        Ref: VectorStoreProviderFunction70DE08B2
+    Type: AWS::SSM::Parameter
+    UpdateReplacePolicy: Delete
+  VectorStoreProviderFunctionServiceRole10C148BE:
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/VectorStoreProviderFunction/ServiceRole/Resource
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+      - Fn::Join:
+        - ''
+        - - 'arn:'
+          - Ref: AWS::Partition
+          - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - Fn::Join:
+        - ''
+        - - 'arn:'
+          - Ref: AWS::Partition
+          - :iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+    Type: AWS::IAM::Role
+  VectorStoreProviderFunctionServiceRoleDefaultPolicyD1718851:
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/VectorStoreProviderFunction/ServiceRole/DefaultPolicy/Resource
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action: lambda:InvokeFunction
+          Effect: Allow
+          Resource:
+          - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoAuthProviderFunction314FA51DArnCBC57E5D
+          - Fn::ImportValue: mtfsradbdevEmbeddingsProviderStack3C343CED:ExportsOutputFnGetAttEmbeddingsProviderFunction749E762AArn0A103CE4
+          - Fn::Join:
+            - ''
+            - - Fn::ImportValue: mtfsradbdevEmbeddingsProviderStack3C343CED:ExportsOutputFnGetAttEmbeddingsProviderFunction749E762AArn0A103CE4
+              - :*
+        - Action:
+          - es:ESHttpDelete
+          - es:ESHttpGet
+          - es:ESHttpHead
+          - es:ESHttpPatch
+          - es:ESHttpPost
+          - es:ESHttpPut
+          Effect: Allow
+          Resource:
+          - Fn::GetAtt:
+            - OsDomain5D09FC6A
+            - Arn
+          - Fn::Join:
+            - ''
+            - - Fn::GetAtt:
+                - OsDomain5D09FC6A
+                - Arn
+              - /*
+          - Fn::Join:
+            - ''
+            - - Fn::GetAtt:
+                - OsDomain5D09FC6A
+                - Arn
+              - /*/*
+        - Action:
+          - ssm:GetParameter
+          - ssm:GetParametersByPath
+          Effect: Allow
+          Resource:
+            Fn::Join:
+            - ''
+            - - 'arn:aws:ssm:'
+              - Ref: AWS::Region
+              - ':'
+              - Ref: AWS::AccountId
+              - :parameter/mtfsrad-b-dev*
+        Version: '2012-10-17'
+      PolicyName: VectorStoreProviderFunctionServiceRoleDefaultPolicyD1718851
+      Roles:
+      - Ref: VectorStoreProviderFunctionServiceRole10C148BE
+    Type: AWS::IAM::Policy
+  VectorStoreProviderOrigin8BFC17A7:
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: mtfsrad-b-dev/VectorStoreProviderStack/OpenSearchManagedStack/VectorStoreProviderOrigin/Resource
+    Properties:
+      Name: /mtfsrad-b-dev/origin_vector_store_provider
+      Type: String
+      Value:
+        Ref: VectorStoreProviderFunction70DE08B2
+    Type: AWS::SSM::Parameter
+    UpdateReplacePolicy: Delete
