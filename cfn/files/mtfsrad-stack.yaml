@@ -28,11 +28,11 @@ Resources:
       #   EnvironmentName: dev
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/vpc-stack-template.yaml
   AuthStack:
-    Type: AWS::CloudFormation::Stack
+    Type: AWS::CloudFormation::Stack 
     Properties:
       Parameters:
         allowedEmailDomains: !Ref AllowedEmailDomains
-        appName: !Ref AppName
+        appName: !Ref AppName 
         removalPolicy: !Ref RemovalPolicy
         signUpVerificationEmailBody: !Ref SignUpVerificationEmailBody
         signUpVerificationEmailSubject: !Ref SignUpVerificationEmailSubject
