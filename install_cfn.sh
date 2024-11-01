@@ -68,6 +68,7 @@ if [ "$DOWNLOAD" = true ]; then
 fi
 
 if [ "$RUN" = true ]; then
+  . .venv/bin/activate
   echo "Installing CloudFormation stacks..."
   python3 install.py
 fi
