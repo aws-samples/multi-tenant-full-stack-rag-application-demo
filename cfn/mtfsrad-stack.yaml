@@ -1,18 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Root stack that creates two nested stacks for frontend and backend
-Outputs:
-  BackendStackRef:
-    Description: Reference to the backend stack
-    Export:
-      Name: BackendStackRef
-    Value:
-      Ref: BackendStack
-  FrontendStackRef:
-    Description: Reference to the frontend stack
-    Export:
-      Name: FrontendStackRef
-    Value:
-      Ref: FrontendStack
 Parameters:
   AllowedEmailDomains:
     Default: amazon.com
@@ -36,14 +23,8 @@ Parameters:
     Type: String
 Resources:
   AuthStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
         EnvironmentName: dev
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/auth-stack-template.yaml
-    Type: AWS::CloudFormation::Stack
-  FrontendStack:
-    Properties:
-      Parameters:
-        EnvironmentName: dev
-      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/mtfsrad-f-dev.template.json
-    Type: AWS::CloudFormation::Stack
