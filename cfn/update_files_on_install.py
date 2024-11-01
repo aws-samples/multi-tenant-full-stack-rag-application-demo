@@ -56,7 +56,6 @@ def process_yaml_file(filename):
         i = 0
         while i < len(lines):
             line = lines[i].strip("\n")
-            print(f"Processing line {line}")
             if '{region}' in line:
                 line = line.replace('{region}', REGION)
             

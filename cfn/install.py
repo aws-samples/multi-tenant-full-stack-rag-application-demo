@@ -65,7 +65,7 @@ stack = cfn.create_stack(
             'ParameterValue': input_values['signup_email_subject']
         }
     ],
-    TimoutInMinutes=60,
+    TimeoutInMinutes=60,
     Capabilities=[
         'CAPABILITY_NAMED_IAM',
         'CAPABILITY_AUTO_EXPAND'
