@@ -12,6 +12,9 @@ cdk.out
 tests
 cfn_templates
 .input_values_cache
+install.py
+update_files_on_install.py
+prompt_for_inputs.py
 aggregated_results.txt
 env.sh
 tmp
