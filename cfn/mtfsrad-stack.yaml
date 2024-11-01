@@ -32,7 +32,7 @@ Resources:
     Properties:
       Parameters:
         allowedEmailDomains: !Ref AllowedEmailDomains
-        appName: !Ref AppName
+        appName: !Ref AppName 
         removalPolicy: !Ref RemovalPolicy
         signUpVerificationEmailBody: !Ref SignUpVerificationEmailBody
         signUpVerificationEmailSubject: !Ref SignUpVerificationEmailSubject
