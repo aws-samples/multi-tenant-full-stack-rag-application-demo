@@ -34,14 +34,6 @@ done
 
 echo "Running in mode $MODE"
 
-if [ ! -d .venv ]
-  then 
-    python3 -m venv .venv
-    . .venv/bin/activate
-    pip install -r installer_requirements.txt
-  else
-    . .venv/bin/activate
-fi
 
 if [ "$DOWNLOAD" = true ]; then
   echo "Downloading CloudFormation templates"
@@ -57,10 +49,20 @@ if [ "$DOWNLOAD" = true ]; then
     local_file=${line:6}
     curl $github_files_base/$line -o cfn_templates/$local_file
   done < cfn_templates/file_manifest.txt
-  echo "Downloading install files"
+  echo "Downloading install.py"
   curl $github_files_base/install.py -o install.py
   curl $github_files_base/prompt_for_inputs.py -o prompt_for_inputs.py
   curl $github_files_base/update_files_on_install.py -o update_files_on_install.py
+  curl $github_files_base/installer_requirements.txt -o installer_requirements.txt
+  if [ ! -d .venv ]
+    then 
+      python3 -m venv .venv
+      . .venv/bin/activate
+      pip install -r installer_requirements.txt
+    else
+      . .venv/bin/activate
+  fi
+
   python3 prompt_for_inputs.py
   find ./cfn_templates | python update_files_on_install.py
 fi
