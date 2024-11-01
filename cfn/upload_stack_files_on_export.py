@@ -35,6 +35,7 @@ def download_file(old_s3_key):
 for filename in sys.stdin:
     filename = filename.strip().replace(':', '')
     print("\n\n{}\n\n".format(filename))
+    file_manifest.append(f"./files/{filename.split('/')[-1]}")
     with open(filename, 'r') as f:
         lines = f.readlines()
     
@@ -70,7 +71,7 @@ for filename in sys.stdin:
             found_bucket = False 
         i += 1
     
-    with open('files/file_manifest.txt', 'w') as f_out:
+    with open('files/file_manifest.json', 'w') as f_out:
         f_out.write(json.dumps(file_manifest))
 
     
