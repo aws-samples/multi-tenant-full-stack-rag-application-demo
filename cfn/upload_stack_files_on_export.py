@@ -3,6 +3,7 @@ import sys
 import json
 import os
 import requests
+import yaml
 
 # github_files_base = 'https://raw.githubusercontent.com/aws-samples/multi-tenant-full-stack-rag-application-demo/refs/heads/main/cfn/'
 
@@ -21,6 +22,7 @@ print("Updating files...")
 
 file_manifest = []
 
+extra_files_to_process = []
 def download_file(old_s3_key):
     global file_manifest
     local_file = f"files/{old_s3_key}"
@@ -31,10 +33,16 @@ def download_file(old_s3_key):
         old_s3_key,
         local_file
     )
+    if old_s3_key.endswith('.json'):
+        with open(local_file, 'r') as f_in:
+            data = json.loads(f_in.read())
+        os.unlink(local_file)
+        local_file = local_file.replace('.json','.yaml')
+        with open(local_file, 'w') as f_out:
+            f_out.write(yaml.dump(data))
+        extra_files_to_process.append(local_file)
 
-for filename in sys.stdin:
-    filename = filename.strip().replace(':', '')
-    print("\n\nGOT FILE {}\n\n".format(filename))
+def process_file(filename):
     file_manifest.append(f"files/{filename.split('/')[-1]}")
     with open(filename, 'r') as f:
         lines = f.readlines()
@@ -60,7 +68,7 @@ for filename in sys.stdin:
                 while lines[i].startswith('- '):
                     old_s3_keys.append(lines[i].replace('- ', '').strip())
                     i += 1
-                # i -= 1
+                i -= 1
                 
             # now copy the file to the output bucket and target s3 key
             for key in old_s3_keys:
@@ -70,8 +78,19 @@ for filename in sys.stdin:
             found_bucket = False 
         i += 1
     
-    file_manifest.sort()
-    with open('files/file_manifest.txt', 'w') as f_out:
-        f_out.write("\n".join(file_manifest) + "\n")
+
+
+for filename in sys.stdin:
+    filename = filename.strip().replace(':', '')
+    print("\n\nGOT FILE {}\n\n".format(filename))
+    process_file(filename)
+
+for filename in extra_files_to_process:
+    print("\n\nGOT FILE {}\n\n".format(filename))
+    process_file(filename)
+    
+file_manifest.sort()
+with open('files/file_manifest.txt', 'w') as f_out:
+    f_out.write("\n".join(file_manifest) + "\n")
 
     
