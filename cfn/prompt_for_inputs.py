@@ -56,7 +56,7 @@ def get_variable(prompt_text, value_file, *, default=None, null_ok=False):
 
 stack_name = get_variable(stack_name_prompt_text, 'stack_name')
 app_name = get_variable(app_name_prompt_text, 'app_name', default='Multi-tenant, full-stack RAG application demo')
-removal_policy = get_variable(removal_policy_prompt_text, 'removal_polcy', default='DESTROY')
+removal_policy = get_variable(removal_policy_prompt_text, 'removal_policy', default='DESTROY')
 allowed_email_domains = get_variable(allowed_email_domains_prompt_text, 'allowed_email_domains')
 signup_email_subject = get_variable(signup_email_subject_prompt_text, 'signup_email_subject', default=f'Verification code for {app_name}')
 signup_email_body = get_variable(signup_email_body_prompt_text, 'signup_email_body', default=f'Your verification code for {app_name} is {{####}}')
