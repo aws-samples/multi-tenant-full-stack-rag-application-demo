@@ -100,6 +100,7 @@ def process_yaml_file(filename):
                         output_content += line
                 elif 'SourceObjectKeys' in line:
                     i += 1
+                    output_content += line + "\n"
                     while lines[i].startswith('- '):
                         old_key = lines[i].replace('- ', '').strip()
                         new_key = f"/{input_values['output_prefix'] }/{old_key}".replace('.json','.yaml')
