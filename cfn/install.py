@@ -36,22 +36,22 @@ stack = cfn.create_stack(
             'ParameterKey': 'AppName',
             'ParameterValue': input_values['app_name']
         },
-        {
-            'ParameterKey': 'CodeBuildRoleArn',
-            'ParameterValue': input_values['codebuild_role_arn']
-        },
-        {
-            'ParameterKey': 'ECRRepoName',
-            'ParameterValue': input_values['ecr_repo_name']
-        },
-        {
-            'ParameterKey': 'OutputBucket',
-            'ParameterValue': input_values['output_bucket']
-        },
-        {
-            'ParameterKey': 'OutputPrefix',
-            'ParameterValue': input_values['output_prefix']
-        },
+        # {
+        #     'ParameterKey': 'CodeBuildRoleArn',
+        #     'ParameterValue': input_values['codebuild_role_arn']
+        # },
+        # {
+        #     'ParameterKey': 'ECRRepoName',
+        #     'ParameterValue': input_values['ecr_repo_name']
+        # },
+        # {
+        #     'ParameterKey': 'OutputBucket',
+        #     'ParameterValue': input_values['output_bucket']
+        # },
+        # {
+        #     'ParameterKey': 'OutputPrefix',
+        #     'ParameterValue': input_values['output_prefix']
+        # },
         {
             'ParameterKey': 'RemovalPolicy',
             'ParameterValue': input_values['removal_policy']
