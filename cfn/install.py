@@ -63,7 +63,7 @@ stack = cfn.create_stack(
         {
             'ParameterKey': 'signUpEmailSubject',
             'ParameterValue': input_values['signup_email_subject']
-        }
+        } 
     ],
     TimeoutInMinutes=60,
     Capabilities=[
