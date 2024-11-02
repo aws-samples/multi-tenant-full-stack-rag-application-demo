@@ -1,22 +1,22 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Root stack for mtfsrad
 Parameters:
-  AllowedEmailDomains:
+  allowedEmailDomains:
     Description: Set the allowed email domains that are allowed to create accounts.
     Type: String
-  AppName:
+  appName:
     Default: Multi-tenant, full-stack RAG application demo
     Description: Set the app name
     Type: String
-  RemovalPolicy:
+  removalPolicy:
     Default: DESTROY
     Description: Set removal policy for stacks
     Type: String
-  SignUpVerificationEmailBody:
+  signUpEmailBody:
     Default: Your verification code is {####}
     Description: Set the email body for sign up verification
     Type: String
-  SignUpVerificationEmailSubject:
+  signUpEmailSubject:
     Default: Verification code for multi-tenant, full-stack RAG application demo
     Description: Set the email subject for sign up verification
     Type: String
@@ -31,11 +31,11 @@ Resources:
     Type: AWS::CloudFormation::Stack 
     Properties:
       Parameters:
-        allowedEmailDomains: !Ref AllowedEmailDomains
-        appName: !Ref AppName 
-        removalPolicy: !Ref RemovalPolicy
-        signUpEmailBody: !Ref SignUpVerificationEmailBody
-        signUpEmailSubject: !Ref SignUpVerificationEmailSubject
+        allowedEmailDomains: !Ref allowedEmailDomains
+        appName: !Ref appName 
+        removalPolicy: !Ref removalPolicy
+        signUpEmailBody: !Ref signUpEmailBody
+        signUpEmailSubject: !Ref signUpEmailSubject
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/auth-stack-template.yaml
   BedrockStack:
     Type: AWS::CloudFormation::Stack
