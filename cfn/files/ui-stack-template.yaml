@@ -146,11 +146,7 @@ Resources:
         Fn::GetAtt:
           - CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092
           - Arn
-      Runtime:
-        Fn::FindInMap:
-          - LatestNodeRuntimeMap
-          - Ref: AWS::Region
-          - value
+      Runtime: nodejs20.x
       Description:
         Fn::Join:
           - ""

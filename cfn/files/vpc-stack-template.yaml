@@ -853,11 +853,7 @@ Resources:
         Fn::GetAtt:
           - CustomVpcRestrictDefaultSGCustomResourceProviderRole26592FE0
           - Arn
-      Runtime:
-        Fn::FindInMap:
-          - LatestNodeRuntimeMap
-          - Ref: AWS::Region
-          - value
+      Runtime: nodejs20.x
       Description: Lambda function for removing all inbound/outbound rules from the VPC default security group
     DependsOn:
       - CustomVpcRestrictDefaultSGCustomResourceProviderRole26592FE0
