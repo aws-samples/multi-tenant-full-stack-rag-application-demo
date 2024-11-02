@@ -8,7 +8,7 @@ Parameters:
   signUpEmailBody:
     Type: String
   signUpEmailSubject:
-    Type: String
+    Type: String 
 
 Resources:
   CognitoStackNestedStackCognitoStackNestedStackResource95DF2EBA:
