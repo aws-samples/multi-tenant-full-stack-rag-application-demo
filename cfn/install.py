@@ -29,11 +29,11 @@ stack = cfn.create_stack(
     TemplateURL=f"https://{input_values['output_bucket']}.s3.{region}.amazonaws.com/{input_values['output_prefix']}/mtfsrad-stack.yaml",
     Parameters=[
         {
-            'ParameterKey': 'AllowedEmailDomains',
+            'ParameterKey': 'allowedEmailDomains',
             'ParameterValue': input_values['allowed_email_domains']
         },
         {
-            'ParameterKey': 'AppName',
+            'ParameterKey': 'appName',
             'ParameterValue': input_values['app_name']
         },
         # {
@@ -53,15 +53,15 @@ stack = cfn.create_stack(
         #     'ParameterValue': input_values['output_prefix']
         # },
         {
-            'ParameterKey': 'RemovalPolicy',
+            'ParameterKey': 'removalPolicy',
             'ParameterValue': input_values['removal_policy']
         },
         {
-            'ParameterKey': 'SignupEmailBody',
+            'ParameterKey': 'signUpEmailBody',
             'ParameterValue': input_values['signup_email_body']
         },
         {
-            'ParameterKey': 'SignupEmailSubject',
+            'ParameterKey': 'signUpEmailSubject',
             'ParameterValue': input_values['signup_email_subject']
         }
     ],
