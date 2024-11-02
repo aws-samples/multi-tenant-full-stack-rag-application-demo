@@ -28,7 +28,6 @@ def download_file(old_s3_key):
     global file_manifest
     local_file = f"files/{old_s3_key}"
     print(f"downloading s3://{SOURCE_BUCKET}/{old_s3_key} to {local_file}")
-    file_manifest.append(local_file)
     s3.download_file(
         SOURCE_BUCKET,
         old_s3_key,
@@ -42,10 +41,11 @@ def download_file(old_s3_key):
         with open(local_file, 'w') as f_out:
             f_out.write(yaml.dump(data))
         extra_files_to_process.append(local_file)
+    file_manifest.append(local_file)
 
 def process_file(filename):
     global extra_files_to_process
-    
+
     file_manifest.append(f"files/{filename.split('/')[-1]}")
     with open(filename, 'r') as f:
         lines = f.readlines()
