@@ -48,10 +48,10 @@ for val in list(input_values.keys()):
 print(f"Input values are: {input_values}")
 
 template_url = f"https://{input_values['output_bucket']}.s3.{region}.amazonaws.com/{input_values['output_prefix']}/mtfsrad-stack.yaml"
-stacks = client.list_stacks()['StackSummaries']
+stacks = cfn.list_stacks()['StackSummaries']
 stack = None
 for existing_stack in stacks:
-    if stack_name.startswith(input_values['stack_name']):
+    if existing_stack['StackName'].startswith(input_values['stack_name']):
         stack = existing_stack
 
 if not stack:
@@ -71,10 +71,8 @@ else:
         StackName=stack['StackName'],
         TemplateURL=template_url,
         Parameters=params,
-        TimeoutInMinutes=60,
-                Capabilities=[
+        Capabilities=[
             'CAPABILITY_NAMED_IAM',
             'CAPABILITY_AUTO_EXPAND'
-        ],
-        EnableTerminationProtection=False
+        ]
     )
