@@ -77,7 +77,7 @@ def process_yaml_file(filename):
             elif found_bucket ==True:
                 # the next line after finding the bucket line should land here.
                 if 'S3Key: ' in line:
-                    old_s3_key = line.split(': ')[1]
+                    old_s3_key = line.split(': ')[1].strip()
                     s3_key = f"{input_values['output_prefix'] }/{old_s3_key}".replace('.json','.yaml')
                     output_content += line.replace(old_s3_key, s3_key)
                 elif '- /' in line:
