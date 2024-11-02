@@ -99,13 +99,14 @@ def process_yaml_file(filename):
                     else:
                         output_content += line
                 elif 'SourceObjectKeys' in line:
-                    i += 1
                     output_content += line + "\n"
-                    while lines[i].startswith('- '):
+                    i += 1
+                    while lines[i].strip().startswith('- '):
                         old_key = lines[i].replace('- ', '').strip()
                         new_key = f"/{input_values['output_prefix'] }/{old_key}".replace('.json','.yaml')
                         output_content += f"            - {new_key}\n"
                         i += 1
+                    i -= 1
                 found_bucket = False
                 # now copy the file to the output bucket and target s3 key
             else:
