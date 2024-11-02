@@ -19,6 +19,21 @@ input_values = {
     'stack_id': ''
 }
 
+print(f"Current directory: {os.getcwd()}")
+print(os.listdir(os.getcwd()))
+
+for val in list(input_values.keys()):
+    file_path = f'./.input_values_cache/{val}'
+    print(f"Does {os.getcwd()}/.input_values_cache/{val} exist?")
+    if os.path.exists(file_path):
+        print(f"Found {file_path}")
+        with open(file_path, 'r') as f:
+            value = f.read().strip().strip('/')
+            print(f"Got value {value}")
+            input_values[val] = value
+
+print(f"Input values are: {input_values}")
+
 params = [
     {
         'ParameterKey': 'allowedEmailDomains',
@@ -41,13 +56,7 @@ params = [
         'ParameterValue': input_values['signup_email_subject']
     } 
 ]
-
-for val in list(input_values.keys()):
-    with open(f'.input_values_cache/{val}', 'r') as f:
-        input_values[val] = f.read().strip().strip('/')
-
-print(f"Input values are: {input_values}")
-
+print(f"Params are {params} ")
 template_url = f"https://{input_values['output_bucket']}.s3.{region}.amazonaws.com/{input_values['output_prefix']}/mtfsrad-stack.yaml"
 stacks = cfn.list_stacks()['StackSummaries']
 print(f"Found existing stacks {stacks}")
@@ -55,6 +64,7 @@ print(f"Found existing stacks {stacks}")
 stack = None
 for existing_stack in stacks:
     stack_name = existing_stack['StackName']
+    print(f"Checking if stack name {stack_name} matches {input_values['stack_name']}")
     if stack_name.startswith(input_values['stack_name']) and \
         not existing_stack['StackStatus'].startswith('DELETE'):
         print(f"Found existing stack {stack}")
@@ -75,7 +85,7 @@ if not stack:
         EnableTerminationProtection=False
     )
     print(f"Created stack {stack_response}")
-    with open('..input_values_cache/stack_id', 'w') as f_out:
+    with open('.input_values_cache/stack_id', 'w') as f_out:
         f_out.write(stack_response['StackId'])
 
 else:

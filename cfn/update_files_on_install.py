@@ -79,7 +79,7 @@ def process_yaml_file(filename):
                 if 'S3Key: ' in line:
                     old_s3_key = line.split(': ')[1]
                     s3_key = f"{input_values['output_prefix'] }/{old_s3_key}".replace('.json','.yaml')
-                    output_content += f"S3Key: {s3_key}\n"
+                    output_content += line.replace(old_s3_key, s3_key)
                 elif '- /' in line:
                     old_key = line.replace('- /', '').strip()
                     if old_key != '*':
