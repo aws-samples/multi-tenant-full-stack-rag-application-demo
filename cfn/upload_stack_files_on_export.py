@@ -23,6 +23,7 @@ print("Updating files...")
 file_manifest = []
 
 extra_files_to_process = []
+
 def download_file(old_s3_key):
     global file_manifest
     local_file = f"files/{old_s3_key}"
@@ -43,6 +44,8 @@ def download_file(old_s3_key):
         extra_files_to_process.append(local_file)
 
 def process_file(filename):
+    global extra_files_to_process
+    
     file_manifest.append(f"files/{filename.split('/')[-1]}")
     with open(filename, 'r') as f:
         lines = f.readlines()
