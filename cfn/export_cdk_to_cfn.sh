@@ -31,7 +31,7 @@ export BUILD_UID=$UID && \
 cdk synth mtfsrad-f-dev | sed '/CDKMetadata/,$d' > ../cfn/files/ui-stack-template.yaml && \
 cd ../cfn && \
 cp mtfsrad-stack.yaml files/ && \
-find ./files -name '*.yaml' | xargs grep cdk-hnb659fds-assets | cut -d ' ' -f 1 | uniq | python upload_stack_files_on_export.py && \
+find ./files -name '*.yaml' | python upload_stack_files_on_export.py && \
 git add ../cfn && \
 git commit -m 'cloudformation export' && \
 git push && \
