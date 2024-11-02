@@ -52,10 +52,11 @@ stacks = cfn.list_stacks()['StackSummaries']
 stack = None
 for existing_stack in stacks:
     if existing_stack['StackName'].startswith(input_values['stack_name']):
+        print(f"Found existing stack {stack}")
         stack = existing_stack
 
 if not stack:
-    stack = cfn.create_stack(
+    stack_response = cfn.create_stack(
         StackName=input_values['stack_name'],
         TemplateURL=template_url,
         Parameters=params,
@@ -66,6 +67,8 @@ if not stack:
         ],
         EnableTerminationProtection=False
     )
+    print(f"Created stack {stack_response}")
+
 else:
     stack = cfn.update_stack(
         StackName=stack['StackName'],
