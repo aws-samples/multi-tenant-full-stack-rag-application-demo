@@ -63,7 +63,7 @@ def process_yaml_file(filename):
                 line = line.replace('{output_prefix}', input_values['output_prefix'])
                 
             if ECR_REPO_TO_REPLACE in line:
-                line = f"Location: {repo['repositoryUri']}"
+                line = line.replace(ECR_REPO_TO_REPLACE, repo['repositoryUri'])
                 output_content += line + "\n"
                 found_bucket = False
             elif BUCKET_TO_REPLACE in line:
