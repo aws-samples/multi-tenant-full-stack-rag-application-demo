@@ -47,6 +47,8 @@ print(f"Using ECR repo: {repo}")
 
 
 print("Updating files...")
+files_to_process = []
+
 
 def process_yaml_file(filename):
     with open(filename, 'r') as f:
@@ -56,6 +58,13 @@ def process_yaml_file(filename):
         i = 0
         while i < len(lines):
             line = lines[i].strip("\n")
+
+            if 'mtfsrad-b-dev' in line:
+                line = line.replace('mtfsrad-b-dev', input_values['stack_name'])
+
+            if 'mtfsrad-f-dev' in line: 
+                line = line.replace('mtfsrad-f-dev', input_values['stack_name'])
+
             if '{region}' in line:
                 line = line.replace('{region}', REGION)
             
@@ -66,6 +75,7 @@ def process_yaml_file(filename):
                 line = line.replace(ECR_REPO_TO_REPLACE, repo['repositoryUri'])
                 output_content += line + "\n"
                 found_bucket = False
+
             elif BUCKET_TO_REPLACE in line:
                 found_bucket = True
                 if f"Fn::Sub: {BUCKET_TO_REPLACE}" in line:
@@ -74,6 +84,7 @@ def process_yaml_file(filename):
                 else:
                     line = line.replace(BUCKET_TO_REPLACE, input_values['output_bucket'])
                     output_content += line + "\n"
+                    
             elif found_bucket ==True:
                 # the next line after finding the bucket line should land here.
                 if 'S3Key: ' in line:
@@ -107,9 +118,9 @@ def process_yaml_file(filename):
     
 for filename in sys.stdin:
     filename = filename.strip().replace(':', '')
-   
     if filename == './cfn_templates':
-        continue
+            continue
+    files_to_process.append(filename)
 
     # elif filename.endswith('.json'):
     #     with open(filename, 'r') as f:
@@ -121,9 +132,17 @@ for filename in sys.stdin:
     #         f.write(template_yaml)
     #     process_yaml_file(filename)
     
-    elif filename.endswith('.yaml'):
+for filename in files_to_process:
+    if filename.endswith('.yaml'):
         process_yaml_file(filename)
-        
+    elif filename.endswith('.json'):
+        with open(filename, 'r') as f:
+            data = json.loads(f.read())
+            data = yaml.dump(data)
+        filename = filename.replace('.json', '.yaml')
+        with open(filename, 'w') as f:
+            f.write(data)
+        process_yaml_file(filename)
     s3_key = f"{input_values['output_prefix']}/{filename.split('/')[-1]}"
     print(f"uploading s3://{input_values['output_bucket']}/{s3_key}")
     s3.upload_file(
