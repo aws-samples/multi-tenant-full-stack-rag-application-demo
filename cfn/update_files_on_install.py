@@ -84,7 +84,7 @@ def process_yaml_file(filename):
                 else:
                     line = line.replace(BUCKET_TO_REPLACE, input_values['output_bucket'])
                     output_content += line + "\n"
-                    
+
             elif found_bucket ==True:
                 # the next line after finding the bucket line should land here.
                 if 'S3Key: ' in line:
@@ -137,6 +137,8 @@ for filename in files_to_process:
         process_yaml_file(filename)
     elif filename.endswith('.json'):
         with open(filename, 'r') as f:
+            data = f.read()
+            print(f"filename {filename} had data {data}")
             data = json.loads(f.read())
             data = yaml.dump(data)
         filename = filename.replace('.json', '.yaml')
