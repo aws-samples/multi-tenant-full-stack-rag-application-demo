@@ -34,8 +34,8 @@ Resources:
         allowedEmailDomains: !Ref AllowedEmailDomains
         appName: !Ref AppName 
         removalPolicy: !Ref RemovalPolicy
-        signUpVerificationEmailBody: !Ref SignUpVerificationEmailBody
-        signUpVerificationEmailSubject: !Ref SignUpVerificationEmailSubject
+        signUpEmailBody: !Ref SignUpVerificationEmailBody
+        signUpEmailSubject: !Ref SignUpVerificationEmailSubject
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/auth-stack-template.yaml
   BedrockStack:
     Type: AWS::CloudFormation::Stack
