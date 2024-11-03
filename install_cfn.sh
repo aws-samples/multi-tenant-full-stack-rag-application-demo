@@ -1,4 +1,5 @@
 #!/bin/bash
+
 echo Started install at `date`
 export SECONDS=0
 export SECONDS=0
@@ -54,6 +55,7 @@ if [ "$DOWNLOAD" = true ]; then
   curl $github_files_base/prompt_for_inputs.py -o prompt_for_inputs.py
   curl $github_files_base/update_files_on_install.py -o update_files_on_install.py
   curl $github_files_base/installer_requirements.txt -o installer_requirements.txt
+  
   if [ ! -d .venv ]
     then 
       python3 -m venv .venv
