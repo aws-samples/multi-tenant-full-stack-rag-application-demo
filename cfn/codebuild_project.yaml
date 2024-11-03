@@ -35,6 +35,7 @@ Resources:
                 Effect: Allow
               - Action: 
                   - 's3:GetObject'
+                  - 's3:PutObject'
                 Resource: 
                   - Fn::Join:
                     - ""
@@ -42,6 +43,7 @@ Resources:
                       - Ref: AWS::Partition
                       - :s3::aws:bucket/
                       - !Ref s3Bucket
+                      - '/*'
                 Effect: Allow
           PolicyName: codebuild-ecr-perms
 

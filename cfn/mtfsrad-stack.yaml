@@ -104,12 +104,12 @@ Resources:
       # Parameters:
       #   EnvironmentName: dev
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/prompt-templates-stack-template.yaml
-  UIStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      Parameters:
-        s3Bucket: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
-      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/ui-stack-template.yaml
+  # UIStack:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     Parameters:
+  #       s3Bucket: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+  #     TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/ui-stack-template.yaml
   VectorStoreStack:
     Type: AWS::CloudFormation::Stack
     Properties:
