@@ -77,12 +77,19 @@ stack = None
 for existing_stack in stacks:
     stack_name = existing_stack['StackName']
     print(f"Checking if stack name {stack_name} matches {input_values['stack_name']}")
-    if stack_name.startswith(input_values['stack_name']) and \
+    if existing_stack['StackStatus'] == 'ROLLBACK_COMPLETE' and \
+        stack_name.startswith(input_values['stack_name']):
+        print(existing_stack)
+        cfn.delete_stack(
+            StackName=stack_name
+        )
+    elif stack_name.startswith(input_values['stack_name']) and \
         not existing_stack['StackStatus'].startswith('DELETE'):
         print(f"Found existing stack {stack}")
         stack = existing_stack
 
 print(f"Stack is now {stack}")
+
 if not stack:
     print("Creating stack.")
     stack_response = cfn.create_stack(

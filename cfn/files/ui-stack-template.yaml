@@ -225,8 +225,8 @@ Resources:
                     - ""
                     - - "arn:"
                       - Ref: AWS::Partition
-                      - :s3::aws:bucket/
-                      - !Ref s3Bucket
+                      - ":s3:::"
+                      - Ref: s3Bucket
                       - "/*"
                 Effect: Allow
           PolicyName: codebuild-ecr-perms
