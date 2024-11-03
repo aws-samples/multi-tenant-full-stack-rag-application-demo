@@ -89,9 +89,6 @@ def process_yaml_file(filename):
                 if f"Fn::Sub: {BUCKET_TO_REPLACE}" in line:
                     line = line.replace(f"Fn::Sub: {BUCKET_TO_REPLACE}", input_values['output_bucket'])
                     output_content += line + "\n"
-                elif 'TemplateURL' in line:
-                    line = line.replace(BUCKET_TO_REPLACE, input_values['output_bucket'])
-                    output_content += line + "\n"
                 else:
                     line = line.replace(BUCKET_TO_REPLACE, input_values['output_bucket'])
                     output_content += line + "\n"
@@ -118,6 +115,8 @@ def process_yaml_file(filename):
                         output_content += f"            - {new_key}\n"
                         i += 1
                     i -= 1
+                else:
+                    output_content += line + "\n"
                 found_bucket = False
                 # now copy the file to the output bucket and target s3 key
             else:

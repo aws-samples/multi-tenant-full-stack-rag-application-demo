@@ -54,6 +54,7 @@ mv ui.zip files/ && \
 cp mtfsrad-stack.yaml files/ && \
 find ./files -name '*.yaml' | python upload_stack_files_on_export.py && \
 git add ../cfn && \
+git add ../install* && \
 git commit -m 'cloudformation export' && \
 git push && \
 echo "Export complete."
