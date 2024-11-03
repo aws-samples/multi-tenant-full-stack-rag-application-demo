@@ -36,7 +36,6 @@ export BUILD_UID=$UID && \
 cdk synth mtfsrad-f-dev | sed '/CDKMetadata/,$d' > ../cfn/files/ui-stack-template.yaml && \
 cd ../cfn && \
 # create zip file for Codebuild docker build requirements for ingestion and UI
-rm files/ingestion_provider.zip && \
 zip -r ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_application/ingestion_provider/loaders/*.py && \
 zip -r ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_application/ingestion_provider/loaders/*.txt && \
 zip -r ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_application/ingestion_provider/splitters/*.py && \
@@ -45,7 +44,6 @@ zip ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_applicatio
 zip ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_application/ingestion_provider/*.txt && \
 zip ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_application/ingestion_provider/Dockerfile.vector_ingestion_provider && \
 mv ingestion_provider.zip files/ && \
-rm files/ui.zip && \
 zip -r ui.zip ../frontend/src/multi_tenant_full_stack_rag_application/ui/src && \
 zip ui.zip ../frontend/src/multi_tenant_full_stack_rag_application/ui/aws-exports.js.template && \
 zip ui.zip ../frontend/src/multi_tenant_full_stack_rag_application/ui/build_website_deployment.sh && \
