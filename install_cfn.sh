@@ -1,5 +1,8 @@
 #!/bin/bash
+<<<<<<< HEAD
 
+=======
+>>>>>>> 662d02bb6449ea1eb47463e5c65a79bfa402dd78
 echo Started install at `date`
 export SECONDS=0
 export SECONDS=0

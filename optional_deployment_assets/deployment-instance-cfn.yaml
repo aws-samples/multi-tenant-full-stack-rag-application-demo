@@ -1,0 +1,121 @@
+Mappings:
+  RegionAmiMap:
+    ap-northeast-1:
+      InstanceType: t3.medium
+      AMI: ami-0091f05e4b8ee6709
+    Ap-south-1: 
+      InstanceType: t3.medium
+      AMI: ami-0a4408457f9a03be3
+    ap-southeast-1:
+      InstanceType: t3.medium
+      AMI: ami-0a6b545f62129c495
+    ca-central-1:
+      InstanceType: t3.medium
+      AMI: ami-0dcab815e6ee910aa
+    eu-central-1:
+      InstanceType: t3.medium
+      AMI: ami-00060fac2f8c42d30
+    eu-west-1:
+      InstanceType: t3.medium
+      AMI: ami-0a2202cf4c36161a1
+    eu-west-2:
+      InstanceType: t3.medium
+      AMI: ami-05ea2888c91c97ca7
+    eu-west-3:
+      InstanceType: t3.medium
+      AMI: ami-015875403620174eb
+    sa-east-1:
+      InstanceType: t3.medium
+      AMI: ami-09523541dfaa61c85
+    us-east-1:
+      InstanceType: t3.medium
+      AMI: ami-0ae8f15ae66fe8cda
+    us-east-2:
+      InstanceType: t3.medium
+      AMI: ami-05c3dc660cb6907f0
+    us-west-2:
+      InstanceType: t3.medium
+      AMI: ami-0a38c1c38a15fed74
+Resources:
+  CdkDeploymentInstance:
+    Type: AWS::EC2::Instance
+    Metadata: 
+      AWS::CloudFormation::Init: 
+        configSets: 
+          default: 
+            - "config1"
+            - "config2"
+        config1: 
+          packages:
+            yum: 
+              python3-pip: []
+              docker: []
+              git: []
+          services:
+            systemd:
+              docker:
+                enabled: "true"
+                ensureRunning: "true"
+        config2:
+          commands:
+            02.createCdkUserGroup:
+              command: groupadd cdkuser
+            03.createCdkUser:
+              command: useradd -g cdkuser -G docker -d /home/cdkuser cdkuser
+            04.installNvm:
+              command: 'su - cdkuser bash -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash"'
+              cwd: "/home/cdkuser"
+            05.setNvm:
+              command: 'su - cdkuser bash -c "echo \"nvm install 20\" >> /home/cdkuser/.bash_profile"'
+            06.installCdk:
+              command: 'su - cdkuser bash -c "echo \"npm install -g aws-cdk\" >> /home/cdkuser/.bash_profile"'
+            07.cloneRepo:
+              command: "git clone https://github.com/aws-samples/multi-tenant-full-stack-rag-application-demo.git"
+              cwd: "/home/cdkuser"
+            08.setDefaultDir:
+              command: 'su - cdkuser bash -c "echo \\"cd /home/cdkuser/multi-tenant-full-stack-rag-application-demo\\" >> /home/cdkuser/.bash_profile"'
+            09.userInstructions1:
+              command: 'su - cdkuser bash -c "echo \\"Now you can copy your aws cli credentials into environment variables in the shell:\\" >> /home/cdkuser/.bash_profile"'
+            09.userInstructions2:
+              command: 'su - cdkuser bash -c "echo \\"Then install by typing ./install.sh, optionally with \\-y to say yes on all sub-stacks so it proceeds with installation rather than stopping a few times during installation to ask about creating IAM roles.\\" >> /home/cdkuser/.bash_profile"'
+            10.chownHomedir:
+              command: chown -R cdkuser:cdkuser /home/cdkuser
+              cwd: "/home/cdkuser"
+            11.switchUser:
+              command: 'su - ssm-user bash -c "echo \\"sudo su - cdkuser\\" >> /home/ssm-user/.bash_profile"'
+            
+        
+    Properties:
+      SubnetId: subnet-04ec80d5e4250b9e2
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            DeleteOnTermination: true
+            VolumeType: gp3
+            VolumeSize: 20
+      ImageId: !FindInMap [RegionAmiMap, !Ref "AWS::Region", AMI]
+      InstanceType: !FindInMap [RegionAmiMap, !Ref "AWS::Region", InstanceType]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #!/bin/bash -xe
+            - ''
+            - yum install -y aws-cfn-bootstrap 
+            - "\n"
+            - '/opt/aws/bin/cfn-init -v --stack '
+            - !Ref 'AWS::StackName'
+            - '         --resource CdkDeploymentInstance '
+            - '         --configsets default '
+            - '         --region '
+            - !Ref 'AWS::Region'
+            - |+
+
+            - |
+              # Signal the status from cfn-init
+            - '/opt/aws/bin/cfn-signal -e $? --stack '
+            - !Ref 'AWS::StackName'
+            - '         --resource CdkDeploymentInstance '
+            - '         --region '
+            - !Ref 'AWS::Region'
+            - |+

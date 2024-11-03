@@ -68,7 +68,6 @@ def process_yaml_file(filename):
                 line = line.replace('mtfsrad-f-dev', input_values['stack_name'])
             if 'mtfsradfdev' in line:
                 line = line.replace('mtfsradfdev', input_values['stack_name'].replace('-', ''))
-
             if '{region}' in line:
                 line = line.replace('{region}', REGION)
             
