@@ -89,6 +89,9 @@ def process_yaml_file(filename):
                 if f"Fn::Sub: {BUCKET_TO_REPLACE}" in line:
                     line = line.replace(f"Fn::Sub: {BUCKET_TO_REPLACE}", input_values['output_bucket'])
                     output_content += line + "\n"
+                elif 'TemplateURL' in line:
+                    line = line.replace(BUCKET_TO_REPLACE, input_values['output_bucket'])
+                    output_content += line + "\n"
                 else:
                     line = line.replace(BUCKET_TO_REPLACE, input_values['output_bucket'])
                     output_content += line + "\n"
