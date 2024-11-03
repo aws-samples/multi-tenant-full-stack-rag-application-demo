@@ -74,7 +74,7 @@ Resources:
               - dynamodb:UpdateItem
             Effect: Allow
             Resource:
-              - Ref: IngestionStatusTableArn
+              - !ImportValue IngestionStatusTableArn
               - Ref: AWS::NoValue
           - Action: lambda:InvokeFunction
             Effect: Allow
