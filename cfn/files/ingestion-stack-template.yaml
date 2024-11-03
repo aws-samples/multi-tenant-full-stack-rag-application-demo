@@ -3,6 +3,13 @@ Outputs:
     Export:
       Name: IngestionStatusTableName
     Value: !Ref DdbTableIngestionStatusTable32816510
+  IngestionStatusTableArnOutput:
+    Export:
+      Name: IngestionStatusTableArn
+    Value: 
+      Fn::GetAttr:
+        - DdbTableIngestionStatusTable32816510
+        - Arn
   IngestionStatusProviderFunctionArnOutput:
     Export:
       Name: IngestionStatusProviderFunctionArn
