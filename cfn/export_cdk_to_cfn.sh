@@ -1,9 +1,6 @@
 #!/bin/bash
-<<<<<<< HEAD
 echo "Don't accidentally run this until you save the old cfn templates hand-edited."
 exit 0
-=======
->>>>>>> 662d02bb6449ea1eb47463e5c65a79bfa402dd78
 
 if [ ! -d ../cfn/files ]
 then

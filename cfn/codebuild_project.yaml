@@ -1,13 +1,14 @@
 Parameters:
-  Region: 
+  region: 
     Type: String
-  CodeBuildProjectName:
+  codeBuildProjectName:
     Type: String
-  S3Bucket:
+  s3Bucket:
     Type: String
-  S3Path: 
+  s3Path: 
     Type: String
-
+  ecrRepoUri: 
+    Type: String
 Resources:
   CodeBuildRole:
     Type: AWS::IAM::Role
@@ -47,8 +48,14 @@ Resources:
         ComputeType: BUILD_GENERAL1_SMALL
         EnvironmentVariables:
           - Name: AWS_DEFAULT_REGION
-            Value: !Ref Region
-      Name: !Ref CodeBuildProjectName
+            Value: !Ref region
+          - Name: AWS_ACCOUNT_ID
+            Value: !Select [0, !Split ['.', !Ref ecrRepoUri]]
+          - Name: IMAGE_REPO_NAME
+            Value: !Select [1, !Split ['/', !Ref ecrRepoUri]]
+          - Name: IMAGE_TAG
+            Value: latest
+      Name: !Ref codeBuildProjectName
       ResourceAccessRole: !Ref CodeBuildRole
       ServiceRole: !Ref CodeBuildRole
       Source: 
@@ -58,8 +65,8 @@ Resources:
             - ""
             -
               - "s3://"
-              - !Ref S3Bucket
+              - !Ref s3Bucket
               - / 
-              - !Ref S3Path
+              - !Ref s3Path
       TimeoutInMinutes: 60
       Visibility: PRIVATE

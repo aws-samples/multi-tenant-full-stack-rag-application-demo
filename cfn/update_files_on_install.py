@@ -20,8 +20,8 @@ print(f"Input values are: {input_values}")
 
 BUCKET_TO_REPLACE = 'cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}'
 REGION = os.getenv('AWS_REGION')
-ECR_REPO_TO_REPLACE = 'cdk-hnb659fds-container-assets-${AWS::AccountId}-${AWS::Region}'
-
+# ECR_REPO_TO_REPLACE = 'cdk-hnb659fds-container-assets-${AWS::AccountId}-${AWS::Region}'
+ECR_REPO_TO_REPLACE = '${AWS::AccountId}.dkr.ecr.${AWS::Region}.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-${AWS::AccountId}-${AWS::Region}'
 s3 = boto3.client('s3', region_name=REGION)
 ecr = boto3.client('ecr', region_name=REGION)
 
@@ -75,7 +75,8 @@ def process_yaml_file(filename):
                 line = line.replace('{output_prefix}', input_values['output_prefix'])
                 
             if ECR_REPO_TO_REPLACE in line:
-                line = line.replace(ECR_REPO_TO_REPLACE, repo['repositoryUri'])
+                line = line.split('Sub: ')[0] + 'Sub: ' + repo['repositoryUri'] + "\n"
+                # line = line.replace(ECR_REPO_TO_REPLACE, repo['repositoryUri'])
                 output_content += line + "\n"
                 found_bucket = False
 

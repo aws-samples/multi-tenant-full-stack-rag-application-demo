@@ -20,13 +20,32 @@ Parameters:
     Default: Verification code for multi-tenant, full-stack RAG application demo
     Description: Set the email subject for sign up verification
     Type: String
+  s3AssetsBucket:
+    Description: the bucket holding the ingestion Docker zip and the UI zip.
+    Type: String
+  ingestionDockerZipPath: 
+    Description: S3 path to a zip file with the files needed to build the docker image for the vector ingestion provider.
+    Type: String
+  uiDockerZipPath: 
+    Description: S3 path to a zip file with the files needed to build the frontend UI.
+    Type: String
 Resources:
+  IngestionProviderImageBuilder:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        region: {region}
+        codeBuildProjectName: ingestionImageBuilder
+        s3Bucket: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+        s3Path: {output_prefix}/ingestion_provider.zip
+        ecrRepoUri: 'cdk-hnb659fds-container-assets-${AWS::AccountId}-${AWS::Region}'
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/codebuild_project.yaml
   VpcStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       # Parameters:
       #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/vpc-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/vpc-stack-template.yaml
   AuthStack:
     Type: AWS::CloudFormation::Stack 
     Properties:
@@ -36,70 +55,70 @@ Resources:
         removalPolicy: !Ref removalPolicy
         signUpEmailBody: !Ref signUpEmailBody
         signUpEmailSubject: !Ref signUpEmailSubject
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/auth-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/auth-stack-template.yaml
   BedrockStack:  
     Type: AWS::CloudFormation::Stack
     Properties:
       # Parameters:
       #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/bedrock-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/bedrock-stack-template.yaml
   DocCollectionsStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       # Parameters:
       #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/doc-collections-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/doc-collections-stack-template.yaml
   EmbeddingsStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       # Parameters:
       #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/embeddings-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/embeddings-stack-template.yaml
   EnrichmentPipelinesStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       # Parameters:
       #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/enrichment-pipelines-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/enrichment-pipelines-stack-template.yaml
   GenerationHandlerStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       # Parameters:
       #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/generation-handler-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/generation-handler-stack-template.yaml
   GraphStoreStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       # Parameters:
       #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/graph-store-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/graph-store-stack-template.yaml
   IngestionStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      # Parameters:
-      #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/ingestion-stack-template.yaml
+      Parameters:
+        ecrRepoUri: 'cdk-hnb659fds-container-assets-${AWS::AccountId}-${AWS::Region}'
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/ingestion-stack-template.yaml
   PromptTemplatesStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       # Parameters:
       #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/prompt-templates-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/prompt-templates-stack-template.yaml
   UIStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       # Parameters:
       #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/ui-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/ui-stack-template.yaml
   VectorStoreStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       # Parameters:
       #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/vector-store-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/vector-store-stack-template.yaml
   FinalStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       # Parameters:
       #   EnvironmentName: dev
-      TemplateURL: https://davetbo-genai-demos.s3.us-west-2.amazonaws.com/mtfsrad-templates/mtfsrad-final-stack-template.yaml
+      TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/mtfsrad-final-stack-template.yaml

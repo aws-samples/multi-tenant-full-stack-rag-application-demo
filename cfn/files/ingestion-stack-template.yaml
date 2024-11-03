@@ -1,3 +1,6 @@
+Parameters:
+  ecrRepoUri: 
+    Type: String
 Resources:
   IngestionBucket4CBA59AA:
     Type: AWS::S3::Bucket
