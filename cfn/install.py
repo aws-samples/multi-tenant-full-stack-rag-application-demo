@@ -54,7 +54,19 @@ params = [
     {
         'ParameterKey': 'signUpEmailSubject',
         'ParameterValue': input_values['signup_email_subject']
-    } 
+    },
+    {
+        'ParameterKey': 's3AssetsBucket',
+        'ParameterValue': input_values['output_bucket']
+    },
+    {
+        'ParameterKey': 'ingestionDockerZipPath',
+        'ParameterValue': f"https://{input_values['output_bucket']}.s3.{region}.amazonaws.com/{input_values['output_prefix']}/ingestion_provider.zip"
+    },
+    {
+        'ParameterKey': 'uiDockerZipPath',
+        'ParameterValue': f"https://{input_values['output_bucket']}.s3.{region}.amazonaws.com/{input_values['output_prefix']}/ui.zip"
+    }
 ]
 print(f"Params are {params} ")
 template_url = f"https://{input_values['output_bucket']}.s3.{region}.amazonaws.com/{input_values['output_prefix']}/mtfsrad-stack.yaml"
