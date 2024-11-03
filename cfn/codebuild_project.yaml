@@ -33,6 +33,16 @@ Resources:
                   - 'ecr:UploadLayerPart'
                 Resource: '*'
                 Effect: Allow
+              - Action: 
+                  - 's3:GetObject'
+                Resource: 
+                  - Fn::Join:
+                    - ""
+                    - - "arn:"
+                      - Ref: AWS::Partition
+                      - :s3::aws:bucket/
+                      - !Ref s3Bucket
+                Effect: Allow
           PolicyName: codebuild-ecr-perms
 
   CodeBuildProject:
@@ -63,8 +73,7 @@ Resources:
         Location: 
           !Join
             - ""
-            -
-              - "s3://"
+            - - "s3://"
               - !Ref s3Bucket
               - / 
               - !Ref s3Path

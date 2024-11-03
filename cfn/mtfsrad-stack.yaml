@@ -107,8 +107,8 @@ Resources:
   UIStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      # Parameters:
-      #   EnvironmentName: dev
+      Parameters:
+        s3Bucket: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/ui-stack-template.yaml
   VectorStoreStack:
     Type: AWS::CloudFormation::Stack

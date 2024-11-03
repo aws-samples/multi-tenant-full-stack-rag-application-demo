@@ -1,3 +1,6 @@
+Parameters:
+  s3Bucket:
+    Type: String
 Resources:
   UiPrivateSiteDeploymentsitebucket1E9AF72D:
     Type: AWS::S3::Bucket
@@ -211,6 +214,22 @@ Resources:
             - - "arn:"
               - Ref: AWS::Partition
               - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action: 
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Resource: 
+                  - Fn::Join:
+                    - ""
+                    - - "arn:"
+                      - Ref: AWS::Partition
+                      - :s3::aws:bucket/
+                      - !Ref s3Bucket
+                      - "/*"
+                Effect: Allow
+          PolicyName: codebuild-ecr-perms
     Metadata:
       aws:cdk:path: mtfsrad-f-dev/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/ServiceRole/Resource
   CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF:
