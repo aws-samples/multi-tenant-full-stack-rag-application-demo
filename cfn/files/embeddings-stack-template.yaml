@@ -1,3 +1,12 @@
+Outputs:
+  EmbeddingsProviderFunctionArnOutput:
+    Export:
+      Name: EmbeddingsProviderFunctionArn
+    Value:
+      Fn::GetAtt:
+        - EmbeddingsProviderFunction749E762A
+        - Arn
+
 Resources:
   EmbeddingsProviderFunctionServiceRoleBF095A5C:
     Type: AWS::IAM::Role
@@ -33,11 +42,11 @@ Resources:
           - Action: lambda:InvokeFunction
             Effect: Allow
             Resource:
-              - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoAuthProviderFunction314FA51DArnCBC57E5D
-              - Fn::ImportValue: mtfsradbdevBedrockProviderStack1AABA887:ExportsOutputFnGetAttBedrockProviderFunction99614D39ArnA074F27C
+              - !ImportValue AuthProviderFunctionArn
+              - !ImportValue BedrockProviderFunctionArn
               - Fn::Join:
                   - ""
-                  - - Fn::ImportValue: mtfsradbdevBedrockProviderStack1AABA887:ExportsOutputFnGetAttBedrockProviderFunction99614D39ArnA074F27C
+                  - - BedrockProviderFunctionArn
                     - :*
           - Action:
               - ssm:GetParameter
@@ -138,6 +147,6 @@ Resources:
                     - 5
                     - Fn::Split:
                         - ":"
-                        - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoIdentityPoolAuthenticatedRole7703D556Arn606C0A72
+                        - !ImportValue CognitoAuthenticatedRoleArn
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/EmbeddingsProviderStack/CognitoAuthRoleRef/PolicymtfsradbdevEmbeddingsProviderStackCognitoAuthRoleRefEF8CD798/Resource

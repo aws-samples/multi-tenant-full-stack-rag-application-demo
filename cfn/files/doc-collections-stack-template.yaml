@@ -1,3 +1,11 @@
+Outputs:
+  DocCollectionsHandlerFunctionArnOutput:
+    Export:
+      Name: DocCollectionsHandlerFunctionArn
+    Value: 
+      Fn::GetAtt:
+        - DocCollectionsHandlerFunctionB290B79C
+        - Arn
 Resources:
   DocCollectionsTable2BF99462F:
     Type: AWS::DynamoDB::Table
@@ -100,7 +108,7 @@ Resources:
           - Action: sts:AssumeRole
             Effect: Allow
             Resource:
-              Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoIdentityPoolAuthenticatedRole7703D556Arn606C0A72
+              !ImportValue CognitoAuthenticatedRoleArn
         Version: "2012-10-17"
       PolicyName: DocCollectionsHandlerFunctionServiceRoleDefaultPolicy0DDCBC82
       Roles:
@@ -131,10 +139,10 @@ Resources:
       Timeout: 60
       VpcConfig:
         SecurityGroupIds:
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputFnGetAttAppSecurityGroupC396D536GroupId4ECD26A6
+          - !ImportValue AppSecurityGroupId
         SubnetIds:
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet1SubnetEBF5BB657298517B
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet2Subnet8AADF05A8CCED4C9
+          - !ImportValue PrivateIsolatedSubnetId1
+          - !ImportValue PrivateIsolatedSubnetId2
     DependsOn:
       - DocCollectionsHandlerFunctionServiceRoleDefaultPolicy0DDCBC82
       - DocCollectionsHandlerFunctionServiceRoleAA001F3A
@@ -243,14 +251,14 @@ Resources:
         - $request.header.Authorization
       JwtConfiguration:
         Audience:
-          - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackUserPoolClient46E47A4DRefBE7BAD85
+          - !ImportValue CognitoUserPoolClientId
         Issuer:
           Fn::Join:
             - ""
             - - https://cognito-idp.
               - Ref: AWS::Region
               - .amazonaws.com/
-              - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackUserPool42FCA09FRef3D901ACD
+              - !ImportValue CognitoUserPoolId
       Name: DocCollectionsHttpAuthorizer
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/DocumentCollectionsHandlerStack/DocCollectionsHttpApi/DocCollectionsHttpAuthorizer/Resource
@@ -584,6 +592,6 @@ Resources:
                     - 5
                     - Fn::Split:
                         - ":"
-                        - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoIdentityPoolAuthenticatedRole7703D556Arn606C0A72
+                        - !ImportValue CognitoAuthenticatedRoleArn
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/DocumentCollectionsHandlerStack/CognitoAuthRoleRef/PolicymtfsradbdevDocumentCollectionsHandlerStackCognitoAuthRoleRefC442369D/Resource

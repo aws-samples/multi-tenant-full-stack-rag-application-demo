@@ -1,19 +1,23 @@
 Parameters:
   allowedEmailDomains:
     Type: String
-  appName: 
-    Type: String
-  removalPolicy: 
-    Type: String
   signUpEmailBody:
     Type: String
   signUpEmailSubject:
     Type: String 
+  stackName:
+    Type: String
 
 Resources:
   CognitoStackNestedStackCognitoStackNestedStackResource95DF2EBA:
     Type: AWS::CloudFormation::Stack
     Properties:
+      Parameters: 
+        allowedEmailDomains: !Ref allowedEmailDomains
+        appSecurityGroupId: !ImportValue AppSecurityGroupId
+        privateEgressSubnetId1: !ImportValue PrivateEgressSubnetId1
+        privateEgressSubnetId2: !ImportValue PrivateEgressSubnetId2
+        stackName: !Ref stackName
       TemplateURL:
         Fn::Join:
           - ""

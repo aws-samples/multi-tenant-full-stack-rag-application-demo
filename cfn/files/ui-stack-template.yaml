@@ -1,6 +1,3 @@
-Parameters:
-  s3Bucket:
-    Type: String
 Resources:
   UiPrivateSiteDeploymentsitebucket1E9AF72D:
     Type: AWS::S3::Bucket
@@ -226,7 +223,7 @@ Resources:
                     - - "arn:"
                       - Ref: AWS::Partition
                       - ":s3:::"
-                      - Ref: s3Bucket
+                      - Ref: UiPrivateSiteDeploymentsitebucket1E9AF72D
                       - "/*"
                 Effect: Allow
           PolicyName: codebuild-ecr-perms

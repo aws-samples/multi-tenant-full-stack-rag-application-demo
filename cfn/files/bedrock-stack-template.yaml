@@ -1,3 +1,11 @@
+Outputs:
+  BedrockProviderFunctionArnOutput:
+    Export:
+      Name: BedrockProviderFunctionArn
+    Value: 
+      Fn::GetAtt:
+        - BedrockProviderFunction99614D39
+        - Arn
 Resources:
   BedrockProviderFunctionServiceRoleEA34841A:
     Type: AWS::IAM::Role
@@ -32,8 +40,7 @@ Resources:
             Resource: "*"
           - Action: lambda:InvokeFunction
             Effect: Allow
-            Resource:
-              Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoAuthProviderFunction314FA51DArnCBC57E5D
+            Resource: !ImportValue AuthProviderFunctionArn
           - Action:
               - ssm:GetParameter
               - ssm:GetParametersByPath
@@ -61,7 +68,7 @@ Resources:
           Description: Allow all outbound traffic by default
           IpProtocol: "-1"
       VpcId:
-        Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpc8378EB38272D6E3A
+        !ImportValue VpcId
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/BedrockProviderStack/BedrockProviderFunction/SecurityGroup/Resource
   BedrockProviderFunction99614D39:
@@ -90,8 +97,8 @@ Resources:
               - BedrockProviderFunctionSecurityGroup72A5B4FB
               - GroupId
         SubnetIds:
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet1SubnetEBF5BB657298517B
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet2Subnet8AADF05A8CCED4C9
+          - !ImportValue PrivateIsolatedSubnetId1
+          - !ImportValue PrivateIsolatedSubnetId2
     DependsOn:
       - BedrockProviderFunctionServiceRoleDefaultPolicyA2EB8301
       - BedrockProviderFunctionServiceRoleEA34841A
@@ -139,6 +146,6 @@ Resources:
                     - 5
                     - Fn::Split:
                         - ":"
-                        - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoIdentityPoolAuthenticatedRole7703D556Arn606C0A72
+                        - !ImportValue CognitoAuthenticatedRoleArn
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/BedrockProviderStack/CognitoAuthRoleRef/PolicymtfsradbdevBedrockProviderStackCognitoAuthRoleRefA521E112/Resource

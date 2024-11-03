@@ -1,3 +1,12 @@
+Outputs:
+  GraphStoreProviderFunctionArnOutput:
+    Export:
+      Name: GraphStoreProviderFunctionArn
+    Value: 
+      Fn::GetAtt:
+        - GraphStoreProviderFunctionE449DC25
+        - Arn
+  
 Resources:
   CognitoAuthRoleRefPolicymtfsradbdevGraphStoreProviderStackCognitoAuthRoleRef61A9C55F736B8C00:
     Type: AWS::IAM::Policy
@@ -27,7 +36,7 @@ Resources:
                     - 5
                     - Fn::Split:
                         - ":"
-                        - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoIdentityPoolAuthenticatedRole7703D556Arn606C0A72
+                        - !ImportValue CognitoAuthenticatedRoleArn
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/GraphStoreProviderStack/CognitoAuthRoleRef/PolicymtfsradbdevGraphStoreProviderStackCognitoAuthRoleRef61A9C55F/Resource
   GraphStoreProviderFunctionServiceRole068FDA4A:
@@ -73,7 +82,7 @@ Resources:
           - Action: lambda:InvokeFunction
             Effect: Allow
             Resource:
-              Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoAuthProviderFunction314FA51DArnCBC57E5D
+              !ImportValue AuthProviderFunctionArn
           - Action:
               - neptune-db:*
               - neptune-db:ReadDataViaQuery
@@ -123,10 +132,10 @@ Resources:
       Timeout: 60
       VpcConfig:
         SecurityGroupIds:
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputFnGetAttAppSecurityGroupC396D536GroupId4ECD26A6
+          - !ImportValue AppSecurityGroupId
         SubnetIds:
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet1SubnetEBF5BB657298517B
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet2Subnet8AADF05A8CCED4C9
+          - !ImportValue PrivateIsolatedSubnetId1
+          - !ImportValue PrivateIsolatedSubnetId2
     DependsOn:
       - GraphStoreProviderFunctionServiceRoleDefaultPolicyEEB86B6A
       - GraphStoreProviderFunctionServiceRole068FDA4A
@@ -151,8 +160,8 @@ Resources:
     Properties:
       DBSubnetGroupDescription: Subnets for GraphDatabase database
       SubnetIds:
-        - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet1SubnetEBF5BB657298517B
-        - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet2Subnet8AADF05A8CCED4C9
+        - !ImportValue PrivateIsolatedSubnetId1
+        - !ImportValue PrivateIsolatedSubnetId2
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/GraphStoreProviderStack/NeptuneStack/GraphDatabase/Subnets/Resource
   NeptuneStackGraphDatabase6D5299C6:
@@ -163,7 +172,7 @@ Resources:
       IamAuthEnabled: true
       StorageEncrypted: true
       VpcSecurityGroupIds:
-        - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputFnGetAttAppSecurityGroupC396D536GroupId4ECD26A6
+        - !ImportValue AppSecurityGroupId
     UpdateReplacePolicy: Delete
     DeletionPolicy: Delete
     Metadata:

@@ -1,3 +1,39 @@
+Outputs: 
+  VpcIdOutput:
+    Export:
+      Name: VpcId
+    Value: !Ref Vpc8378EB38
+  AppSecurityGroupIdOutput:
+    Export:
+      Name: AppSecurityGroupId
+    Value: 
+      Fn::GetAtt:
+        - AppSecurityGroupC396D536
+        - GroupId
+  PrivateEgressSubnetId1Output:
+    Export:
+      Name: PrivateEgressSubnetId1
+    Value: !Ref VpcprivatewithegressSubnet1Subnet6268702B
+  PrivateEgressSubnetId2Output:
+    Export:
+      Name: PrivateEgressSubnetId2
+    Value: !Ref VpcprivatewithegressSubnet2Subnet3088D8AE
+  PrivateIsolatedSubnetId1Output:
+    Export:
+      Name: PrivateIsolatedSubnetId1
+    Value: !Ref VpcdataisolatedSubnet1SubnetEBF5BB65
+  PrivateIsolatedSubnetId2Output:
+    Export:
+      Name: PrivateIsolatedSubnetId2
+    Value: !Ref VpcdataisolatedSubnet2Subnet8AADF05A
+  PublicIngressSubnetId1Output:
+    Export:
+      Name: PublicIngressSubnetId1
+    Value: !Ref VpcingressSubnet1Subnet059F22C6
+  PublicIngressSubnetId2Output:
+    Export:
+      Name: PublicIngressSubnetId2
+    Value: !Ref VpcingressSubnet2SubnetF175D754
 Resources:
   Vpc8378EB38:
     Type: AWS::EC2::VPC
@@ -353,6 +389,8 @@ Resources:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       InternetGatewayId:
+
+
         Ref: VpcIGWD7BA715C
       VpcId:
         Ref: Vpc8378EB38

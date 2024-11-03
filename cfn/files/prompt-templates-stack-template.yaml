@@ -1,3 +1,11 @@
+Outputs:
+  PromptTemplateHandlerFunctionArnOutput:
+    Export:
+      Name: PromptTemplateHandlerFunctionArn
+    Value: 
+      Fn::GetAtt:
+        - PromptTemplateHandlerFunction2A6BF5FF
+        - Arn
 Resources:
   PTCognitoAuthRolePolicymtfsradbdevPromptTemplateHandlerStackPTCognitoAuthRole6E2F3592C9501BC7:
     Type: AWS::IAM::Policy
@@ -40,7 +48,7 @@ Resources:
                     - 5
                     - Fn::Split:
                         - ":"
-                        - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoIdentityPoolAuthenticatedRole7703D556Arn606C0A72
+                        - !ImportValue CognitoAuthenticatedRoleArn
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/PromptTemplateHandlerStack/PTCognitoAuthRole/PolicymtfsradbdevPromptTemplateHandlerStackPTCognitoAuthRole6E2F3592/Resource
   PromptTemplatesTableD62549A1:
@@ -139,7 +147,7 @@ Resources:
           - Action: lambda:InvokeFunction
             Effect: Allow
             Resource:
-              Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoAuthProviderFunction314FA51DArnCBC57E5D
+              !ImportValue AuthProviderFunctionArn
         Version: "2012-10-17"
       PolicyName: PromptTemplateHandlerFunctionServiceRoleDefaultPolicyA4BEE58B
       Roles:
@@ -155,7 +163,7 @@ Resources:
           Description: Allow all outbound traffic by default
           IpProtocol: "-1"
       VpcId:
-        Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpc8378EB38272D6E3A
+        !ImportValue VpcId
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/PromptTemplateHandlerStack/PromptTemplateHandlerFunction/SecurityGroup/Resource
   PromptTemplateHandlerFunction2A6BF5FF:
@@ -186,8 +194,8 @@ Resources:
               - PromptTemplateHandlerFunctionSecurityGroup8C913856
               - GroupId
         SubnetIds:
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet1SubnetEBF5BB657298517B
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet2Subnet8AADF05A8CCED4C9
+          - !ImportValue PrivateIsolatedSubnetId1
+          - !ImportValue PrivateIsolatedSubnetId2
     DependsOn:
       - PromptTemplateHandlerFunctionServiceRoleDefaultPolicyA4BEE58B
       - PromptTemplateHandlerFunctionServiceRole21920E21
@@ -296,14 +304,14 @@ Resources:
         - $request.header.Authorization
       JwtConfiguration:
         Audience:
-          - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackUserPoolClient46E47A4DRefBE7BAD85
+          - !ImportValue CognitoUserPoolClientId
         Issuer:
           Fn::Join:
             - ""
             - - https://cognito-idp.
               - Ref: AWS::Region
               - .amazonaws.com/
-              - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackUserPool42FCA09FRef3D901ACD
+              - !ImportValue CognitoUserPoolId
       Name: PromptTemplateHandlerAuthorizer
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/PromptTemplateHandlerStack/PromptTemplateHandlerHttpApi/PromptTemplateHandlerAuthorizer/Resource

@@ -1,6 +1,23 @@
-Parameters:
-  ecrRepoUri: 
-    Type: String
+Outputs:
+  IngestionStatusTableNameOutput:
+    Export:
+      Name: IngestionStatusTableName
+    Value: !Ref DdbTableIngestionStatusTable32816510
+  IngestionStatusProviderFunctionArnOutput:
+    Export:
+      Name: IngestionStatusProviderFunctionArn
+    Value:
+      Fn::GetAtt:
+        - IngestionStatusProviderFunctionE9E064BF
+        - Arn
+  IngestionStatusTableStreamArnOutput:
+    Export:
+      Name: IngestionStatusTableStreamArn
+    Value:
+      Fn::GetAtt:
+        - DdbTableIngestionStatusTable32816510
+        - StreamArn
+
 Resources:
   IngestionBucket4CBA59AA:
     Type: AWS::S3::Bucket
@@ -83,7 +100,7 @@ Resources:
           - Action: lambda:InvokeFunction
             Effect: Allow
             Resource:
-              Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoAuthProviderFunction314FA51DArnCBC57E5D
+              !ImportValue CognitoAuthProviderFunctionArn
           - Action:
               - dynamodb:BatchGetItem
               - dynamodb:BatchWriteItem
@@ -127,7 +144,7 @@ Resources:
           Description: Allow all outbound traffic by default
           IpProtocol: "-1"
       VpcId:
-        Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpc8378EB38272D6E3A
+        !ImportValue VpcId
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/IngestionProviderStack/IngestionStatusProviderFunction/SecurityGroup/Resource
   IngestionStatusProviderFunctionE9E064BF:
@@ -164,8 +181,8 @@ Resources:
               - IngestionStatusProviderFunctionSecurityGroupBEB94B8C
               - GroupId
         SubnetIds:
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet1SubnetEBF5BB657298517B
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet2Subnet8AADF05A8CCED4C9
+          - !ImportValue PrivateIsolatedSubnetId1
+          - !ImportValue PrivateIsolatedSubnetId2
     DependsOn:
       - IngestionStatusProviderFunctionServiceRoleDefaultPolicyAF322013
       - IngestionStatusProviderFunctionServiceRole4982D6C2
@@ -208,10 +225,10 @@ Resources:
               - Fn::GetAtt:
                   - IngestionStatusProviderFunctionE9E064BF
                   - Arn
-              - Fn::ImportValue: mtfsradbdevBedrockProviderStack1AABA887:ExportsOutputFnGetAttBedrockProviderFunction99614D39ArnA074F27C
-              - Fn::ImportValue: mtfsradbdevDocumentCollectionsHandlerStack7FE01056:ExportsOutputFnGetAttDocCollectionsHandlerFunctionB290B79CArn454F6B72
-              - Fn::ImportValue: mtfsradbdevEmbeddingsProviderStack3C343CED:ExportsOutputFnGetAttEmbeddingsProviderFunction749E762AArn0A103CE4
-              - Fn::ImportValue: mtfsradbdevVectorStoreProviderStackD15A38D1:portsOutputFnGetAttOpenSearchManagedStackNestedStackOpenSearchManagedStackNestedStackResource253201F9OutputsmtfsradbdevVectorStoreProviderStackOpenSearchManagedStackVectorStoreProviderFunction71969801Arn911E4BA2
+              - !ImportValue BedrockProviderFunctionArn
+              - !ImportValue DocCollectionsHandlerFunctionArn
+              - !ImportValue EmbeddingsProviderFunctionArn
+              - !ImportValue VectorStoreProviderFunctionArn
               - Fn::Join:
                   - ""
                   - - Fn::GetAtt:
@@ -220,19 +237,19 @@ Resources:
                     - :*
               - Fn::Join:
                   - ""
-                  - - Fn::ImportValue: mtfsradbdevBedrockProviderStack1AABA887:ExportsOutputFnGetAttBedrockProviderFunction99614D39ArnA074F27C
+                  - - !ImportValue BedrockProviderFunctionArn
                     - :*
               - Fn::Join:
                   - ""
-                  - - Fn::ImportValue: mtfsradbdevDocumentCollectionsHandlerStack7FE01056:ExportsOutputFnGetAttDocCollectionsHandlerFunctionB290B79CArn454F6B72
+                  - - !ImportValue DocCollectionsHandlerFunctionArn
                     - :*
               - Fn::Join:
                   - ""
-                  - - Fn::ImportValue: mtfsradbdevEmbeddingsProviderStack3C343CED:ExportsOutputFnGetAttEmbeddingsProviderFunction749E762AArn0A103CE4
+                  - - !ImportValue EmbeddingsProviderFunctionArn
                     - :*
               - Fn::Join:
                   - ""
-                  - - Fn::ImportValue: mtfsradbdevVectorStoreProviderStackD15A38D1:portsOutputFnGetAttOpenSearchManagedStackNestedStackOpenSearchManagedStackNestedStackResource253201F9OutputsmtfsradbdevVectorStoreProviderStackOpenSearchManagedStackVectorStoreProviderFunction71969801Arn911E4BA2
+                  - - !ImportValue VectorStoreProviderFunctionArn
                     - :*
           - Action:
               - ssm:GetParameter
@@ -300,14 +317,14 @@ Resources:
               - es:ESHttpPut
             Effect: Allow
             Resource:
-              - Fn::ImportValue: mtfsradbdevVectorStoreProviderStackD15A38D1:ExportsOutputFnGetAttOpenSearchManagedStackNestedStackOpenSearchManagedStackNestedStackResource253201F9OutputsmtfsradbdevVectorStoreProviderStackOpenSearchManagedStackOsDomain26DE6D31Arn48511E48
+              - !ImportValue OpenSearchDomainArn
               - Fn::Join:
                   - ""
-                  - - Fn::ImportValue: mtfsradbdevVectorStoreProviderStackD15A38D1:ExportsOutputFnGetAttOpenSearchManagedStackNestedStackOpenSearchManagedStackNestedStackResource253201F9OutputsmtfsradbdevVectorStoreProviderStackOpenSearchManagedStackOsDomain26DE6D31Arn48511E48
+                  - - !ImportValue OpenSearchDomainArn
                     - /*
               - Fn::Join:
                   - ""
-                  - - Fn::ImportValue: mtfsradbdevVectorStoreProviderStackD15A38D1:ExportsOutputFnGetAttOpenSearchManagedStackNestedStackOpenSearchManagedStackNestedStackResource253201F9OutputsmtfsradbdevVectorStoreProviderStackOpenSearchManagedStackOsDomain26DE6D31Arn48511E48
+                  - - !ImportValue OpenSearchDomainArn
                     - /*/*
         Version: "2012-10-17"
       PolicyName: VectorIngestionFunctionServiceRoleDefaultPolicy1455DD67
@@ -344,10 +361,10 @@ Resources:
       Timeout: 900
       VpcConfig:
         SecurityGroupIds:
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputFnGetAttAppSecurityGroupC396D536GroupId4ECD26A6
+          - !ImportValue AppSecurityGroupId
         SubnetIds:
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet1SubnetEBF5BB657298517B
-          - Fn::ImportValue: mtfsradbdevVpc39114410:ExportsOutputRefVpcdataisolatedSubnet2Subnet8AADF05A8CCED4C9
+          - !ImportValue PrivateIsolatedSubnetId1
+          - !ImportValue PrivateIsolatedSubnetId2
     DependsOn:
       - VectorIngestionFunctionServiceRoleDefaultPolicy1455DD67
       - VectorIngestionFunctionServiceRoleCCAA25E8
@@ -395,7 +412,7 @@ Resources:
                     - 5
                     - Fn::Split:
                         - ":"
-                        - Fn::ImportValue: mtfsradbdevAuthProviderStackCCE112F5:ExportsOutputFnGetAttCognitoStackNestedStackCognitoStackNestedStackResource95DF2EBAOutputsmtfsradbdevAuthProviderStackCognitoStackCognitoIdentityPoolAuthenticatedRole7703D556Arn606C0A72
+                        - !ImportValue CognitoAuthenticatedRoleArn
     Metadata:
       aws:cdk:path: mtfsrad-b-dev/IngestionProviderStack/CognitoAuthDocBucketPolicy/Resource
   IngestionQueueIngestionQueueDLQ72DA3DFE:
