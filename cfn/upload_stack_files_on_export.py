@@ -47,45 +47,49 @@ def process_file(filename):
     global extra_files_to_process
 
     file_manifest.append(f"files/{filename.split('/')[-1]}")
-    with open(filename, 'r') as f:
-        lines = f.readlines()
-    
-    found_bucket = False
-    i = 0
+    if not filename.endswith('.zip'):
+        with open(filename, 'r') as f:
+            lines = f.readlines()
+        
+        found_bucket = False
+        i = 0
 
-    while i < len(lines):
-        line = lines[i]
-        if BUCKET_TO_FIND in line:
-            found_bucket = True
-        elif found_bucket ==True:
-            # the next line after finding the bucket line should land here.
-            old_s3_keys = []
-            if 'S3Key: ' in line:
-                old_s3_keys.append(line.split('S3Key: ')[1].strip())
-            elif '- /' in line:
-                new_key = line.replace('- /', '').strip()
-                if new_key != '*':
-                    old_s3_keys.append(new_key)
-            elif 'SourceObjectKeys:' in line:
-                i += 1
-                while lines[i].startswith('- '):
-                    old_s3_keys.append(lines[i].replace('- ', '').strip())
+        while i < len(lines):
+            line = lines[i]
+            if BUCKET_TO_FIND in line:
+                found_bucket = True
+            elif found_bucket ==True:
+                # the next line after finding the bucket line should land here.
+                old_s3_keys = []
+                if 'S3Key: ' in line:
+                    old_s3_keys.append(line.split('S3Key: ')[1].strip())
+                elif '- /' in line:
+                    new_key = line.replace('- /', '').strip()
+                    if new_key != '*':
+                        old_s3_keys.append(new_key)
+                elif 'SourceObjectKeys:' in line:
                     i += 1
-                i -= 1
-                
-            # now copy the file to the output bucket and target s3 key
-            for key in old_s3_keys:
-                print(f"found resource to download: {key} in file {filename}. Downloading...")
-                download_file(key)
-                # set it back until it finds the next one
-            found_bucket = False 
-        i += 1
-    
+                    while lines[i].startswith('- '):
+                        old_s3_keys.append(lines[i].replace('- ', '').strip())
+                        i += 1
+                    i -= 1
+                    
+                # now copy the file to the output bucket and target s3 key
+                for key in old_s3_keys:
+                    print(f"found resource to download: {key} in file {filename}. Downloading...")
+                    download_file(key)
+                    # set it back until it finds the next one
+                found_bucket = False 
+            i += 1
+            
+        
 
 
 for filename in sys.stdin:
     filename = filename.strip().replace(':', '')
     print("\n\nGOT FILE {}\n\n".format(filename))
+    if filename == './files':
+        continue
     process_file(filename)
 
 for filename in extra_files_to_process:

@@ -68,7 +68,7 @@ def process_yaml_file(filename):
                 line = line.replace('mtfsrad-f-dev', input_values['stack_name'])
             if 'mtfsradfdev' in line:
                 line = line.replace('mtfsradfdev', input_values['stack_name'].replace('-', ''))
-                
+
             if '{region}' in line:
                 line = line.replace('{region}', REGION)
             
@@ -80,6 +80,10 @@ def process_yaml_file(filename):
                 output_content += line + "\n"
                 found_bucket = False
 
+            elif 'ALLOWED_EMAIL_DOMAINS: ' in line:
+                line = line.replace('amazon.com', input_values['allowed_email_domains'])
+                output_content += line + "\n"
+                
             elif BUCKET_TO_REPLACE in line:
                 found_bucket = True
                 if f"Fn::Sub: {BUCKET_TO_REPLACE}" in line:

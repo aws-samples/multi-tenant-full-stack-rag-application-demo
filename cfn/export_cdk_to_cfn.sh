@@ -1,4 +1,6 @@
 #!/bin/bash
+echo "Don't accidentally run this until you save the old cfn templates hand-edited."
+exit 0
 
 if [ ! -d ../cfn/files ]
 then
@@ -30,6 +32,25 @@ cd ../frontend && \
 export BUILD_UID=$UID && \
 cdk synth mtfsrad-f-dev | sed '/CDKMetadata/,$d' > ../cfn/files/ui-stack-template.yaml && \
 cd ../cfn && \
+# create zip file for Codebuild docker build requirements for ingestion and UI
+zip -r ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_application/ingestion_provider/loaders && \
+zip -r ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_application/ingestion_provider/splitters && \
+zip ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_application/ingestion_provider/vector_ingestion*.py && \
+zip ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_application/ingestion_provider/ingestion_status.py && \
+zip ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_application/ingestion_provider/*.txt && \
+zip ingestion_provider.zip ../backend/src/multi_tenant_full_stack_rag_application/ingestion_provider/Dockerfile.vector_ingestion_provider && \
+mv ingestion_provider.zip files/ && \
+zip -r ui.zip ../frontend/src/multi_tenant_full_stack_rag_application/ui/node_modules && \
+zip -r ui.zip ../frontend/src/multi_tenant_full_stack_rag_application/ui/src && \
+zip ui.zip ../frontend/src/multi_tenant_full_stack_rag_application/ui/aws-exports.js.template && \
+zip ui.zip ../frontend/src/multi_tenant_full_stack_rag_application/ui/build_website_deployment.sh && \
+zip ui.zip ../frontend/src/multi_tenant_full_stack_rag_application/ui/index.html && \
+zip ui.zip ../frontend/src/multi_tenant_full_stack_rag_application/ui/*.json && \
+zip ui.zip ../frontend/src/multi_tenant_full_stack_rag_application/ui/vite.config.js && \
+zip ui.zip ../frontend/src/multi_tenant_full_stack_rag_application/ui/yarn.lock && \
+zip ui.zip ../frontend/app.py && \
+zip ui.zip ../frontend/requirements.txt && \
+mv ui.zip files/ && \
 cp mtfsrad-stack.yaml files/ && \
 find ./files -name '*.yaml' | python upload_stack_files_on_export.py && \
 git add ../cfn && \
