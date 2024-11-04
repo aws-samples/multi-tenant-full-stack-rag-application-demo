@@ -35,7 +35,11 @@ export AWS_SECRET_ACCESS_KEY="your aws secret key"
 export AWS_SESSION_TOKEN="your aws session token"
 ```
 
-6. Then run:
+6. If you've never installed a CDK stack in this account and region, you'll need to bootstrap the region in that account. Run the following:
+
+`cdk bootstrap aws://account_id/region` where `account_id` is your 12-digit AWS account ID and the region is the region code, like `us-west-2`.
+
+7. Then run:
 
 ```
 screen
@@ -55,7 +59,7 @@ screen -r
 
 And type <CTRL>+A and then D to disconnect from the screen and leave it runnning.
 
-7. It may take take up to 60 minutes to deploy the whole stack, backend and frontend. At the end of the frontend deployment, it will print out the URL of the CloudFront distribution for the frontend UI. Click that to get started.
+8. It may take take up to 60 minutes to deploy the whole stack, backend and frontend. At the end of the frontend deployment, it will print out the URL of the CloudFront distribution for the frontend UI. Click that to get started.
 
 ### Using your pre-installed CDK ### 
 
@@ -64,7 +68,8 @@ If you're familiar with using the CDK, and you already have your account bootstr
 1. `git clone https://github.com/aws-samples/multi-tenant-full-stack-rag-application-demo.git`
 2. `cd multi-tenant-full-stack-rag-application-demo`
 3. paste your AWS credentials into the terminal
-4. `./install_cdk.sh -y` (the -y is optional to approve all of the IAM changes, equivalent to running `cdk deploy --require-approval never`)
+4. Bootstrap your account and region if you've never used CDK in this region (`cdk bootstrap aws://account_id/region_code`)
+5. `./install_cdk.sh -y` (the -y is optional to approve all of the IAM changes, equivalent to running `cdk deploy --require-approval never`)
 
 ### Next steps after installation ###
 
