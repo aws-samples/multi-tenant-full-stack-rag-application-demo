@@ -87,9 +87,8 @@ class ReactUiStack(Stack):
         
         self.ssm_param_frontend_origin =  ssm.StringParameter(self, "FrontendOrigin",
             parameter_name=f'/{stack_name_backend}/origin_frontend',
-            # TODO: Switch this back
-            # string_value=self.site.distribution.distribution_domain_name
-            string_value='http://localhost:5173'
+            string_value=self.site.distribution.distribution_domain_name
+            # string_value='http://localhost:5173'
         )
         
         self.ssm_param_frontend_origin.apply_removal_policy(RemovalPolicy.DESTROY)
