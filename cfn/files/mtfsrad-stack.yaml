@@ -84,8 +84,6 @@ Resources:
   IngestionStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      Parameters:
-        ecrRepoUri: 'cdk-hnb659fds-container-assets-${AWS::AccountId}-${AWS::Region}'
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/ingestion-stack-template.yaml
   PromptTemplatesStack:
     Type: AWS::CloudFormation::Stack
