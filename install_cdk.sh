@@ -81,6 +81,6 @@ echo
 echo Installation complete!
 echo elapsed time: $(($SECONDS / 60)) minutes and $(($SECONDS % 60)) seconds
 echo
-echo "exporting cfn templates..."
-cd ../cfn
-./export_cdk_to_cfn.sh
+# echo "exporting cfn templates..."
+# cd ../cfn
+# ./export_cdk_to_cfn.sh
