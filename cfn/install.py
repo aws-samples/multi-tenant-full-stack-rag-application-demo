@@ -60,6 +60,10 @@ params = [
         'ParameterValue': input_values['output_bucket']
     },
     {
+        'ParameterKey': 'stackName',
+        'ParameterValue': input_values['stack_name']
+    },
+    {
         'ParameterKey': 'ingestionDockerZipPath',
         'ParameterValue': f"https://{input_values['output_bucket']}.s3.{region}.amazonaws.com/{input_values['output_prefix']}/ingestion_provider.zip"
     },
