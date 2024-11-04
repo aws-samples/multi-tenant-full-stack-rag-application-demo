@@ -10,37 +10,69 @@ Welcome! The goal of this stack is to demonstrate:
 * how to do graph RAG, by providing example entity extraction pipelines and example prompt orchestration of user prompts across vector or graph databases, depending on the user prompt contents.
 
 ## Getting started
-To get started, do the following:
-1. git clone this repository or download the main branch.
+To get started, do the following. If you have CDK installed on your machine and working in your account alread, skip to [using a pre-existing CDK installation](#using-a-pre-existing-cdk-installation).
 
-2. [Install the AWS Python CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html) in your development environment, if you don't already have it.
+### Using the CDK deployment instance provided here.
 
-3. After [setting up your programmatic access](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_auth) and [bootstrapping](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_bootstrap) in the previous guide, open a terminal window and navigate to the root folder of this repository where you cloned it.
+1. If you don't have CDK working yet, the easiest way to get going will be to deploy the ec2 instance in [optional_deployment_assets/deployment-instance-template.yaml](optional_deployment_assets/deployment-instance-template.yaml) by going to your CloudFormation console, clicking create new stack, and uploading the deployment-instance-template.yaml file as a new template.
 
-4. Before installing, copy `backend/lib/__config__sample.py` to `backend/lib/__config__.py`, and fix any defaults. Specific ones you might want to change are:
+2. After the install completes, go to the EC2 console click on the running instance that just installed, and click on the Connect button at the top. Use the Session Manager connect option, and click Connect.
 
-   * app_name (defaults to "Multi-tenant full-stack RAG demo")
+3. Once in the terminal, paste in the following command:
 
-   * allowed_email_domains under the auth_provider_params['cognito'] section. This will control which email domains are allowed to create accounts using Cognito self-service account creation. Without editing this you'll have to create users in the Cognito user pool created in the console.
+```
+sudo su - cdkuser && cd multi-tenant-full-stack-rag-application-demo
+```
 
-   * cognito_domain_prefix under the Cognito section. This must be globally unique in AWS, and will have your deployment region and account appended to it, so you can deploy to multiple regions and accounts easily with the same prefix and to increase the likelihood of the default value just working for you.
-   
-   * verification_message_settings under the Cognito section, which controls the email subject and body sent after a user signs up, for them to receive a confirmation code to complete sign-up.
+4. Use your favorite terminal editor to edit the backend/cdk.context.json file. Specifically, you need to at least edit the `allowed_email_domains` configuration option, so that you'll be able to create users through the web sign-up form. You may also want to change the `app_name`, the `verification_email_subject`, and the `verification_email_body`. Finally, you can add your own IP address or range to the `os_dashboards_ec2_enable_traffic_from_ip` to allow you to connect to the OpenSearch Dashboards proxy EC2 instance.
 
-   * extraction_model_id under the enrichment_pipelines['entity_extraction'] section. Defaults to Haiku and should be good left as default.
+5. Then add AWS credentials for a user or role you've created to the terminal session by setting these variables:
 
-   * ec2_enable_traffic_from_ip in the vector_store_provider_params['opensearch_managed'] section. This allows your IP to connect to the OpenSearch Dashboards proxy that's created on a small EC2 instance. Otherwise you'll have to use the EC2 console, find the instance created, and add your IP to the security group later. You only need to enable it for HTTPS.
+```
+export AWS_ACCESS_KEY_ID="your aws access key ID"
+export AWS_SECRET_ACCESS_KEY="your aws secret key"
+# optionally, use the session token if you're using short term credentials instead of an IAM user (best practice)
+export AWS_SESSION_TOKEN="your aws session token"
+```
 
-5. type `./install.sh` and hit enter. 
-    a. Use -nf to make it skip installing the frontend UI stack as well as the backend stack. You should not use this first time through, but if you're doing development on only backend components you might be able to avoid reinstalling the frontend every time as well, so it's optional after the first time.
-    b. Optionally use -y to reply yes to all confirmation screens to create IAM roles for the various stacks. Note that there are many stacks and each one that creates IAM roles will stop and prompt you during the install if you don't use -y. 
-    c. Optionally use -h to hotswap stack contents if you're actively developing, but not advised for production because it will introduce drift in your stack resources.
+6. Then run:
 
-6. It will take about 20 or 30 minutes to deploy the whole stack, backend and frontend. At the end of the frontend deployment, it will print out the URL of the CloudFront distribution for the frontend UI. Click that to get started.
+```
+screen
+./install_cdk.sh
+```
 
-7. When you first get to the login screen, use the create account tab and create a new user. You must use the same domain name you added to the __config__.py file in the allowed_email_domains list. If you skipped that part, you can create users in the Cognito console, or update the __config__.py file and rerun ./install.sh to reflect changes.
-8. After setting up your Cognito user you should be able to log in.
-8. Create a document collection and upload some documents. When creating the collection, use the description to describe specifically when to search this collection and when not to, as in the example below:
+Optionally add `-y` if you want to approve of the IAM changes it's going to prompt you for. If you don't use `-y`, be aware that there are multiple stacks being installed, and they'll all prompt you 
+
+The `screen` command will make it so that if your installation session will be disconnected from your terminal session, so if you get disconnected, the install will continue.
+
+If you do get disconnected, to reconnect to the screen from before, after reconnecting to the Session Manager terminal, type:
+
+```
+sudo su - cdkuser 
+screen -r
+```
+
+And type <CTRL>+A and then D to disconnect from the screen and leave it runnning.
+
+7. It may take take up to 60 minutes to deploy the whole stack, backend and frontend. At the end of the frontend deployment, it will print out the URL of the CloudFront distribution for the frontend UI. Click that to get started.
+
+### Using your pre-installed CDK ### 
+
+If you're familiar with using the CDK, and you already have your account bootstrapped, just do the following:
+
+1. `git clone https://github.com/aws-samples/multi-tenant-full-stack-rag-application-demo.git`
+2. `cd multi-tenant-full-stack-rag-application-demo`
+3. paste your AWS credentials into the terminal
+4. `./install_cdk.sh -y` (the -y is optional to approve all of the IAM changes, equivalent to running `cdk deploy --require-approval never`)
+
+### Next steps after installation ###
+
+1. When you first get to the login screen, use the create account tab and create a new user. You must use the same domain name you added to the cdk.context.json file in the allowed_email_domains list. If you skipped that part, you can create users in the Cognito console, or update the cdk.context.json file and rerun ./install_cdk.sh to reflect changes.
+
+2. After setting up your Cognito user you should be able to log in.
+
+3. Create a document collection and upload some documents. When creating the collection, use the description to describe specifically when to search this collection and when not to, as in the example below:
 
 `Use this document collection for (fill in the use case here). Don't use it for other topics.`
 
@@ -53,7 +85,7 @@ To get started, do the following:
 * Upload files to the document collection
 ![upload_files](./readme_assets/upload_files.png)
 
-9. Click on Start a Conversation in the left nav. Click the first Anthropic model for Haiku (`anthropic.claude-3-haiku-20240307-v1:0`), and start asking questions about your documents!
+4. Click on Start a Conversation in the left nav. Click the first Anthropic model for Haiku (`anthropic.claude-3-haiku-20240307-v1:0`), and start asking questions about your documents!
 
 ## Architecture
 
@@ -81,7 +113,7 @@ Update coming soon after I optimize the first version a bit.
  | Default prompts for each model family | complete |
   | Sharing document collections across users at the collection level | complete | Works like Quip where you can search for named users. Doesn't yet support asterisk for sharing with everyone who's logged in. |
  | Conversation history | in progress | The current conversation has memory but it doesn't yet offer saving of conversations. | 
-  | Custom logos instead of "Multi-tenant full-stack rag demo" to enable customized field demos.| partially complete | no logos yet, but the app title is configurable through backend/lib/__config__.py |
+  | Custom logos instead of "Multi-tenant full-stack rag demo" to enable customized field demos.| partially complete | no logos yet, but the app title is configurable through backend/cdk.context.json file. |
  | Saving conversation history | | |
  | Paging through long lists of uploaded files |||
  | Feedback | | |
