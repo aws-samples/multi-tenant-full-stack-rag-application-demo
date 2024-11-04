@@ -23,6 +23,8 @@ Parameters:
   s3AssetsBucket:
     Description: the bucket holding the ingestion Docker zip and the UI zip.
     Type: String
+  stackName:
+    Type: String
   ingestionDockerZipPath: 
     Description: S3 path to a zip file with the files needed to build the docker image for the vector ingestion provider.
     Type: String
