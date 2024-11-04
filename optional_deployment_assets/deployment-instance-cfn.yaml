@@ -81,12 +81,10 @@ Resources:
             10.chownHomedir:
               command: chown -R cdkuser:cdkuser /home/cdkuser
               cwd: "/home/cdkuser"
-            11.switchUser:
-              command: 'su - ssm-user bash -c "echo \\"sudo su - cdkuser\\" >> /home/ssm-user/.bash_profile"'
-            
-        
+              
+
     Properties:
-      SubnetId: subnet-04ec80d5e4250b9e2
+      SubnetId: subnet-07dea557f6a824ac6
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:

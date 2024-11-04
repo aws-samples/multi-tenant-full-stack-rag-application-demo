@@ -1,5 +1,0 @@
-requests
-lxml
-cssselect
-boto3
-pyyaml
