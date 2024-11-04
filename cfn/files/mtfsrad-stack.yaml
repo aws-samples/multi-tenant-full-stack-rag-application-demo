@@ -51,46 +51,33 @@ Resources:
     Properties:
       Parameters:
         allowedEmailDomains: !Ref allowedEmailDomains
-        appName: !Ref appName 
-        removalPolicy: !Ref removalPolicy
         signUpEmailBody: !Ref signUpEmailBody
         signUpEmailSubject: !Ref signUpEmailSubject
+        stackName: !Ref stackName
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/auth-stack-template.yaml
   BedrockStack:  
     Type: AWS::CloudFormation::Stack
     Properties:
-      # Parameters:
-      #   EnvironmentName: dev
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/bedrock-stack-template.yaml
   DocCollectionsStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      # Parameters:
-      #   EnvironmentName: dev
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/doc-collections-stack-template.yaml
   EmbeddingsStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      # Parameters:
-      #   EnvironmentName: dev
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/embeddings-stack-template.yaml
   EnrichmentPipelinesStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      # Parameters:
-      #   EnvironmentName: dev
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/enrichment-pipelines-stack-template.yaml
   GenerationHandlerStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      # Parameters:
-      #   EnvironmentName: dev
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/generation-handler-stack-template.yaml
   GraphStoreStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      # Parameters:
-      #   EnvironmentName: dev
       TemplateURL: https://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}.s3.{region}.amazonaws.com/{output_prefix}/graph-store-stack-template.yaml
   IngestionStack:
     Type: AWS::CloudFormation::Stack

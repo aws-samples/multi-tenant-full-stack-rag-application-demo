@@ -23,7 +23,7 @@ Outputs:
       Name: PrivateIsolatedSubnetId1
     Value: !Ref VpcdataisolatedSubnet1SubnetEBF5BB65
   PrivateIsolatedSubnetId2Output:
-    Export:
+    Export: 
       Name: PrivateIsolatedSubnetId2
     Value: !Ref VpcdataisolatedSubnet2Subnet8AADF05A
   PublicIngressSubnetId1Output:

@@ -14,9 +14,8 @@ Resources:
     Properties:
       Parameters: 
         allowedEmailDomains: !Ref allowedEmailDomains
-        appSecurityGroupId: !ImportValue AppSecurityGroupId
-        privateEgressSubnetId1: !ImportValue PrivateEgressSubnetId1
-        privateEgressSubnetId2: !ImportValue PrivateEgressSubnetId2
+        signUpEmailBody: !Ref signUpEmailBody
+        signUpEmailSubject: !Ref signUpEmailSubject
         stackName: !Ref stackName
       TemplateURL:
         Fn::Join:

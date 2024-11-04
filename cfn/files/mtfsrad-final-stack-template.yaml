@@ -1,10 +1,7 @@
 Parameters:
-  ParamStackName:
+  StackName:
     Type: String
     Default: mtfsrad-b-dev
-  ParamRemovalPolicy:
-    Type: String
-    Default: DESTROY
   ParamAppName:
     Type: String
     Default: Multi-tenant full-stack RAG application demo
