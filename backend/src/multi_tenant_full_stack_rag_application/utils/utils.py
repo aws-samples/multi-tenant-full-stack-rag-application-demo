@@ -169,7 +169,7 @@ def get_bedrock_runtime_client():
 #     body = json.loads(response['body'])
 #     return body['creds']
 
-def get_document_collections(user_id, collection_id=None, *, account_id=None, lambda_client=None):
+def get_document_collections(user_id, collection_id=None, *, account_id=None, lambda_client=None, origin=None):
     if not account_id:
         account_id = os.getenv('AWS_ACCOUNT_ID')
     doc_collections_fn_name = get_ssm_params('document_collections_handler_function_name')
@@ -185,7 +185,7 @@ def get_document_collections(user_id, collection_id=None, *, account_id=None, la
                 "accountId": account_id,
             },
             "headers": {
-                "origin": get_ssm_params('origin_frontend')
+                "origin": origin
             },
             "routeKey": route_key,
             "pathParameters": {

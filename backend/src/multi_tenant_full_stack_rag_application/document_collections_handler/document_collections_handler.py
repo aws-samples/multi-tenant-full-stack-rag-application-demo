@@ -339,7 +339,7 @@ class DocumentCollectionsHandler:
         path = handler_evt.path
 
         if handler_evt.origin in self.allowed_origins.values() and \
-            handler_evt.origin != self.allowed_origins['origin_frontend'] and \
+            handler_evt.origin not in [self.allowed_origins['origin_frontend'], self.allowed_origins['origin_frontend_localdev']] and \
                 'user_id' in handler_evt.document_collection:
                 # user_id sent in from trusted source that doesn't
                 # have access to the user's JWT, like vector_ingestion_provider
@@ -354,7 +354,7 @@ class DocumentCollectionsHandler:
        
         # first check if user_id was sent by a trusted source and use it from there.
         if handler_evt.origin in self.allowed_origins.values() and \
-            handler_evt.origin != self.allowed_origins['origin_frontend'] and \
+            handler_evt.origin not in [self.allowed_origins['origin_frontend'], self.allowed_origins['origin_frontend_localdev']] and \
                 handler_evt.user_id is not None:
                 # this means the user_id has been sent
                 # by a trusted service that's not receiving
@@ -514,7 +514,7 @@ class DocumentCollectionsHandler:
                 else:
                     # delete a doc collection
                     result = self.delete_doc_collection(handler_evt)
-
+        print(f"Doc collections handler returning result {result}")
         return utils.format_response(status, result, handler_evt.origin)
 
     def share_create(self, collection_id, share_with_user_email):

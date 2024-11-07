@@ -245,7 +245,7 @@ class PromptTemplateHandler:
         status = 200
 
         if handler_evt.origin in self.allowed_origins.values() and \
-            handler_evt.origin != self.allowed_origins['origin_frontend'] and \
+            handler_evt.origin not in [self.allowed_origins['origin_frontend'], self.allowed_origins['origin_frontend_localdev']] and \
                 hasattr(handler_evt, 'prompt_template') and \
                 'user_id' in handler_evt.prompt_template:
                 handler_evt.user_id = handler_evt.prompt_template['user_id']

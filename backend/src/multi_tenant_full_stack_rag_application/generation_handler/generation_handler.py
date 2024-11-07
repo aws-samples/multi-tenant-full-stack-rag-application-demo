@@ -30,7 +30,6 @@ class GenerationHandler:
             search_template_path = "multi_tenant_full_stack_rag_application/generation_handler/system_get_search_query.txt"
         self.utils = utils
         self.my_origin = self.utils.get_ssm_params('origin_generation_handler')
-        self.allowed_origins = self.utils.get_allowed_origins()
         
         with open(search_template_path, 'r') as f_in:
             self.search_query_template = f_in.read()
@@ -50,7 +49,7 @@ class GenerationHandler:
         print(f"get_search_query got handler_evt {handler_evt.__dict__()}")
         msg_obj = handler_evt.message_obj
         (hist, curr_prompt) = self.get_conversation(msg_obj)
-        doc_collections = self.utils.get_document_collections(handler_evt.user_id)
+        doc_collections = self.utils.get_document_collections(handler_evt.user_id, origin=self.my_origin)
         print(f"get_search_query got doc_collections {doc_collections}")
         doc_collections_dicts = []
         collection_names = list(doc_collections.keys())
@@ -86,7 +85,7 @@ class GenerationHandler:
                     "stop_sequences": ["</selected_document_collections>"]
                 }
             },
-            self.allowed_origins['origin_generation_handler']
+            self.my_origin
         )
         print(f"Got response from bedrock: {response}")
         status = response['statusCode']
@@ -125,10 +124,7 @@ class GenerationHandler:
         print(f"Got generationHandlerEvent {handler_evt.__dict__()}, type {type(handler_evt)}")
         method = handler_evt.method
         path = handler_evt.path
-        # if event.origin not in self.allowed_origins.values():
-        #     print(f"Event.origin ({event.origin} is not in allowed values {self.allowed_origins.values()})")
-        #     return format_response(403, {}, None)
-    
+
         status = 200
         user_id = None
 

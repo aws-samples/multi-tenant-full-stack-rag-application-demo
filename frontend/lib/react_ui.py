@@ -86,7 +86,7 @@ class ReactUiStack(Stack):
         )
         
         # comment out the local dev one if you don't need it for developers
-        self.ssm_param_frontend_origin =  ssm.StringParameter(self, "FrontendOrigin",
+        self.ssm_param_frontend_origin_localdev =  ssm.StringParameter(self, "FrontendOriginLocalDev",
             parameter_name=f'/{stack_name_backend}/origin_frontend_localdev',
             string_value='http://localhost:5173'
         )

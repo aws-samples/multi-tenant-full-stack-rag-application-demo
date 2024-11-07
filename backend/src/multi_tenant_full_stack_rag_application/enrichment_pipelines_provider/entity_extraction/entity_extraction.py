@@ -43,6 +43,7 @@ class EntityExtraction(Pipeline):
         # else:
         #     self.neptune_endpoint = neptune_endpoint
         self.my_origin = self.utils.get_ssm_params('origin_entity_extraction')
+        self.allowed_origins = self.utils.get_allowed_origins()
         self.model_id = default_extraction_model_id
 
     def process(self, event):
@@ -60,7 +61,7 @@ class EntityExtraction(Pipeline):
             account_id = record['eventSourceARN'].split(':')[4]
             user_id = new_image['user_id']['S']
 
-            response = self.utils.get_document_collections(user_id, collection_id)
+            response = self.utils.get_document_collections(user_id, collection_id, origin=self.my_origin)
             print(f"Got response {response}")
             enrichment_pipelines = {}
             collection_name = list(response.keys())[0]

@@ -47,7 +47,7 @@ class NeptuneGraphStoreProvider(GraphStoreProvider):
         status = 200
         result = {}
         if handler_evt.origin not in self.allowed_origins.values() or \
-            handler_evt.origin == self.allowed_origins['origin_frontend']:
+            handler_evt.origin in [self.allowed_origins['origin_frontend'], self.allowed_origins['origin_frontend_localdev']]:
             return self.utils.format_response(403, {"error": "forbidden"}, handler_evt.origin)
         elif handler_evt.operation == 'execute_statement':
             result = {

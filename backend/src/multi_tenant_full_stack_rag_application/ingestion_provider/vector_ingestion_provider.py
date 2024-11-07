@@ -50,7 +50,7 @@ class VectorIngestionProvider:
         self.utils = utils
         self.pdf_loader = self.get_pdf_loader()
         self.my_origin = self.utils.get_ssm_params('origin_ingestion_provider', ssm_client=ssm_client)
-
+        
         if ocr_model_id:
             self.ocr_model_id = ocr_model_id
         else:
@@ -412,7 +412,8 @@ class VectorIngestionProvider:
         response = self.utils.get_document_collections(
             user_id,
             collection_id, 
-            lambda_client=lambda_client
+            lambda_client=lambda_client,
+            origin=self.my_origin
         )
 
         print(f"Got verified collection: {response}, type {type(response)}")
