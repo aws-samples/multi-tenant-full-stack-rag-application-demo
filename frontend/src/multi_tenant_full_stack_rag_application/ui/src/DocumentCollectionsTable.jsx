@@ -7,7 +7,7 @@ import { logsTableAriaLabels } from './commons/commons';
 import Api from './commons/api'
 import { Box, Button, ButtonDropdown, Container, FileUpload, FormField, Header, SpaceBetween, Spinner, Table } from '@cloudscape-design/components';
 import { atom, useRecoilState, useResetRecoilState, useRecoilValue } from 'recoil';
-import { currentCollectionState } from './DocumentCollectionForm'
+import { currentCollectionState, uploadedFilesState, urlCollectionIdState } from './DocumentCollectionForm'
 
 import "./documentCollectionsTable.css"
 
@@ -65,6 +65,8 @@ async function getTableProvider() {
 
 function DocumentCollectionsTable() {
   useResetRecoilState(currentCollectionState)();
+  useResetRecoilState(urlCollectionIdState)();
+  useResetRecoilState(uploadedFilesState)();
   const [docCollections, setDocCollections] = useRecoilState(docCollectionsState);
   // const [files, setFiles] = useState([]);
   const [selectedItem, setSelectedItem] = useState({});

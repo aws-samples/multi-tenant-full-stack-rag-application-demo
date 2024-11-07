@@ -144,7 +144,7 @@ class MultiTenantRagStack(Stack):
         ingestion_provider_stack = IngestionProviderStack(self, 'IngestionProviderStack',
             app_security_group=vpc_stack.app_security_group,
             auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
-            auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
+            auth_role=auth_provider_stack.cognito_stack.authenticated_role,
             parent_stack_name=self.stack_name,
             user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
             user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,

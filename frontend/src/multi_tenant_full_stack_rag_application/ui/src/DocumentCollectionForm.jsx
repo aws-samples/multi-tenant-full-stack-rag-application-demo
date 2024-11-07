@@ -10,7 +10,8 @@ import DocumentCollection from './DocumentCollection'
 import DocumentCollectionEnrichmentPipelines from './DocumentCollectionEnrichmentPipelines'
 import DocumentCollectionSharingList from './DocumentCollectionSharingList'
 import DocumentCollectionUploadedDocumentsTable from './DocumentCollectionUploadedDocumentsTable'
-import { atom, useRecoilState, useRecoilValue /*useResetRecoilState,*/ } from 'recoil'
+import { atom, useRecoilState, useRecoilValue, /*useResetRecoilState,*/ 
+useResetRecoilState} from 'recoil'
 
 
 const api = new Api();
@@ -68,6 +69,8 @@ export const uploadedFilesState = atom({
 
 function DocumentCollectionForm() {
   let tmpParams = useParams()
+  // useResetRecoilState(currentCollectionState)();
+
   const [urlCollectionId, setUrlCollectionId] = useRecoilState(urlCollectionIdState)
   const [currentCollection, setCurrentCollection] = useRecoilState(currentCollectionState)
   // const [addUserModal, setAddUserModal] = useRecoilState(addUserModalState)
@@ -85,9 +88,10 @@ function DocumentCollectionForm() {
   // const [selectedVectorEngine, setSelectedVectorEngine] = useRecoilState(selectedVectorEngineState)
   const [submitDisabled, setSubmitDisabled] = useState(true)
   const [uploadedFiles, setUploadedFiles] = useRecoilState(uploadedFilesState)
-  
+
   useEffect(() => {
     setParams(tmpParams)
+    setCurrentCollection({})
     console.log(`tmpParams are ${JSON.stringify(tmpParams)}`)
     console.log(`urlCollectionId is ${urlCollectionId}`)
   }, [])

@@ -28,7 +28,7 @@ class IngestionProviderStack(Stack):
     def __init__(self, scope: Construct, construct_id: str,
         app_security_group: ec2.ISecurityGroup,
         auth_fn: lambda_.IFunction,
-        auth_role_arn: str,
+        auth_role: iam.IRole,
         parent_stack_name: str,
         user_pool_client_id: str,
         user_pool_id: str,
@@ -168,17 +168,17 @@ class IngestionProviderStack(Stack):
         
         self.ingestion_status_table.table.grant_read_write_data(self.ingestion_function.grant_principal)
         
-        cognito_auth_role = iam.Role.from_role_arn(self, 'CognitoAuthRoleRef', auth_role_arn)
+        # cognito_auth_role = iam.Role.from_role_arn(self, 'CognitoAuthRoleRef', auth_role_arn)
 
-        cognito_auth_role.attach_inline_policy(iam.Policy(self, 'CognitoAuthDocBucketPolicy',
+        auth_role.attach_inline_policy(iam.Policy(self, 'CognitoAuthDocBucketPolicy',
             statements=[
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
                     actions=[
                         "s3:PutObject",
                         "s3:GetObject",
-                        "s3:DeleteObject"
-                    ],
+                        "s3:DeleteObject",
+                    ],  
                     resources=[
                         f"{self.ingestion_bucket.bucket.bucket_arn}/private/{'${cognito-identity.amazonaws.com:sub}'}/*",
                     ]
