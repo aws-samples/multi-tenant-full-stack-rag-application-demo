@@ -85,12 +85,17 @@ class ReactUiStack(Stack):
             value=self.site.distribution.distribution_domain_name,
         )
         
+        # comment out the local dev one if you don't need it for developers
         self.ssm_param_frontend_origin =  ssm.StringParameter(self, "FrontendOrigin",
-            parameter_name=f'/{stack_name_backend}/origin_frontend',
-            # string_value=self.site.distribution.distribution_domain_name
+            parameter_name=f'/{stack_name_backend}/origin_frontend_localdev',
             string_value='http://localhost:5173'
         )
         
+        self.ssm_param_frontend_origin =  ssm.StringParameter(self, "FrontendOrigin",
+            parameter_name=f'/{stack_name_backend}/origin_frontend',
+            string_value=self.site.distribution.distribution_domain_name
+        )
+
         self.ssm_param_frontend_origin.apply_removal_policy(RemovalPolicy.DESTROY)
         # CfnOutput(
         #     self,
