@@ -440,7 +440,7 @@ function ChatPlayground(props) {
   }
 
   function initParams(params) {
-    // console.log(`initParams received ${JSON.stringify(params)}`)
+    console.log(`initParams received ${JSON.stringify(params)}`)
     let finalParams = {}
     let paramKeys = params.default_paths;
     for (let i = 0; i < paramKeys.length; i++) {
@@ -449,6 +449,7 @@ function ChatPlayground(props) {
         continue
       }
       let parts = key.split('.')
+      console.log(`Got key ${key}, parts ${JSON.stringify(parts)}`)
       let paramName = parts[0]
       let paramObj = params[paramName]
       let typeVal = paramObj['type']

@@ -12,8 +12,6 @@ from datetime import datetime
 from pdf2image import convert_from_path
 
 from multi_tenant_full_stack_rag_application import utils 
-from multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status import IngestionStatus
-from multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status_provider import IngestionStatusProvider
 from multi_tenant_full_stack_rag_application.ingestion_provider.loaders import Loader
 from multi_tenant_full_stack_rag_application.ingestion_provider.splitters import Splitter, OptimizedParagraphSplitter
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_document import VectorStoreDocument
@@ -73,18 +71,6 @@ class PdfImageLoader(Loader):
             # print("Using ocr template data passed in.")
             self.ocr_template_text = ocr_template_text
         # print(f"PdfImageLoader initialized with ocr template text {self.ocr_template_text}")
-    
-    def download_from_s3(self, bucket, s3_path):
-        ts = datetime.now().isoformat()
-        tmpdir = f"/tmp/{ts}"
-        # print(f"Creating tmpdir {tmpdir}")
-        os.makedirs(tmpdir)
-        filename = s3_path.split('/')[-1].replace(' ', '_')
-        local_file_path = f"{tmpdir}/{filename}"
-        # print(f"Downloading s3://{bucket}/{s3_path} to local_file_path {local_file_path}")
-        self.s3.download_file(bucket, s3_path, local_file_path)
-        # print(f"Success? {os.path.exists(local_file_path)}")
-        return local_file_path
 
     def estimate_tokens(self, text):
         return self.utils.get_token_count(text)
@@ -207,7 +193,7 @@ class PdfImageLoader(Loader):
             parts = path.split('/')
             bucket = parts[2]
             s3_path = '/'.join(parts[3:])
-            local_file = self.download_from_s3(bucket, s3_path)
+            local_file = self.utils.download_from_s3(bucket, s3_path)
         else:
             local_file = path
         # print(f"Loaded pdf to {local_file}")

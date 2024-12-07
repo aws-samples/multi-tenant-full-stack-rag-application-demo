@@ -82,6 +82,17 @@ def delete_ingestion_status(user_id, doc_id, origin, *, delete_from_s3=False):
         }
     )
 
+def download_from_s3(bucket, s3_path):
+    ts = datetime.now().isoformat()
+    tmpdir = f"/tmp/{ts}"
+    # print(f"Creating tmpdir {tmpdir}")
+    os.makedirs(tmpdir)
+    filename = s3_path.split('/')[-1].replace(' ', '_')
+    local_file_path = f"{tmpdir}/{filename}"
+    # print(f"Downloading s3://{bucket}/{s3_path} to local_file_path {local_file_path}")
+    self.s3.download_file(bucket, s3_path, local_file_path)
+    # print(f"Success? {os.path.exists(local_file_path)}")
+    return local_file_path
 
 def embed_text(text, origin, *, dimensions=1024, lambda_client=None):
     print(f'utils.embed_text got text {text}, origin {origin}')
@@ -170,6 +181,7 @@ def get_bedrock_runtime_client():
 #     return body['creds']
 
 def get_document_collections(user_id, collection_id=None, *, account_id=None, lambda_client=None, origin=None):
+    print(f"Called utils.get_document_collections with user_id {user_id} and collection_id {collection_id}")
     if not account_id:
         account_id = os.getenv('AWS_ACCOUNT_ID')
     doc_collections_fn_name = get_ssm_params('document_collections_handler_function_name')
@@ -311,7 +323,7 @@ def get_ssm_params(param=None,*, ssm_client=None):
         ssm_params = {}
         next_token = ''
         path =  f"/{stack_name}"
-        print(f"Getting all params with prefix {path}")
+        # print(f"Getting all params with prefix {path}")
         while next_token != None:
             args = {
                 "Path": path,
@@ -320,9 +332,9 @@ def get_ssm_params(param=None,*, ssm_client=None):
             }
             if next_token != '':
                 args['NextToken'] = next_token
-            print(f"Calling get_parameters_by_path with arg {args}")
+            # print(f"Calling get_parameters_by_path with arg {args}")
             response = ssm_client.get_parameters_by_path(**args)
-            print(f"get_parameters_by_path response = {response}")
+            # print(f"get_parameters_by_path response = {response}")
             for p in response['Parameters']:
                 name = p['Name'].replace(f'/{stack_name}/', '')
                 if name == 'origin_frontend' and \
@@ -492,6 +504,8 @@ def neptune_statement(collection_id, statement, statement_type, origin):
         }
     )
     return response
+
+
 def sanitize_response(body, *, dont_sanitize_fields=[]):
     # # print(f"Sanitize_response received body {body}")
     if isinstance(body, dict):

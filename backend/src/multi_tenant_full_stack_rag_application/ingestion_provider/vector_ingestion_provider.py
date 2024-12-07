@@ -11,6 +11,7 @@ from urllib.parse import unquote_plus
 
 from multi_tenant_full_stack_rag_application import utils
 
+from .loaders.json_loader import JsonLoader
 from .loaders.pdf_image_loader import PdfImageLoader
 from .loaders.text_loader import TextLoader
 from .splitters.optimized_paragraph_splitter import OptimizedParagraphSplitter
@@ -72,7 +73,7 @@ class VectorIngestionProvider:
             self.sqs = sqs_client
         
         print(f"vector_ingestion_provider getting max tokens for {default_ocr_model}")
-        self.max_tokens_per_chunk = self.utils.invoke_lambda(
+        response = self.utils.invoke_lambda(
             self.utils.get_ssm_params('embeddings_provider_function_name'),
             {
                 "operation": "get_model_max_tokens",
@@ -82,6 +83,8 @@ class VectorIngestionProvider:
                 }
             }
         )
+        self.max_tokens_per_chunk = json.loads(response['body'])['response']
+        
         print(f"Got max_tokens_per_chunk {self.max_tokens_per_chunk}")
         self.splitter = OptimizedParagraphSplitter(
             max_tokens_per_chunk=self.max_tokens_per_chunk
@@ -329,7 +332,7 @@ class VectorIngestionProvider:
             # save_vectors_fn=self.vector_store_provider.save,
             splitter=self.splitter
         )
-        docs = loader.load_and_split(local_path, file_dict['user_id'], f"{file_dict['collection_id']}/{file_dict['filename']}", extra_metadata=extra_meta)
+        docs = loader.load_and_split(local_path, f"{file_dict['collection_id']}/{file_dict['filename']}", extra_metadata=extra_meta)
         # print(f"Ingest_text_file returning docs {docs}")
         return docs
 

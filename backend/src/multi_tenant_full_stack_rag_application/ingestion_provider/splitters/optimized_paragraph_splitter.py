@@ -46,7 +46,7 @@ class OptimizedParagraphSplitter(Splitter):
 
     def get_model_max_tokens(self, model_id):
         if not self.max_tokens_per_chunk:
-            self.max_tokens_per_chunk = invoke_lambda(
+            response = invoke_lambda(
                 self.emb_provider_fn_name, 
                 {
                     'operation': 'get_model_max_tokens',
@@ -57,6 +57,8 @@ class OptimizedParagraphSplitter(Splitter):
                 }, 
                 lambda_client=self.lambda_
             )
+            self.max_tokens_per_chunk = json.loads(response['body'])['response']
+        print(f"Got max_tokens_per_chunk {self.max_tokens_per_chunk}")
         return self.max_tokens_per_chunk
 
     # def get_token_count(self, text):
@@ -71,8 +73,9 @@ class OptimizedParagraphSplitter(Splitter):
         content = content.replace('\xa0', '')
         content = content.replace('\t','')
         split_seq = self.split_seqs[split_seq_num]
-        header_len = self.get_token_count(extra_header_text)
-        text_len = self.get_token_count(content)
+        header_len = self.utils.get_token_count(extra_header_text)
+        text_len = self.utils.get_token_count(content)
+        print(f"Got header_len {header_len} and text_len {text_len}")
         # header_len = self.emb_provider_fn_name.get_token_count(extra_header_text)
         # text_len = self.emb_provider_fn_name.get_token_count(content)
         token_ct = header_len + text_len
@@ -90,7 +93,7 @@ class OptimizedParagraphSplitter(Splitter):
                 if part.strip() == '':
                     continue
                 part += split_seq
-                num_toks = self.get_token_count(part)
+                num_toks = self.utils.get_token_count(part)
                 # num_toks = self.emb_provider_fn_name.get_token_count(part)
                 if running_part_toks + num_toks < self.max_tokens_per_chunk:
                     running_part += ' ' + part

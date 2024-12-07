@@ -118,15 +118,17 @@ function DocumentCollectionsTable() {
       })
       setTableData(tmpTableData)
       setDocCollections(tmpDocCollections)
+      console.log("Setting tableLoadingState = false")
+      setTableLoadingState(false)
     })()
   }, [])
 
   useEffect(() =>{
-    if (tableData.length > 0) {
-      // console.log("docCollections changed")
-      // console.dir(docCollections)
-      setTableLoadingState(false)
-    }
+    // if (tableData.length > 0) {
+    //   // console.log("docCollections changed")
+    //   // console.dir(docCollections)
+    //   setTableLoadingState(false)
+    // }
     // setTableLoadingState(false)
     // // console.log("set tableLoadingState to false")
   }, [tableData])

@@ -370,8 +370,8 @@ class DocumentCollectionsHandler:
                 self.my_origin,
                 lambda_client=self.lambda_
             )
-            # print(f"Got user_id from token {handler_evt.user_id}")
-            # print(f"Handler_evt is now {handler_evt.__dict__}")
+            print(f"Got user_id from token {handler_evt.user_id}")
+            print(f"Handler_evt is now {handler_evt.__dict__}")
             if hasattr(handler_evt, 'document_collection'):
                 handler_evt.document_collection['user_id'] = handler_evt.user_id
             if not handler_evt.user_id or handler_evt.user_id == '':
@@ -384,6 +384,7 @@ class DocumentCollectionsHandler:
             # )
             # print(f"Handler_evt is now {handler_evt.__dict__}") 
         
+        print(f"handler_evt is now {handler_evt.__dict__}")
         if method == 'OPTIONS': 
             result = {}
 
