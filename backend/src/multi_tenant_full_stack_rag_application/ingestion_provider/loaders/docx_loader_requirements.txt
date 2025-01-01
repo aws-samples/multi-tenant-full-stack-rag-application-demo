@@ -1,1 +1,1 @@
-pypandoc-binary
+pypandoc_binary

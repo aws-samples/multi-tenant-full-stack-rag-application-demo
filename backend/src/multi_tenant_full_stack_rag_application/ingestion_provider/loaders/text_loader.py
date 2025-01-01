@@ -2,13 +2,15 @@
 #  SPDX-License-Identifier: MIT-0
 import json
 import os
-from multi_tenant_full_stack_rag_application.ingestion_provider.loaders import Loader
+
+from .loader import Loader
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_document import VectorStoreDocument
 from multi_tenant_full_stack_rag_application import utils
 from datetime import datetime
 
 
 default_embedding_model = os.getenv('EMBEDDING_MODEL_ID')
+
 
 class TextLoader(Loader):
     def __init__(self, *, 
@@ -82,6 +84,7 @@ class TextLoader(Loader):
             ctr = 0
             id = f"{source}:{ctr}"
             for chunk in text_chunks:
+                id = f"{source}:{ctr}"
                 vector = self.utils.embed_text(chunk, self.my_origin)
                 if not return_dicts:
                     docs.append(VectorStoreDocument(
@@ -107,7 +110,7 @@ class TextLoader(Loader):
                 f"{collection_id}/{filename}",
                 etag,
                 0, 
-                f'ERROR: {e.args[0]}',
+                f'ERROR: {e.__dict__}',
                 self.utils.get_ssm_params('origin_ingestion_provider')
             )
             raise e

@@ -64,7 +64,6 @@ function DocumentCollectionUploadedDocumentsTable() {
   });
 
   useEffect(() => {
-    //
     if (currentCollection.hasOwnProperty('collectionId') && 
         currentCollection.collectionId.length == 32 ) {
       (async () => {
@@ -83,6 +82,10 @@ function DocumentCollectionUploadedDocumentsTable() {
           console.dir(tmpFiles)
           for (let i = 0; i < tmpFiles.length; i++) {
             tmpFiles[i].key = `tmpFile_${i}`
+            tmpFiles[i].onClick = async () => await api.downloadFile(
+              currentCollection.collectionId, 
+              tmpFiles[i].file_name
+            );
           }
           setUploadedFiles(tmpFiles)
           setLastEvalKey(tmpFiles[tmpFiles.length - 1]['file_name'])

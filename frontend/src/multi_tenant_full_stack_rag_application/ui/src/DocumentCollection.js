@@ -4,6 +4,8 @@ class DocumentCollection {
         collection_name,
         description,
         vector_db_type='opensearch_managed',
+        vector_ingestion_enabled=true,
+        file_storage_tool_enabled=false,
         collection_id='',
         share_list = [],
         enrichment_pipelines={},
@@ -17,6 +19,8 @@ class DocumentCollection {
         this.user_email = user_email.trim()
         this.description = description.trim()
         this.vectorDbType = vector_db_type.trim()
+        this.vectorIngestionEnabled = vector_ingestion_enabled
+        this.fileStorageToolEnabled = file_storage_tool_enabled
         this.collectionId = collection_id != '' ? collection_id.trim() : ''
         this.shareList = share_list
         this.enrichmentPipelines = enrichment_pipelines;
@@ -32,6 +36,8 @@ class DocumentCollection {
             this.name,
             this.description,
             this.vectorDbType,
+            this.vectorIngestionEnabled,
+            this.fileStorageToolEnabled,
             this.collectionId,
             this.shareList,
             JSON.parse(JSON.stringify(this.enrichmentPipelines)),
@@ -47,6 +53,8 @@ class DocumentCollection {
             collection_name: this.name,
             description: this.description,
             vector_db_type: this.vectorDbType,
+            vector_ingestion_enabled: this.vectorIngestionEnabled,
+            file_storage_tool_enabled: this.fileStorageToolEnabled,
             collection_id: this.collectionId,
             shared_with: this.shareList,
             enrichment_pipelines: this.enrichmentPipelines,

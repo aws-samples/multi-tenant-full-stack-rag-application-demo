@@ -7,34 +7,28 @@ class BedrockProviderEvent:
     def __init__(self,
         chunk_text='',
         dimensions=0,
+        inference_config={},
         input_type='',
         messages=[],
         model_id='',
-        model_kwargs={},
         operation='',
         origin='',
-        prompt='',
-        search_text='',
-        input_text='',
     ):
         # now assign all variables to self.
         self.chunk_text = chunk_text
         self.dimensions = dimensions
+        self.inference_config = inference_config
         self.input_type = input_type
         self.messages = messages
         self.model_id = model_id
-        self.model_kwargs = model_kwargs
         self.operation = operation
         self.origin = origin
-        self.prompt = prompt
-        self.search_text = search_text
-        self.input_text = input_text
 
     def from_lambda_event(self, event):
         self.operation = event['operation']
         self.origin = event['origin']
         args = event['args']
-        self.model_id = args['model_id']
+        self.model_id = args['modelId']
         
         # assign the args without defaults or 
         # that only exist on one operation
@@ -48,12 +42,10 @@ class BedrockProviderEvent:
             self.search_text= args['search_text']
         
         elif self.operation == 'invoke_model':
-            if 'model_kwargs' in args:
-                self.model_kwargs = args['model_kwargs']
+            if 'inferenceConfig' in args:
+                self.inference_config = args['inferenceConfig']
             if 'messages' in args:
-                self.messages = args['messages']
-            elif 'prompt' in args:
-                self.prompt = args['prompt']
+                self.messages = args['messages'] 
             else:
                 raise Exception("invoke_model requires either 'prompt' or 'messages'")
         

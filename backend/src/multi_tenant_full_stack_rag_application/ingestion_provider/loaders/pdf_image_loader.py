@@ -12,7 +12,7 @@ from datetime import datetime
 from pdf2image import convert_from_path
 
 from multi_tenant_full_stack_rag_application import utils 
-from multi_tenant_full_stack_rag_application.ingestion_provider.loaders import Loader
+from .loader import Loader
 from multi_tenant_full_stack_rag_application.ingestion_provider.splitters import Splitter, OptimizedParagraphSplitter
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_document import VectorStoreDocument
 
@@ -20,6 +20,7 @@ from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_
 default_ocr_template_path = 'multi_tenant_full_stack_rag_application/ingestion_provider/loaders/pdf_image_loader_ocr_template.txt'
 default_ocr_model = os.getenv('OCR_MODEL_ID')
 default_embedding_model = os.getenv('EMBEDDING_MODEL_ID')
+
 
 class PdfImageLoader(Loader):
     def __init__(self,*, 
@@ -98,29 +99,36 @@ class PdfImageLoader(Loader):
             # print(f"Processing file {path}")
             page_header = f"<PAGE_NUM>\n{page_num}\n</PAGE_NUM>\n"
             page_header_tokens = self.estimate_tokens(page_header)
-            
             chunk_id = f"{parent_filename}:{chunk_num}"
 
             with open(path, 'rb') as img:
-                content = b64encode(img.read()).decode('utf-8')
+                content = b64encode(img.read()).decode('utf-8')  # .encode('utf-8')
                 print(f"Type of content is now {type(content)}")
+                
             msgs = [
                 {
-                    "mime_type": "image/jpeg",
-                    "content": content
-                },
-                {
-                    "page_num": page_num,
-                    "mime_type": "text/plain",
-                    "content": f"{file_name_header}\n{page_header}\n{self.ocr_template_text}"
+                    "role": "user",
+                    "content": [
+                        {
+                            "image": {
+                                "source": {
+                                    "bytes": content,
+                                },
+                                "format": "jpeg"
+                            }
+                        },
+                        {
+                            "text": f"{file_name_header}\n{page_header}\n{self.ocr_template_text}"
+                        }
+                    ]
                 }
             ]
-            # # print(f"Invoking model with msgs {msgs}")
+            print(f"Invoking model with msgs {msgs}")
             response = self.utils.invoke_bedrock(
                 "invoke_model",
                 {
                     "messages": msgs,
-                    "model_id": self.ocr_model_id,
+                    "modelId": self.ocr_model_id,
                 },
                 self.utils.get_ssm_params('origin_ingestion_provider')
             )
@@ -196,17 +204,17 @@ class PdfImageLoader(Loader):
             local_file = self.utils.download_from_s3(bucket, s3_path)
         else:
             local_file = path
-        # print(f"Loaded pdf to {local_file}")
+        print(f"Loaded pdf to {local_file}")
         return local_file
 
     def load_and_split(self, path, user_id, source=None, *, etag='', extra_metadata={}, extra_header_text=''):
         if not source:
             source = path
-        # print(f"PdfImageLoader loading {path}, {source}")
+        print(f"PdfImageLoader loading {path}, {source}", flush=True)
         collection_id = source.split('/')[-2]
         filename = source.split('/')[-1]
 
-        self.utils.set_ingestion_status(
+        result = self.utils.set_ingestion_status(
             user_id, 
             f"{collection_id}/{filename}",
             etag,
@@ -214,23 +222,30 @@ class PdfImageLoader(Loader):
             'IN_PROGRESS',
             self.utils.get_ssm_params('origin_ingestion_provider')
         )
+        print(f"Result from setting ingestion status to IN_PROGRESS: {result}")
         try:
             print(f"Loading path {path}")
-            print(f"does path exist? {os.path.exists(path)}")
+            print(f"does path exist? {os.path.exists(path)}", flush=True)
             local_file = self.load(path)
+            print(f"Got local file {local_file} loaded...now splitting.", flush=True)
             split_results = self.split_pages(local_file)
+            print(f"Got split results {split_results}", flush=True)
             docs: [VectorStoreDocument] = self.llm_ocr(split_results['splits'], source, extra_header_text, extra_metadata)
+            print(f"Returning {len(docs)} docs: {docs}", flush=True)
             return docs
         except Exception as e:
+            print(dir(e))
             print(f"Error loading {path}: {e}")
+            os.unlink(path)
             self.utils.set_ingestion_status(
                 user_id, 
                 f"{collection_id}/{filename}",
                 etag,
                 0, 
-                f'ERROR: {e.args[0]}',
+                f'ERROR: {e.__dict__}',
                 self.utils.get_ssm_params('origin_ingestion_provider')
             )
+            
             raise e
         
         # self.utils.save_vector_docs(docs, user_id, collection_id)

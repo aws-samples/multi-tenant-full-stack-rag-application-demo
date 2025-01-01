@@ -11,7 +11,8 @@ information, add it as a property on the node or edge. Also add the full name of
 of the node.
 
 Each node should have at least the fields `id`, `name`, and `type`. The `id` is the unique identifier, 
-and the `type` is the type of entity, like 'company' or 'executive'. You can include other properties 
+and the `type` is the type of entity, like 'company' or 'executive'. If possible, include address info
+for city, state, and zip code in separate node attributes. You can include other attributes. 
 if you find them. 
 
 The source node always acts on the target node in the way described by the edge label.
@@ -28,7 +29,10 @@ So the example output might be:
           "id": "1234_any_st_anytown_anystate_11111",
           "type": "property",
           "name": "1234 Any St, Anytown, Anystate 11111",
-          "address": "1234 Any St, Anytown, Anystate 11111",
+          "street_address": "1234 Any St",
+          "city": "Anytown",
+          "state": "CA",
+          "zip": "11111"
       },
       {
           "id": "dave",,

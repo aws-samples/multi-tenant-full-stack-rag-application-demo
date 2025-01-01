@@ -37,6 +37,7 @@ export default class Api {
       this.deleteDocCollection = this.deleteDocCollection.bind(this);
       this.deleteFile = this.deleteFile.bind(this);
       this.deletePromptTemplate = this.deletePromptTemplate.bind(this);
+      this.downloadFile = this.downloadFile.bind(this);
       this.getData = this.getData.bind(this);
       this.postData = this.postData.bind(this);
       this.getCurrentAuth = this.getCurrentAuth.bind(this);
@@ -149,6 +150,33 @@ export default class Api {
       return response
     }
 
+    downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || 'download';
+      const clickHandler = () => {
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+          a.removeEventListener('click', clickHandler);
+        }, 150);
+      };
+      a.addEventListener('click', clickHandler, false);
+      a.click();
+      return a;
+    }
+
+    async downloadFile(collectionId, fileName) {
+      console.log(`Downloading ${collectionId}/${fileName}`);
+      let response = await Storage.get(
+        `${collectionId}/${fileName}`,
+        {
+          level: 'private',
+          download: true
+        }
+      )
+      this.downloadBlob(response.Body, fileName)
+    }
   
     async generate(postObject) {
       let url = this.apiUrls['generation']
@@ -286,6 +314,9 @@ export default class Api {
           modelsFinal.push(model)
         }
       })
+      console.log("Got response from getLlms:")
+      console.dir(modelsFinal)
+      console.dir(bedrockModelParams)
       return {
         models: modelsFinal,
         model_default_params: bedrockModelParams
@@ -449,7 +480,6 @@ export default class Api {
       // console.dir(result)
       return result
     }
-  
 
     async uploadFiles(collectionId, files) {
       console.log('UploadFiles received')

@@ -17,6 +17,8 @@ class DocumentCollection:
         collection_name: str, 
         description: str, 
         vector_db_type: str='opensearch_managed', 
+        vector_ingestion_enabled: bool=True,
+        file_storage_tool_enabled: bool=True,
         collection_id: str=None,
         shared_with=[], 
         created_date: str=None, 
@@ -30,12 +32,15 @@ class DocumentCollection:
         self.description = description
         self.shared_with = self.check_allowed_email_domains(shared_with)
         self.vector_db_type = vector_db_type
+        self.vector_ingestion_enabled = vector_ingestion_enabled
+        self.file_storage_tool_enabled = file_storage_tool_enabled
         self.collection_id = collection_id if collection_id else uuid4().hex
         now = datetime.now().isoformat() + 'Z'
         self.created_date = created_date if created_date else now
         self.updated_date = updated_date if updated_date else now
-        # print(f"Got enrichment_pipelines {enrichment_pipelines}, type {type(enrichment_pipelines)}")
+        print(f"Got enrichment_pipelines {enrichment_pipelines}, type {type(enrichment_pipelines)}")
         self.enrichment_pipelines = json.loads(enrichment_pipelines) if isinstance(enrichment_pipelines, str) else enrichment_pipelines
+        print(f"graph_schema is {graph_schema}, type {type(graph_schema)}")
         self.graph_schema = json.loads(graph_schema) if isinstance(graph_schema, str) else graph_schema
 
     @staticmethod
@@ -55,13 +60,17 @@ class DocumentCollection:
             
     @staticmethod
     def from_ddb_record(rec):
-        # print(f"document_collection.from_ddb_record received rec {rec}, type {type(rec)}")
+        print(f"document_collection.from_ddb_record received rec {rec}, type {type(rec)}")
+        vector_ingestion_enabled = True if 'vector_ingestion_enabled' not in rec else rec['vector_ingestion_enabled']['BOOL']
+        file_storage_tool_enabled = False if 'file_storage_tool_enabled' not in rec else rec['file_storage_tool_enabled']['BOOL']
         return DocumentCollection(
             rec['partition_key']['S'],
             rec['user_email']['S'],
             rec['collection_name']['S'],
             rec['description']['S'],
             rec['vector_db_type']['S'],
+            vector_ingestion_enabled,
+            file_storage_tool_enabled,
             rec['collection_id']['S'],
             rec.get('shared_with', {}).get('SS', []),
             rec['created_date']['S'],
@@ -79,6 +88,8 @@ class DocumentCollection:
             'collection_id': {'S': self.collection_id},
             'description': {'S': self.description},
             'vector_db_type': {'S': self.vector_db_type},
+            'vector_ingestion_enabled': {'BOOL': self.vector_ingestion_enabled},
+            'file_storage_tool_enabled': {'BOOL': self.file_storage_tool_enabled},
             'created_date': {'S': self.created_date},
             'updated_date': {'S': self.updated_date},
             'graph_schema': {'S': json.dumps(self.graph_schema if self.graph_schema else {})},
@@ -99,6 +110,8 @@ class DocumentCollection:
             'collection_name': self.collection_name,
             'description': self.description,
             'vector_db_type': self.vector_db_type,
+            'vector_ingestion_enabled': self.vector_ingestion_enabled,
+            'file_storage_tool_enabled': self.file_storage_tool_enabled,
             'created_date': self.created_date,
             'shared_with': self.shared_with,
             'updated_date': self.updated_date,
@@ -115,6 +128,8 @@ class DocumentCollection:
             'collection_name': self.collection_name,
             'description': self.description,
             'vector_db_type': self.vector_db_type,
+            'vector_ingestion_enabled': self.vector_ingestion_enabled,
+            'file_storage_tool_enabled': self.file_storage_tool_enabled,
             'created_date': self.created_date,
             'shared_with': self.shared_with,
             'updated_date': self.updated_date,
@@ -147,6 +162,8 @@ class DocumentCollection:
             self.collection_id == obj.collection_id and \
             self.collection_name == obj.collection_name and \
             self.description == obj.description and \
-            self.vector_db_type == obj.vector_db_type # and \
+            self.vector_db_type == obj.vector_db_type and \
+            self.vector_ingestion_enabled == obj.vector_ingestion_enabled and \
+            self.file_storage_tool_enabled == obj.file_storage_tool_enabled
             # self.created_date == obj.created_date and \
             # self.updated_date == obj.updated_date

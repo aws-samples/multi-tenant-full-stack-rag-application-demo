@@ -6,7 +6,7 @@ from urllib.parse import unquote_plus
 
 class VectorIngestionProviderEvent:
     def from_lambda_event(self, event):
-        # print(f"VectorIngestionProviderrEvent received event {event}")
+        print(f"VectorIngestionProviderEvent received event {event}")
         self.ingestion_files = []
         for record in event["Records"]:
             # print(f"Got top-level record {record}")

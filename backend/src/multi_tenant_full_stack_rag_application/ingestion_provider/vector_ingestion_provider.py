@@ -11,6 +11,7 @@ from urllib.parse import unquote_plus
 
 from multi_tenant_full_stack_rag_application import utils
 
+from .loaders.docx_loader import DocxLoader
 from .loaders.json_loader import JsonLoader
 from .loaders.pdf_image_loader import PdfImageLoader
 from .loaders.text_loader import TextLoader
@@ -30,14 +31,17 @@ from .ingestion_status import IngestionStatus
 # ]
 
 default_ocr_model = os.getenv('OCR_MODEL_ID')
+default_embedding_model = os.getenv('EMBEDDING_MODEL_ID')
 
 max_download_attempts = 3
 vector_ingestion_provider = None
+
 
 class VectorIngestionProvider:
     def __init__(self,*,
         lambda_client: boto3.client=None,
         ocr_model_id: str=None,
+        embedding_model_id: str=None,
         s3_client: boto3.client=None,
         sqs_client: boto3.client=None,
         ssm_client: boto3.client=None,
@@ -52,6 +56,11 @@ class VectorIngestionProvider:
         self.pdf_loader = self.get_pdf_loader()
         self.my_origin = self.utils.get_ssm_params('origin_ingestion_provider', ssm_client=ssm_client)
         
+        if embedding_model_id:
+            self.embedding_model_id = embedding_model_id
+        else:
+            self.embedding_model_id = default_embedding_model
+
         if ocr_model_id:
             self.ocr_model_id = ocr_model_id
         else:
@@ -72,19 +81,20 @@ class VectorIngestionProvider:
         else:
             self.sqs = sqs_client
         
-        print(f"vector_ingestion_provider getting max tokens for {default_ocr_model}")
+        print(f"vector_ingestion_provider getting max tokens for ocr model: {default_ocr_model}")
         response = self.utils.invoke_lambda(
             self.utils.get_ssm_params('embeddings_provider_function_name'),
             {
                 "operation": "get_model_max_tokens",
                 "origin": self.my_origin,
                 "args": {
-                    "model_id": default_ocr_model
+                    "model_id": self.embedding_model_id
                 }
             }
         )
+        print(f"response from invoke_lambda for get_model_max_tokens: {response}")
         self.max_tokens_per_chunk = json.loads(response['body'])['response']
-        
+        print(f"Got")
         print(f"Got max_tokens_per_chunk {self.max_tokens_per_chunk}")
         self.splitter = OptimizedParagraphSplitter(
             max_tokens_per_chunk=self.max_tokens_per_chunk
@@ -162,7 +172,19 @@ class VectorIngestionProvider:
         if not verified_doc_collection:
             print(f"Collection {collection_id} not found for user {user_id}")
             return
-        
+        if not ('vector_ingestion_enabled' in verified_doc_collection and \
+            verified_doc_collection['vector_ingestion_enabled'] == True):
+            print(f"Skipping {filename} because doc collection {verified_doc_collection['collection_name']} has vector ingestion disabled.")
+            self.utils.set_ingestion_status(
+                user_id,
+                f"{collection_id}/{filename}",
+                file_dict['etag'],
+                0,
+                "UPLOADED",
+                self.my_origin
+            )
+            return
+
         local_path = self.download_s3_file(file_dict['bucket'], s3_key)
 
         result = self.ingest_file(local_path, file_dict)
@@ -265,7 +287,7 @@ class VectorIngestionProvider:
             elif local_path.lower().endswith('.pdf'):
                 docs = self.ingest_pdf_file(local_path, file_dict)
             elif local_path.lower().endswith('.docx'):
-                print(f'.docx not yet supported.')
+                docs = self.ingest_docx_file(local_path, file_dict)
             else:
                 # local_path.endswith('.txt'):
                 # assume you can parse it as text for now
@@ -290,10 +312,15 @@ class VectorIngestionProvider:
                 f"{file_dict['collection_id']}/{file_dict['filename']}",
                 file_dict['etag'],
                 0,
-                f"ERROR: {e}",
+                f"ERROR: {e.__dict__}",
                 self.my_origin
             )
             raise e
+
+    def ingest_docx_file(self, local_path, file_dict):
+        loader = DocxLoader(splitter=self.splitter)
+        docs = loader.load_and_split(local_path, file_dict['user_id'])
+        return docs
 
     def ingest_json_file(self, local_path, file_dict, *, json_lines=True, extra_meta={}):
         # print(f"ingest_json_file got local path {local_path}")

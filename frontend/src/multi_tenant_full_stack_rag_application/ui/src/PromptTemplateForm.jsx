@@ -147,21 +147,21 @@ function PromptTemplateForm() {
   }, [currentTemplate.name])
 
   useEffect(() => {
-    // (async () => {
-    //   let response =  api.getLlms()
-    //   setLlmDefaultParams(response['model_default_params']);
-    //   let llmsOptions = []
-    //   response['models'].forEach( modelId => {
-    //     llmsOptions.push({
-    //       label: modelId, 
-    //       value: modelId
-    //     });
-    //   });
-    //   // // console.log("Setting llmsOptions to:");
-    //   // // console.dir(llmsOptions);
-    //   setLlms(llmsOptions);
-    //   setLlmsLoadingStatus('finished');
-    // })();
+    (async () => {
+      let response =  api.getLlms()
+      setLlmDefaultParams(response['model_default_params']);
+      let llmsOptions = []
+      response['models'].forEach( modelId => {
+        llmsOptions.push({
+          label: modelId, 
+          value: modelId
+        });
+      });
+      // // console.log("Setting llmsOptions to:");
+      // // console.dir(llmsOptions);
+      setLlms(llmsOptions);
+      setLlmsLoadingStatus('finished');
+    })();
     // (async () => {  
     //   if (currentTemplate.templateId) {
     //     if (currentTemplate.templateId.startsWith('default_')) {
@@ -347,7 +347,7 @@ function PromptTemplateForm() {
             </FormField>
             <FormField label="Please enter comma-separated stop sequences for this prompt:">
                 <Input
-                onChange={({ detail }) => updateCurrentTemplate('stopSeqs')}
+                onChange={({ detail }) => updateCurrentTemplate('stopSeqs', detail.value)}
                 value={currentTemplate.stopSeqs}
               />
             </FormField>

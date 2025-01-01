@@ -7,7 +7,7 @@ import numpy as np
 import os
 import sys
 
-from base64 import b64encode
+from base64 import b64decode, b64encode
 from math import ceil
 from numpy.linalg import norm
 from os import getcwd, getenv, path
@@ -44,16 +44,17 @@ event {
             "input_type": "search_query"
 
         for invoke_model:
-            "model_id": str,
-            "prompt": str='',
-            "model_kwargs": dict={}
-            "messages": [dict]=[]
-
+            messages: [dict],
+            model_id: str,
+            additional_model_req_fields: any=None, 
+            additional_model_resp_field_paths: [str]=None,
+            guardrail_config: dict=None, 
+            inference_config: dict={},
+            system: list=None, 
+            tool_config: dict=None
+        
         for list_models:
-            none
-
-
-
+                none
 }
 """
 
@@ -66,7 +67,7 @@ params_path = path.join(parent_path, 'bedrock_model_params.json')
 
 with open(params_path, 'r') as params_in:
     bedrock_model_params_json = params_in.read()
-    # # print(f"Got bedrock_model_params before parsing: {json.dumps(bedrock_model_params_json)}")
+    print(f"Got bedrock_model_params before parsing: {bedrock_model_params_json}")
     bedrock_model_params = json.loads(bedrock_model_params_json)
 
 
@@ -143,19 +144,40 @@ class BedrockProvider():
     def embed_text(self, text, model_id, input_type='search_query', *, dimensions=1024):
         print(f"Embedding text with model {model_id} and dimensions {dimensions}")
         if model_id.startswith('cohere'):
-            kwargs = {'input_type': input_type}
-            if dimensions: 
-                kwargs['dimensions'] = dimensions
-            return self.invoke_model(model_id, text, kwargs)
-        elif model_id.startswith('amazon'):
-            kwargs = {
-                'dimensions': dimensions
+            args = {
+                "texts":[text],
+                "input_type": input_type
             }
-            # print(f"Calling with model {model_id}, input {text},  kwargs {kwargs}")
-            return self.invoke_model(model_id, text, kwargs)
+            # kwargs = {'input_type': input_type}
+            # if dimensions: 
+            #     kwargs['dimensions'] = dimensions
+            # return self.bedrock_rt.invoke_model(model_id, text, kwargs)
+        elif model_id.startswith('amazon'):
+            # kwargs = {
+            #     'dimensions': dimensions
+            # }
+            # # print(f"Calling with model {model_id}, input {text},  kwargs {kwargs}")
+            # return self.invoke_model(model_id, text, kwargs)
+            args = {
+                "inputText": text,
+                "dimensions": dimensions
+            }
         else:
             raise Exception("Unknown model ID provided.")
-    
+        body = json.dumps(args).encode('utf-8')
+        
+        response = self.bedrock_rt.invoke_model(
+            modelId=model_id,
+            body=body,
+            contentType = 'application/json',
+            accept='*/*'
+        )
+        print(f"embed_text got response from bedrock_rt.invoke_model: {response}")
+        body = json.loads(response['body'].read())
+        # print(f"embed_text result: {body.keys()}")
+        # print(f"Got response from bedrock.invoke_model: {body}")
+        return body['embedding']
+        
     # @staticmethod
     # def extract_context(results):
     #     text = ''
@@ -186,15 +208,15 @@ class BedrockProvider():
         if model_id.startswith('ai21.') or \
             model_id.startswith('amazon.titan-image-generator') or \
             model_id.startswith('amazon.titan-embed'): 
-            token_ct = self.model_params[model_id]['maxTokens']['max']
+            token_ct = self.model_params[model_id]['maxTokens']['default']
         elif model_id.startswith('amazon.titan-text'):
             token_ct = self.model_params[model_id]['textGenerationConfig']['maxTokenCount']['max']
         elif model_id.startswith('anthropic.claude-3'):
-            token_ct = self.model_params[model_id]['max_tokens']['max']
-        elif model_id.startswith('anthropic'):
-            token_ct = self.model_params[model_id]['max_tokens_to_sample']['max']
+            token_ct = self.model_params[model_id]['maxTokens']['max']
+        # elif model_id.startswith('anthropic'):
+        #     token_ct = self.model_params[model_id]['max_tokens_to_sample']['max']
         elif model_id.startswith('cohere.'):
-            token_ct = self.model_params[model_id]['max_tokens']['max']
+            token_ct = self.model_params[model_id]['maxTokens']['max']
         elif model_id.startswith('meta.llama2'):
             token_ct = self.model_params[model_id]['max_gen_len']['max']
         elif model_id.startswith('stability.'):
@@ -263,9 +285,14 @@ class BedrockProvider():
         elif operation == 'invoke_model':
             model_id = handler_evt.model_id
             prompt = handler_evt.prompt if hasattr(handler_evt,'prompt')  else ''
-            model_kwargs = handler_evt.model_kwargs if hasattr(handler_evt,'model_kwargs') else {}
+            inference_config = handler_evt.inference_config if hasattr(handler_evt,'inference_config') else {}
             messages = handler_evt.messages if hasattr(handler_evt,'messages') else []
-            response = self.invoke_model(model_id, prompt, model_kwargs, messages=messages)
+            response = self.invoke_model(
+                inference_config=inference_config,
+                messages=messages,
+                model_id=model_id,
+
+            )
             # print(f"invoke_model got response {response}")   
             
         elif operation == 'list_models':
@@ -281,116 +308,173 @@ class BedrockProvider():
         }
         print(f"Bedrock_provider returning result {result}") 
         return result
-
-    def invoke_model(self, model_id: str, prompt: str='', model_kwargs={}, *, messages=[]):
-        # # print(f"Invoking model {model_id}")
+        
+    def invoke_model(self, *, 
+        messages: [dict], 
+        model_id: str, 
+        additional_model_req_fields: any=None, 
+        additional_model_resp_field_paths: [str]=None,
+        guardrail_config: dict=None, 
+        inference_config: dict={},
+        system: list=None, 
+        tool_config: dict=None
+    ):
         content_type = 'application/json'
         accept = '*/*'
-        # print(f"Invoke model got model_kwargs {model_kwargs}")
-        model_kwargs = self._populate_default_args(model_id, model_kwargs)
-        # print(f"After merging default args, model_kwargs = {model_kwargs}")
+        inference_config = self._populate_default_args(model_id, inference_config)
+        print(f"After merging default args, inference_config = {inference_config}")
+        final_msgs = []
+        for msg in messages:
+            print(f"msg type: {type(msg)}")
+            if isinstance(msg, str):
+                msg = json.loads(msg)
+            print(msg)
+            print(msg.keys())
+            for i in range(len(msg['content'])):
+                print(f"message content array: {msg['content']}")
+                print(f"type(msg[content][i]) {type(msg['content'][i])}")
+                if isinstance(msg['content'][i], str):
+                    print("Loading json string.")
+                    msg['content'][i] = json.loads(msg['content'][i])
+                if 'image' in msg['content'][i].keys():
+                    print(f"image dict: {msg['content'][i]['image']}")
+                    print(f"image dict type: {type(msg['content'][i]['image'])}")
+                    print(f"src dict type: {type(msg['content'][i]['image']['source'])}")
+                    print(msg['content'][i]['image']['source'])
+                    if isinstance(msg['content'][i]['image']['source']['bytes'], str):
+                        print("Converting content payload from string to bytes.")
+                        msg['content'][i]['image']['source']['bytes'] = b64decode(msg['content'][i]['image']['source']['bytes'].encode('utf-8'))
+            final_msgs.append(msg)
+        args = {
+            "modelId": model_id,
+            "messages": final_msgs,
+            "inferenceConfig": inference_config
+        }
 
-        if model_id.startswith('amazon'):
-            args = {
-                "inputText": prompt,
-            }
-            if 'dimensions' in model_kwargs.keys():
-                args['dimensions'] = model_kwargs['dimensions']
-            if "embed" not in model_id:
-                args["textGenerationConfig"] = model_kwargs
-        elif model_id.startswith('cohere.embed'):
-            args = {
-                "texts": [prompt],
-                "input_type": model_kwargs["input_type"]
-            }
-        elif model_id.startswith('anthropic.claude-3'):
-            args = model_kwargs
-            if len(messages) == 0:
-                args['messages'] = [
-                    {"role": "user", "content": prompt}
-                ]
-            else: 
-                # format should be [{"mime_type": mime_type, "content": content}]
-                # for images content should be bytes.
-                final_content = []
-                for msg in messages:
-                    print(f"Got message with mime type {msg['mime_type']}")
-                    if msg["mime_type"] in ['text/plain','text', 'txt']:
-                        final_content.append({
-                            "type": "text",
-                            "text": msg["content"]
-                        })
-                    elif msg["mime_type"] in [
-                        "jpg",
-                        "image/jpeg",
-                        "png",
-                        "image/png",
-                        "png",
-                        "image/webp",
-                        "webp",
-                        "image/gif"
-                        "gif"
-                    ]:   
-                        # content_image = msg["content"].encode('utf-8')
-                        print(f"Type of msg content is now {type(msg['content'])}")
-                        final_content.append({
-                            "type": "image", 
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/jpeg", 
-                                "data": msg["content"]
-                            }
-                        })
-                    else:
-                        raise Exception(f"Unexpected mime type received: {msg['mime_type']}. If it's a plain text file (like code) pass in 'text/plain' as the mime type")
+        if additional_model_req_fields:
+            args['additionalModelRequestFields'] = additional_model_req_fields
+        
+        if additional_model_resp_field_paths:
+            args['additionalModelResponseFieldPaths']
+
+        if guardrail_config:
+            args['guardrailConfig'] = guardrail_config
+
+        if system:
+            args['system'] = system
+        
+        if tool_config:
+            args['toolConfig'] = tool_config
+    
+        response = self.bedrock_rt.converse(**args)
+        print(f"invoke_model got response from bedrock_rt.invoke_model: {response}")
+        return response['output']['message']['content'][0]['text']
+        # body = json.loads(response['body'].read())
+        # print(f"Invocation result: {body}")
+        # print(f"Got response from bedrock.converse: {body}")
+        # return body
+
+        # if model_id.startswith('amazon'):
+        #     args = {
+        #         "inputText": prompt,
+        #     }
+        #     if 'dimensions' in model_kwargs.keys():
+        #         args['dimensions'] = model_kwargs['dimensions']
+        #     if "embed" not in model_id:
+        #         args["textGenerationConfig"] = model_kwargs
+        # elif model_id.startswith('cohere.embed'):
+        #     args = {
+        #         "texts": [prompt],
+        #         "input_type": model_kwargs["input_type"]
+        #     }
+        # elif model_id.startswith('anthropic.claude-3'):
+        #     args = model_kwargs
+        #     if len(messages) == 0:
+        #         args['messages'] = [
+        #             {"role": "user", "content": prompt}
+        #         ]
+        #     else: 
+        #         # format should be [{"mime_type": mime_type, "content": content}]
+        #         # for images content should be bytes.
+        #         final_content = []
+        #         for msg in messages:
+        #             print(f"Got message with mime type {msg['mime_type']}")
+        #             if msg["mime_type"] in ['text/plain','text', 'txt']:
+        #                 final_content.append({
+        #                     "type": "text",
+        #                     "text": msg["content"]
+        #                 })
+        #             elif msg["mime_type"] in [
+        #                 "jpg",
+        #                 "image/jpeg",
+        #                 "png",
+        #                 "image/png",
+        #                 "png",
+        #                 "image/webp",
+        #                 "webp",
+        #                 "image/gif"
+        #                 "gif"
+        #             ]:   
+        #                 # content_image = msg["content"].encode('utf-8')
+        #                 print(f"Type of msg content is now {type(msg['content'])}")
+        #                 final_content.append({
+        #                     "type": "image", 
+        #                     "source": {
+        #                         "type": "base64",
+        #                         "media_type": "image/jpeg", 
+        #                         "data": msg["content"]
+        #                     }
+        #                 })
+        #             else:
+        #                 raise Exception(f"Unexpected mime type received: {msg['mime_type']}. If it's a plain text file (like code) pass in 'text/plain' as the mime type")
                 
-                args['messages'] = [{
-                    "role": "user",
-                    "content": final_content
-                }]
-            # # print(f"Running with args['messages'] = {args['messages']}")
-        else:
-            args = model_kwargs
-            args["prompt"] = prompt
+        #         args['messages'] = [{
+        #             "role": "user",
+        #             "content": final_content
+        #         }]
+        #     # # print(f"Running with args['messages'] = {args['messages']}")
+        # else:
+        #     args = model_kwargs
+        #     args["prompt"] = prompt
 
-        print(f"invoking model with model_id {model_id} and args {args}")
-        result = self.bedrock_rt.invoke_model(
-            modelId=model_id,
-            accept=accept,
-            contentType=content_type,
-            body=json.dumps(args)
-        )
-        body = json.loads(result['body'].read())
-        print(f"Invocation result: {body}")
-        if "content" in body:
-            text = ''
-            for line in body['content']:
-                if line['type'] == 'text':
-                    text += line['text']
-            return text
-        elif "completion" in body: 
-            return body['completion']
-        elif "generations" in body:
-            text = ''
-            for result in body['generations']:
-                text += result['text']
-            return text
-        elif "results" in body:
-            text = ''
-            for result in body['results']:
-                text += result['outputText']
-            return text 
-        elif "embedding" in body:
-            return body['embedding']
-        elif "embeddings" in body:
-            return body["embeddings"]
-        elif "outputs" in body:
-            text = ''
-            for output in body['outputs']:
-                text += output['text']
-            return text
-        else:
-            raise Exception('could not find return value in payload!')
+        # print(f"invoking model with model_id {model_id} and args {args}")
+        # result = self.bedrock_rt.invoke_model(
+        #     modelId=model_id,
+        #     accept=accept,
+        #     contentType=content_type,
+        #     body=json.dumps(args)
+        # )
+        # body = json.loads(result['body'].read())
+        # print(f"Invocation result: {body}")
+        # if "content" in body:
+        #     text = ''
+        #     for line in body['content']:
+        #         if line['type'] == 'text':
+        #             text += line['text']
+        #     return text
+        # elif "completion" in body: 
+        #     return body['completion']
+        # elif "generations" in body:
+        #     text = ''
+        #     for result in body['generations']:
+        #         text += result['text']
+        #     return text
+        # elif "results" in body:
+        #     text = ''
+        #     for result in body['results']:
+        #         text += result['outputText']
+        #     return text 
+        # elif "embedding" in body:
+        #     return body['embedding']
+        # elif "embeddings" in body:
+        #     return body["embeddings"]
+        # elif "outputs" in body:
+        #     text = ''
+        #     for output in body['outputs']:
+        #         text += output['text']
+        #     return text
+        # else:
+        #     raise Exception('could not find return value in payload!')
     
     # def list_bedrock_kbs(self):
     #     kbs = []
@@ -422,11 +506,19 @@ class BedrockProvider():
             self.models = self.bedrock.list_foundation_models()['modelSummaries']
         return self.models
     
-    def _populate_default_args(self, model_id, model_kwargs={}):
-        params = self.model_params[model_id]
+    def _populate_default_args(self, model_id, inference_config={}):
+        params = None
+        alt_model_id = model_id.replace('us.', '')
+        if model_id in self.model_params:
+            params = self.model_params[model_id]
+        elif alt_model_id in self.model_params:
+            params = self.model_params[alt_model_id]
+        else:
+            raise Exception(f"Could not find model {model_id} or {alt_model_id} in models.")
+        
         paths = params['default_paths']
         args = {
-            **model_kwargs
+            **inference_config
         }
         for path in paths:
             parts = path.split('.')
@@ -435,8 +527,8 @@ class BedrockProvider():
             else: 
                 key = parts[0]
     
-            if key in model_kwargs:
-                args[key] = model_kwargs[key]
+            if key in inference_config:
+                args[key] = inference_config[key]
             else:
                 args[key] = jq.compile(f'.{path}').input_value(params).first()
         return args

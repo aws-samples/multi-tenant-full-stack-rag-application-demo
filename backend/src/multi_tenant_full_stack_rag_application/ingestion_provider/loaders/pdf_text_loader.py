@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 
 from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
-from multi_tenant_full_stack_rag_application.ingestion_provider.loaders import Loader
+from .loader import Loader
 from multi_tenant_full_stack_rag_application.ingestion_provider.splitters import Splitter
 
 class PdfTextLoader(Loader):
@@ -87,7 +87,7 @@ class PdfTextLoader(Loader):
             height = found_item["geometry"]["BoundingBox"]["Height"]
             top = found_item["geometry"]["BoundingBox"]["Top"]
             if found_item['block_type'] == 'PAGE':
-                # print(found_item)
+                print(found_item)
             if "text" in found_item:
                 leading_newlines = self.calculate_leading_newlines(last_height, last_top, top)
                 output_text += leading_newlines + found_item["text"] + " "

@@ -1,0 +1,2 @@
+ googlesearch-python
+ lxml[html_clean]

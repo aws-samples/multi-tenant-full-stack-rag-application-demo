@@ -26,17 +26,28 @@ region = os.getenv(
 
 config = {}
 
+if not os.path.isdir('src/multi_tenant_full_stack_rag_application/ui/src/commons/prompt_templates'):
+    os.mkdir('src/multi_tenant_full_stack_rag_application/ui/src/commons/prompt_templates')
+
 shutil.copyfile(
     '../backend/src/multi_tenant_full_stack_rag_application/bedrock_provider/bedrock_model_params.json', 
     'src/multi_tenant_full_stack_rag_application/ui/src/commons/bedrock_model_params.json'
 )
 
-if not os.path.isdir('src/multi_tenant_full_stack_rag_application/ui/src/commons/prompt_templates'):
-    os.mkdir('src/multi_tenant_full_stack_rag_application/ui/src/commons/prompt_templates')
-
 with open('src/multi_tenant_full_stack_rag_application/ui/src/commons/bedrock_model_params.json', 'r') as f_in:
     bedrock_model_params = json.loads(f_in.read())
     bedrock_model_ids = list(bedrock_model_params.keys())
+
+
+for model_id in bedrock_model_ids:
+    if region == 'us-west-2'and model_id.startswith('amazon.nova'):
+        model_dict = bedrock_model_params[model_id]
+        new_model_id = f"us.{model_id}"
+        bedrock_model_params[new_model_id] = model_dict
+        del bedrock_model_params[model_id]
+
+with open('src/multi_tenant_full_stack_rag_application/ui/src/commons/bedrock_model_params.json', 'w') as f_out:
+    f_out.write(json.dumps(bedrock_model_params))
 
 templates = {}
 for file in glob.glob(

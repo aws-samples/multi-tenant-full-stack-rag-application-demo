@@ -1,30 +1,65 @@
 #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #  SPDX-License-Identifier: MIT-0
 
+
+import boto3
 import json
+import os
+
 from datetime import datetime
 from json import JSONEncoder
 
 def _default(self, obj):
-    return getattr(obj.__class__, "to_json", _default.default)(obj)
+    if obj:
+        return getattr(obj.__class__, "to_json", _default.default)(obj)
+    else:
+        return '{}'
 
 _default.default = JSONEncoder.default  # Save unmodified default.
 JSONEncoder.default = _default # Replace it.
+s3 = boto3.client('s3')
+ingestion_bucket = os.getenv('INGESTION_BUCKET')
 
 
 class IngestionStatus:
-    def __init__(self, user_id: str, doc_id: str, etag: str, 
-        lines_processed: int=0, progress_status: str='', last_modified=None):
+    def __init__(self, 
+        user_id: str, 
+        doc_id: str, 
+        etag: str, 
+        lines_processed: int=0, 
+        progress_status: str='', 
+        # presigned_url: str='',
+        last_modified=None
+    ):
         self.user_id = user_id
         self.doc_id = doc_id
         self.etag = etag
         self.lines_processed = lines_processed
         self.progress_status = progress_status
+        # if presigned_url:
+        #     self.presigned_url = presigned_url
+        # else:
+        #     self.presigned_url = self.create_presigned_url({
+        #         'user_id': {'S': user_id},
+        #         'doc_id': {'S': doc_id}
+        #     })
+
         if not last_modified:
             self.last_modified = datetime.now().isoformat() + 'Z'
         else:
             self.last_modified = last_modified
 
+    def create_presigned_url(self, rec):
+        return s3.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': ingestion_bucket,
+                'Key': f"/private/{rec['user_id']['S']}/{rec['doc_id']['S']}"
+            },
+            # links time out in 20 minutes
+            ExpiresIn=20 * 60
+        )
+    
     @staticmethod
     def from_ddb_record(rec):
         print(f"from_ddb_record got rec {rec}")
@@ -34,7 +69,7 @@ class IngestionStatus:
                 lines_processed = float(lines_processed)
             else:
                 lines_processed = int(lines_processed)
-
+        
         return IngestionStatus(
             rec['user_id']['S'],
             rec['doc_id']['S'],
@@ -61,6 +96,7 @@ class IngestionStatus:
             'etag': self.etag,
             'lines_processed': self.lines_processed,
             'progress_status': self.progress_status,
+            # 'presigned_url': self.presigned_url,
             'last_modified': self.last_modified,
         }
 

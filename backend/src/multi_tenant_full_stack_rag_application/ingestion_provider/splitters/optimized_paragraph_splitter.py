@@ -57,6 +57,7 @@ class OptimizedParagraphSplitter(Splitter):
                 }, 
                 lambda_client=self.lambda_
             )
+            print(f"response from get_model_max_tokens: {response}")
             self.max_tokens_per_chunk = json.loads(response['body'])['response']
         print(f"Got max_tokens_per_chunk {self.max_tokens_per_chunk}")
         return self.max_tokens_per_chunk
@@ -69,6 +70,7 @@ class OptimizedParagraphSplitter(Splitter):
     #     )
 
     def split(self, content, source, *, extra_header_text='', extra_metadata={}, return_dicts=False, split_seq_num=0):
+        print(f"OptimizedParagraphSplitter got content {content}")
         results = []
         content = content.replace('\xa0', '')
         content = content.replace('\t','')
@@ -80,11 +82,13 @@ class OptimizedParagraphSplitter(Splitter):
         # text_len = self.emb_provider_fn_name.get_token_count(content)
         token_ct = header_len + text_len
         if token_ct <= self.max_tokens_per_chunk:
+            print(f"Token count is less than max tokens. Keeping it all one chunk.")
             results = [f"{extra_header_text}\n{content}"]
         else:
             parts = content.split(self.split_seqs[split_seq_num])
             if not isinstance(parts, list):
                 parts = [parts]
+            print(f"Got {len(parts)} parts after splitting with split_seq {self.split_seqs[split_seq_num]}")
             # aggregate parts back together so they approach the desired max tokens
             # per chunk.
             running_part = ''
@@ -98,10 +102,10 @@ class OptimizedParagraphSplitter(Splitter):
                 if running_part_toks + num_toks < self.max_tokens_per_chunk:
                     running_part += ' ' + part
                     running_part_toks += num_toks
-                    
                 else: 
                     # The running part is full. Append to the results array.
                     if running_part != '':
+                        print(f"Appending running part to results ({len(running_part.split())} words)")
                         results.append(f"{extra_header_text} {running_part}")
                         running_part = ''
                         running_part_toks = 0
@@ -109,6 +113,7 @@ class OptimizedParagraphSplitter(Splitter):
                     # to fit in the max_tokens_per_chunk, split it. Otherwise, just us it as
                     # the beginning of a new running part.
                     if num_toks > self.max_tokens_per_chunk:
+                        print(f"Recursing because the number of tokens is still too big {num_toks}.")
                         results += self.split(
                             part, 
                             source,
@@ -121,5 +126,5 @@ class OptimizedParagraphSplitter(Splitter):
                         running_part_toks = num_toks
 
             results.append(f"{extra_header_text} {running_part}")   
-        # print(f"optimized paragraph splitter returning {results}")  
+        print(f"optimized paragraph splitter returning {results}")  
         return results

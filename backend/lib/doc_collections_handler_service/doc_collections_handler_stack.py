@@ -17,6 +17,7 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_iam as iam,
     aws_lambda as lambda_,
+    aws_s3 as s3,
     aws_ssm as ssm,
 )
 from constructs import Construct
@@ -38,6 +39,7 @@ class DocumentCollectionsHandlerStack(Stack):
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
+
         build_cmds = []
 
         # for path in embeddings_provider_req_paths:

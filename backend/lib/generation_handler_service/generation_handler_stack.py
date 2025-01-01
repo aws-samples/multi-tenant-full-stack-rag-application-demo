@@ -18,6 +18,7 @@ from aws_cdk import (
     aws_iam as iam,
     aws_lambda as lambda_,
     aws_neptune_alpha as neptune,
+    aws_s3 as s3,
     aws_ssm as ssm,
 )
 from constructs import Construct
@@ -28,6 +29,7 @@ class GenerationHandlerStack(Stack):
         app_security_group: ec2.ISecurityGroup,
         auth_fn: lambda_.IFunction,
         auth_role_arn: str,
+        graph_handler_fn_arn: str,
         parent_stack_name: str,
         user_pool_client_id: str,
         user_pool_id: str,
@@ -71,7 +73,7 @@ class GenerationHandlerStack(Stack):
             ),
             security_groups=[app_security_group]
         )
-        
+
         self.generation_handler_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
             actions=['ssm:GetParameter','ssm:GetParametersByPath'],
@@ -83,7 +85,10 @@ class GenerationHandlerStack(Stack):
         self.generation_handler_function.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
             actions=['lambda:InvokeFunction'],
-            resources=[auth_fn.function_arn]
+            resources=[
+                auth_fn.function_arn,
+                graph_handler_fn_arn,
+            ]
         ))
 
         self.generation_handler_function.grant_invoke(cognito_auth_role)

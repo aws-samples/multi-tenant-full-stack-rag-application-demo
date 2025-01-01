@@ -23,6 +23,7 @@ class FinalScriptsStack(NestedStack):
         domain: aos.Domain,
         embeddings_provider_function: lambda_.IFunction,
         extraction_function: lambda_.IFunction,
+        generation_handler_function: lambda_.IFunction,
         graph_store_provider_function: lambda_.IFunction,
         inference_principal: iam.IPrincipal,
         ingestion_bucket: s3.IBucket,
@@ -32,6 +33,7 @@ class FinalScriptsStack(NestedStack):
         ingestion_status_provider_function: lambda_.IFunction,
         ingestion_status_table: ddb.ITable,
         prompt_templates_handler_function: lambda_.IFunction,
+        tools_provider_function: lambda_.IFunction,
         vector_store_provider_function: lambda_.IFunction,
         **kwargs
     ) -> None:
@@ -86,13 +88,102 @@ class FinalScriptsStack(NestedStack):
         
         bedrock_provider_function.grant_invoke(embeddings_provider_function.grant_principal)
 
+        # ingestion_bucket.grant_read(doc_collections_handler_function.grant_principal)
+        # ingestion_bucket.grant_read_write(generation_handler_function.grant_principal)
+        generation_handler_function.add_to_role_policy(iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            actions=[
+                "s3:PutObject",
+                "s3:GetObject",
+            ],  
+            resources=[
+                f"{ingestion_bucket.bucket_arn}/private/{'${cognito-identity.amazonaws.com:sub}'}/*",
+            ]
+        ))
+
+        generation_handler_function.add_to_role_policy(iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            actions=[
+                's3:ListBucket'
+            ],
+            resources=[
+                f"{ingestion_bucket.bucket_arn}"
+            ],
+            conditions={
+                "StringLike": {
+                    "s3:prefix": [
+                        "private/${cognito-identity.amazonaws.com:sub}/",
+                        "private/${cognito-identity.amazonaws.com:sub}/*"
+                    ]
+                }
+            }
+        ))
+
+        # doc_collections_handler_function.add_to_role_policy(iam.PolicyStatement(
+        #     effect=iam.Effect.ALLOW,
+        #     actions=[
+        #         "s3:GetObject",
+        #     ],  
+        #     resources=[
+        #         f"{ingestion_bucket.bucket_arn}/private/{'${cognito-identity.amazonaws.com:sub}'}/*",
+        #     ]
+        # ))
+
+        tools_provider_function.add_to_role_policy(iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            actions=[
+                "s3:PutObject",
+                "s3:GetObject",
+            ],  
+            resources=[
+                f"{ingestion_bucket.bucket_arn}/private/{'${cognito-identity.amazonaws.com:sub}'}/*",
+            ]
+        ))
+
+        tools_provider_function.add_to_role_policy(iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            actions=[
+                's3:ListBucket'
+            ],
+            resources=[
+                f"{ingestion_bucket.bucket_arn}"
+            ],
+            conditions={
+                "StringLike": {
+                    "s3:prefix": [
+                        "private/${cognito-identity.amazonaws.com:sub}/",
+                        "private/${cognito-identity.amazonaws.com:sub}/*"
+                    ]
+                }
+            }
+        ))
+
+        # doc_collections_handler_function.add_to_role_policy(iam.PolicyStatement(
+        #     effect=iam.Effect.ALLOW,
+        #     actions=[
+        #         's3:ListBucket'
+        #     ],
+        #     resources=[
+        #         f"{ingestion_bucket.bucket_arn}"
+        #     ],
+        #     conditions={
+        #         "StringLike": {
+        #             "s3:prefix": [
+        #                 "private/${cognito-identity.amazonaws.com:sub}/",
+        #                 "private/${cognito-identity.amazonaws.com:sub}/*"
+        #             ]
+        #         }
+        #     }
+        # ))
+        tools_provider_function.grant_invoke(generation_handler_function.grant_principal)
+
         bedrock_provider_function.grant_invoke(extraction_principal)
         doc_collections_handler_function.grant_invoke(extraction_principal)
         graph_store_provider_function.grant_invoke(extraction_principal)
         ingestion_status_provider_function.grant_invoke(extraction_principal)
         prompt_templates_handler_function.grant_invoke(extraction_principal)
         vector_store_provider_function.grant_invoke(extraction_principal)
-    
+
         bedrock_provider_function.grant_invoke(inference_principal)
         doc_collections_handler_function.grant_invoke(inference_principal)
         embeddings_provider_function.grant_invoke(inference_principal)

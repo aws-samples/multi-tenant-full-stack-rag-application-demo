@@ -56,7 +56,7 @@ export const UPLOADED_DOCUMENTS_COLUMN_DEFINITIONS = [
   {
     id: 'file_name',
     header: 'File Name',
-    cell: item => item.file_name,
+    cell: item => <Link onClick={item.onClick}>{item.file_name}</Link>,
     key: item => item.key,
     isRowHeader: true,
     isItemDisabled: item => item.hasOwnProperty('disabled') ? item.disabled : false

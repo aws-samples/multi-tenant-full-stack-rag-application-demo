@@ -67,6 +67,7 @@ class EntityExtraction(Pipeline):
             collection_name = list(response.keys())[0]
             collection = response[collection_name]
             if collection and 'enrichment_pipelines' in collection:
+                print(f"Got collection {collection}")
                 enrichment_pipelines = json.loads(collection['enrichment_pipelines'])
             print(f"enrichment pipelines is now {enrichment_pipelines}")
             if not ('entity_extraction' in enrichment_pipelines and enrichment_pipelines['entity_extraction']['enabled'] == True):
@@ -86,6 +87,7 @@ class EntityExtraction(Pipeline):
                 query,
                 self.my_origin
             )
+            print(f"response frm vector_store_query was {response}")
             body = json.loads(response['body'])
             print(f"Got chunks for for entity extraction {body}")
             doc_text = ''
@@ -124,21 +126,25 @@ class EntityExtraction(Pipeline):
 
             prompt = ee_template_text.replace('{context}', doc_text).replace('{graph_schema}', collection['graph_schema'])
             prompt = f"<FILENAME>{new_image['doc_id']['S']}</FILENAME>\n\n" + prompt
+            msgs = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ]
             response = self.utils.invoke_bedrock(
                 'invoke_model',
                 {
-                    "model_id": self.model_id,
-                    "prompt": prompt,
-                    "messages": [{
-                        "mime_type": "text/plain",
-                        "content": prompt
-                    }],
-                    "model_kwargs": {
-                        "max_tokens": 2000,
+                    "modelId": self.model_id,
+                    "messages": msgs,
+                    "inferenceConfig": {
+                        "maxTokens": 2000,
                         "temperature": 0.0,
-                        "top_p": 0.9,
-                        "top_k": 250,
-                        "stop_sequences": ["</JSON>"] if 'stop_sequences' not in template else template['stop_sequences']
+                        "stopSequences": ["</JSON>"] if 'stop_sequences' not in template else template['stop_sequences']
                     }
                 },
                 self.my_origin
@@ -306,6 +312,7 @@ class EntityExtraction(Pipeline):
                 print(f"Got schema: {schema}")
                 collection['graph_schema'] = schema
                 collection['user_id'] = user_id
+                print(f"updating doc collection with schema: {collection}")
                 collection_save_result = self.utils.upsert_doc_collection(collection, self.my_origin)
                 print(f"Updated collections result {collection_save_result}")
 

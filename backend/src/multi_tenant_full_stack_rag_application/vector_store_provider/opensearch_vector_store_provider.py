@@ -66,6 +66,7 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
     #         "name": "hnsw",
     #         "engine": "faiss"
         response = self.utils.get_model_dimensions(self.my_origin)
+        print(f"response from get_model_dimensions: {response}")
         dims = json.loads(response['body'])['response']
         print(f"Creating vector index with dims {dims}")
         # {'statusCode': '200', 'headers': {'Access-Control-Allow-Headers': 'Authorization, Content-Type, x-csrf-token, X-Api-Key, *', 'Access-Control-Allow-Credentials': 'true', 'Access-Control-Allow-Origin': 'dmtfsradbVectorStoreProvi-VectorStoreProviderFunct-ADohbMUuwwWz', 'Access-Control-Allow-Methods': 'DELETE,OPTIONS,GET,POST,PUT', 'Vary': 'Origin'}, 'body': '{"response": 1024}'}
@@ -188,6 +189,9 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
         payload = ''
         print(f"Saving {len(doc_chunks)} (type {type(doc_chunks[0])}) documents to vector store {collection_id}")
         doc_ids = []
+        if isinstance(doc_chunks[0], VectorStoreDocument):
+            doc = doc.to_dict()
+            
         for doc in doc_chunks:
             print(f"saving doc {doc}")
             doc_id = doc['id']
@@ -228,7 +232,7 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             recommendation = in_queue.get()
             while recommendation:
                 id = recommendation['id']
-                search_query = recommendation['vector_database_search_terms']
+                search_query = recommendation['search_terms']
                 results = {}
                 vector = self.utils.embed_text(search_query, self.my_origin)
         

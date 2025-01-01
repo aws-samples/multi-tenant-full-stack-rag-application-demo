@@ -224,6 +224,13 @@ class IngestionProviderStack(Stack):
             value=self.ingestion_bucket.bucket.bucket_name,
         )
 
+        ingestion_bucket_name_param = ssm.StringParameter(self, 'IngestionBucketNameParam',
+            parameter_name=f"/{parent_stack_name}/ingestion_bucket_name",
+            string_value=self.ingestion_bucket.bucket.bucket_name,
+        )
+
+        ingestion_bucket_name_param.apply_removal_policy(RemovalPolicy.DESTROY)
+
         isp_fn_name_param = ssm.StringParameter(self, 'IngestionStatusFunctionName',
             parameter_name=f"/{parent_stack_name}/ingestion_status_provider_function_name",
             string_value=self.ingestion_status_function.function_name,

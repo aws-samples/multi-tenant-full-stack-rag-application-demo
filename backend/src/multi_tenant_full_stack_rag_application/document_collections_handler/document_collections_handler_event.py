@@ -25,7 +25,7 @@ class DocumentCollectionsHandlerEvent:
         self.origin = origin
 
     def from_lambda_event(self, event):
-        # print(f"dch evt.from_lambda_event received event {event}")
+        print(f"dch evt.from_lambda_event received event {event}")
         self.account_id = event['requestContext']['accountId']
         [self.method, self.path] = event['routeKey'].split(' ')
         if 'authorizer' in event['requestContext'] and \

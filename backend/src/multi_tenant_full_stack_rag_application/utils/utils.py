@@ -108,6 +108,7 @@ def embed_text(text, origin, *, dimensions=1024, lambda_client=None):
         }, 
         lambda_client=lambda_client
     )
+    print(f"utils.embed_text received response {response} from invoke_lambda")
     embeddings = json.loads(response['body'])['response']
     print(f"utils.embed_text returning {embeddings}")
     return embeddings
@@ -181,6 +182,8 @@ def get_bedrock_runtime_client():
 #     return body['creds']
 
 def get_document_collections(user_id, collection_id=None, *, account_id=None, lambda_client=None, origin=None):
+    if not user_id:
+        raise Exception("Must send user ID with request to get document collections.")
     print(f"Called utils.get_document_collections with user_id {user_id} and collection_id {collection_id}")
     if not account_id:
         account_id = os.getenv('AWS_ACCOUNT_ID')
@@ -213,6 +216,7 @@ def get_document_collections(user_id, collection_id=None, *, account_id=None, la
     
     print(f"get_document_collections got response {response}")
     body = response['body']# )['response']
+    print(f"Got body {body}, type {type(body)}")
     dcs = {}
     result = None
     if body:
@@ -391,7 +395,7 @@ def get_userid_from_token(auth_token, origin, *, lambda_client=None ):
         payload, 
         lambda_client=lambda_client
     )
-    # print(f"get_userid_from_token got response {response}")
+    print(f"get_userid_from_token got response {response}")
     if "errorMessage" in response:
         raise Exception(response["errorMessage"])
     body = json.loads(response['body'])
@@ -403,15 +407,18 @@ def get_user_pool_id():
 
 
 def invoke_bedrock(operation, kwargs, origin):
+    fn_name = get_ssm_params('bedrock_provider_function_name')
+    payload = {
+        "operation": operation,
+        "origin": origin,
+        "args": kwargs
+    }
+    print(f'invoking {fn_name} with payload {payload}')
     response = invoke_lambda(
-        get_ssm_params('bedrock_provider_function_name'),
-        {
-            "operation": operation,
-            "origin": origin,
-            "args": kwargs
-        },
+        fn_name,
+        payload,
     )
-    # print(f"Got response from lambda {response}")
+    print(f"invoke_bedrock got response from lambda {response}")
     return response
 
 
@@ -422,24 +429,26 @@ def invoke_lambda(function_name, payload={}, *, lambda_client=None):
             lambda_client_singleton = BotoClientProvider.get_client('lambda')
         lambda_client = lambda_client_singleton
 
-    # print(f"Invoking {function_name}")
+    print(f"Invoking {function_name}")
+    print(f"Invoking lambda with payload: {payload}")
     print(f"Payload keys: {payload.keys()}")
-    if 'args' in payload.keys():
-        print(f"args keys: {payload['args'].keys()}")
-        # print(f"model_id is {payload['args']['model_id']}")
-        if 'messages' in payload['args'].keys():
-            print(f"message keys: {payload['args']['messages'][0].keys()}")
-            msg = payload['args']['messages'][0]
-            if msg['mime_type'] == 'image/jpeg':
-                print(f"Type of content is {type(msg['content'])}")
-    elif 'body' in payload.keys():
-        print(f"body keys: {payload['body'].keys()}")
-    # print(f"Payload is {payload}")
-
+    # if 'args' in payload.keys():
+    #     print(f"args keys: {payload['args'].keys()}")
+    #     # print(f"model_id is {payload['args']['model_id']}")
+    #     # if 'messages' in payload['args'].keys():
+    #     #     print(f"message keys: {payload['args']['messages'][0].keys()}")
+    #     #     msg = payload['args']['messages'][0]
+    #     #     if msg['mime_type'] == 'image/jpeg':
+    #     #         print(f"Type of content is {type(msg['content'])}")
+    # elif 'body' in payload.keys():
+    #     print(f"body keys: {payload['body'].keys()}")
+    # # print(f"Payload is {payload}")
+    payload_bytes = json.dumps(payload).encode('utf-8')
+    print(f"Payload bytes: {payload_bytes}")
     response = lambda_client.invoke(
         FunctionName=function_name,
         InvocationType='RequestResponse',
-        Payload=json.dumps(payload)
+        Payload=payload_bytes
     )
     response = json.loads(response['Payload'].read().decode("utf-8"))
     # print(f"Got response {response}")

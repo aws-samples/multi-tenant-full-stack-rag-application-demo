@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import ReactSlider from 'react-slider';
 import sanitizeHtml from 'sanitize-html';
 import { docCollectionsState } from './DocumentCollectionsTable'
-import { useRecoilValue } from 'recoil';
+import { useRecoilState } from 'recoil';
 // import modelDefaultParams from './model_default_params.json'
 import './chatPlayground.css';
 // import awsExports from './aws-exports';
@@ -63,7 +63,7 @@ const initLlmValue = {"label":"select an LLM", "value": ""}
 const initPromptValue = {"label": "select a prompt template", "value": ""}
 
 function ChatPlayground(props) {
-  const docCollections = useRecoilValue(docCollectionsState);
+  const [docCollections, setDocCollections] = useRecoilState(docCollectionsState);
   const [
     selectedDocCollection,
     setSelectedDocCollection
@@ -100,16 +100,18 @@ function ChatPlayground(props) {
     // load list of doc collections
     console.log("docCollections: ")
     console.dir(docCollections)
-    let tmpDocCollectionsOptions = []
-    docCollections.forEach( collection => {
-      tmpDocCollectionsOptions.push({
-        label: collection.collection_name, 
-        value: collection.collection_id
+    if (docCollections && docCollections.length > 0) {
+      let tmpDocCollectionsOptions = []
+      docCollections.forEach( collection => {
+        tmpDocCollectionsOptions.push({
+          label: collection.collection_name, 
+          value: collection.collection_id
+        });
       });
-    });
-    console.log("docCollectionsOptions: ")
-    console.dir(tmpDocCollectionsOptions)
-    setDocCollectionsOptions(tmpDocCollectionsOptions);
+      console.log("docCollectionsOptions: ")
+      console.dir(tmpDocCollectionsOptions)
+      setDocCollectionsOptions(tmpDocCollectionsOptions);
+    }
   },[docCollections])
 
   useEffect(() => {
@@ -120,8 +122,16 @@ function ChatPlayground(props) {
       setCurrentUser({
         id: currentAuth.userId,
         name: 'Chat User'
-      })
-
+      });
+    })();
+    // load list of docCollections if they're not already populated
+    (async () => {
+      if (!docCollections || docCollections.length == 0) {
+        const response = await api.getDocCollections();
+        console.log("Got doc collections")
+        console.dir(response)
+        setDocCollections(response)
+      }
     })();
     // load list of LLMs
     (async () => {

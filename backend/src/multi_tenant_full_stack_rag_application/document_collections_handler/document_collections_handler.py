@@ -95,7 +95,8 @@ class DocumentCollectionsHandler:
         coll_dict = handler_evt.document_collection
         if not 'collection_id' in coll_dict:
             coll_dict['collection_id'] = uuid4().hex
-        
+        if not 'graph_schema' in coll_dict: 
+            coll_dict['graph_schema'] = {}
         # print(f"coll_dict is {coll_dict}")
         created = datetime.now().isoformat() + 'Z' if 'created_date' \
             not in coll_dict else coll_dict['created_date']
@@ -113,11 +114,14 @@ class DocumentCollectionsHandler:
             coll_dict['collection_name'],
             coll_dict['description'],
             coll_dict['vector_db_type'],
+            coll_dict['vector_ingestion_enabled'],
+            coll_dict['file_storage_tool_enabled'],
             coll_dict['collection_id'],
             shared_with,
             created,
             updated,
-            enrichment_pipelines=coll_dict['enrichment_pipelines']
+            enrichment_pipelines=coll_dict['enrichment_pipelines'],
+            graph_schema=coll_dict['graph_schema']
         )
         # print(f"Created doc collection record {dc.__dict__()}")
         return dc
@@ -199,24 +203,25 @@ class DocumentCollectionsHandler:
             return None
         
         # print(f"get_doc_collections received user_id {user_id}")
-        projection_expression = "#partition_key, #sort_key, #user_email," + \
-            " #collection_name, #description, #vector_db_type," + \
-            " #collection_id, #shared_with, #created_date, #updated_date," + \
-            " #enrichment_pipelines, #graph_schema"
-        expression_attr_names = {
-            "#partition_key": "partition_key",
-            "#sort_key": "sort_key", 
-            "#user_email": "user_email",
-            "#collection_name": "collection_name",
-            "#description": "description", 
-            "#vector_db_type": "vector_db_type",
-            "#collection_id": "collection_id", 
-            "#shared_with": "shared_with", 
-            "#created_date": "created_date", 
-            "#updated_date": "updated_date",
-            "#enrichment_pipelines": "enrichment_pipelines", 
-            "#graph_schema": "graph_schema"
-        }
+        # projection_expression = "#partition_key, #sort_key, #user_email," + \
+        #     " #collection_name, #description, #vector_db_type, #vector_ingestion_enabled," + \
+        #     " #collection_id, #shared_with, #created_date, #updated_date," + \
+        #     " #enrichment_pipelines, #graph_schema"
+        # expression_attr_names = {
+        #     "#partition_key": "partition_key",
+        #     "#sort_key": "sort_key", 
+        #     "#user_email": "user_email",
+        #     "#collection_name": "collection_name",
+        #     "#description": "description", 
+        #     "#vector_db_type": "vector_db_type",
+        #     "#vector_ingestion_enabled": "vector_ingestion_enabled",
+        #     "#collection_id": "collection_id", 
+        #     "#shared_with": "shared_with", 
+        #     "#created_date": "created_date", 
+        #     "#updated_date": "updated_date",
+        #     "#enrichment_pipelines": "enrichment_pipelines", 
+        #     "#graph_schema": "graph_schema"
+        # }
         sort_key = 'collection::'
         # print(f"Getting items starting with {sort_key} for user_id {user_id}")
         kwargs = {
@@ -235,18 +240,18 @@ class DocumentCollectionsHandler:
                     'ComparisonOperator': 'BEGINS_WITH' 
                 }
             },
-            'ProjectionExpression': projection_expression,
-            'ExpressionAttributeNames': expression_attr_names,
+            # 'ProjectionExpression': projection_expression,
+            # 'ExpressionAttributeNames': expression_attr_names,
             'Limit': int(limit)
         }
         if last_eval_key != '':
             kwargs['ExclusiveStartKey']: last_eval_key
-        # print(f"querying ddb with kwargs {kwargs}")
+        print(f"querying ddb with kwargs {kwargs}")
         result = self.ddb.query(
             **kwargs
         )
         items = []
-        # print(f"result from querying ddb: {result}")
+        print(f"result from querying ddb: {result}")
         if "Items" in result.keys():
             for item in result["Items"]:        
                 if len(list(item.keys())) > 0:
@@ -454,19 +459,23 @@ class DocumentCollectionsHandler:
                     },
                     lambda_client=self.lambda_
                 )
+                print(f"Got ingestion status response {response}")
                 file_statuses = json.loads(response['body'])
                 print(f"Ingestion_status_provider returned file_statuses {file_statuses}")
                 file_list = []
                 
                 for file_status in file_statuses:
-                    # print(f"Got file_status {file_status}")
+                    print(f"Got file_status {file_status}")
                     file_list.append({
                         'file_name': file_status['doc_id'].split('/')[-1],
                         'last_modified': datetime.now().isoformat() + 'Z' \
                             if not 'last_modified' in file_status \
                                 else file_status['last_modified'],
                         'status': file_status['progress_status'],
+                        # 'presigned_url': file_status['presigned_url']
                     })
+                    # file_list.append(file_status)
+
                 # print(f"file_list is now {file_list}")
                 result = { 
                     "response": collection_obj,
@@ -539,12 +548,12 @@ class DocumentCollectionsHandler:
             TableName=self.doc_collections_table,
             Item=new_collection_record
         )
-        # print(f"Got response from ddb.put_item for new_collection_record \n{new_collection_record}\n{response}")
+        print(f"Got response from ddb.put_item for new_collection_record \n{new_collection_record}\n{response}")
         if 'ResponseMetadata' in response and \
             'HTTPStatusCode' in response['ResponseMetadata'] and \
                 response['ResponseMetadata']['HTTPStatusCode'] == 200:
                 result = DocumentCollection.from_ddb_record(new_collection_record)
-                # print(f"returning DocumentCollection {result}")
+                print(f"returning DocumentCollection {result}")
                 return result
         else:
             raise Exception(f"Failed to upsert collection for {new_collection.__dict__()}.")

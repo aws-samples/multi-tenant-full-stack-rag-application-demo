@@ -50,7 +50,7 @@ config = {
             "enrichment_pipelines_provider/entity_extraction/entity_extraction_requirements.txt",
             "bedrock_provider/bedrock_provider_requirements.txt"
          ],
-         "extraction_model_id": "anthropic.claude-3-haiku-20240307-v1:0",
+         "extraction_model_id": "anthropic.claude-3-5-haiku-20241022-v1:0",
          # "extraction_model_id": "anthropic.claude-3-sonnet-20240229-v1:0",
       }
    },
@@ -75,7 +75,7 @@ config = {
    "vector_store_provider_params": {
       "loader_params": {
          "PdfImageLoader": {
-            "default_ocr_model": "anthropic.claude-3-haiku-20240307-v1:0"
+            "default_ocr_model": "anthropic.claude-3-5-haiku-20241022-v1:0"
          }
       },
       "opensearch_managed": {

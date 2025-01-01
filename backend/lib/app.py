@@ -28,6 +28,7 @@ from lib.generation_handler_service.generation_handler_stack import GenerationHa
 from lib.graph_store_provider_service.graph_store_provider_stack import GraphStoreProviderStack
 from lib.ingestion_provider_service.ingestion_provider_stack import  IngestionProviderStack
 from lib.prompt_template_handler_service.prompt_template_handler_stack import PromptTemplateHandlerStack
+from lib.tools_provider_service.tools_provider_service_stack import ToolsProviderStack
 from lib.vector_store_provider_service.vector_store_provider_stack import VectorStoreProviderStack
 from lib.shared.vpc import VpcStack
 
@@ -208,9 +209,17 @@ class MultiTenantRagStack(Stack):
             app_security_group=vpc_stack.app_security_group,
             auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
             auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
+            graph_handler_fn_arn=graph_store_provider_stack.graph_store_provider.function_arn,
             parent_stack_name=self.stack_name,
             user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
             user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
+            vpc=vpc_stack.vpc
+        )
+
+        tools_provider_stack = ToolsProviderStack(self, 'ToolsProviderStack',
+            app_security_group=vpc_stack.app_security_group,
+            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
+            parent_stack_name=self.stack_name,
             vpc=vpc_stack.vpc
         )
 
@@ -221,6 +230,7 @@ class MultiTenantRagStack(Stack):
             embeddings_provider_function=embeddings_provider_stack.embeddings_provider_function,
             # enrichment_pipelines_handler_stack.entity_extraction_function.entity_extraction_function.grant_principal,
             extraction_function=enrichment_pipelines_handler_stack.entity_extraction_function.entity_extraction_function,
+            generation_handler_function=generation_handler_stack.generation_handler_function,
             graph_store_provider_function=graph_store_provider_stack.graph_store_provider,
             inference_principal=generation_handler_stack.generation_handler_function.grant_principal,
             ingestion_bucket=ingestion_provider_stack.ingestion_bucket.bucket,
@@ -230,6 +240,7 @@ class MultiTenantRagStack(Stack):
             ingestion_status_provider_function=ingestion_provider_stack.ingestion_status_function,
             ingestion_status_table=ingestion_provider_stack.ingestion_status_table.table,
             prompt_templates_handler_function=prompt_templates_handler_stack.prompt_template_handler_function,
+            tools_provider_function=tools_provider_stack.tools_provider_function,
             vector_store_provider_function=vector_store_provider_stack.vector_store_stack.vector_store_provider,
         )
 

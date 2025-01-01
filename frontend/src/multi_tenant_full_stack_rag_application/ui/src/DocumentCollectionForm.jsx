@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import Api from './commons/api';
-import { Button, Container, Form, FormField, Header, Input, SpaceBetween, Spinner, Tabs } from '@cloudscape-design/components';
+import { Button, Checkbox, Container, Form, FormField, Header, Input, SpaceBetween, Spinner, Tabs } from '@cloudscape-design/components';
 import { json, useParams } from 'react-router-dom';
 import DeleteConfirmationModal from './DeleteConfirmationModal'
 import DocumentCollection from './DocumentCollection'
@@ -36,7 +36,10 @@ const filePageSize = 20
 
 export const currentCollectionState = atom({
   key: 'currentCollectionState',
-  default: {},
+  default: {
+    vectorIngestionEnabled: true,
+    fileStorageToolEnabled: false,
+  }
 })
 
 export const urlCollectionIdState = atom({
@@ -70,7 +73,6 @@ export const uploadedFilesState = atom({
 function DocumentCollectionForm() {
   let tmpParams = useParams()
   // useResetRecoilState(currentCollectionState)();
-
   const [urlCollectionId, setUrlCollectionId] = useRecoilState(urlCollectionIdState)
   const [currentCollection, setCurrentCollection] = useRecoilState(currentCollectionState)
   // const [addUserModal, setAddUserModal] = useRecoilState(addUserModalState)
@@ -91,7 +93,10 @@ function DocumentCollectionForm() {
 
   useEffect(() => {
     setParams(tmpParams)
-    setCurrentCollection({})
+    // setCurrentCollection({
+    //   vectorIngestionEnabled: true,
+    //   fileStorageToolEnabled: false
+    // })
     console.log(`tmpParams are ${JSON.stringify(tmpParams)}`)
     console.log(`urlCollectionId is ${urlCollectionId}`)
   }, [])
@@ -131,6 +136,8 @@ function DocumentCollectionForm() {
               tmpCollection.collection_name,
               tmpCollection.description,
               tmpCollection.vector_db_type,
+              tmpCollection.vector_ingestion_enabled,
+              tmpCollection.file_storage_tool_enabled,
               tmpCollection.collection_id,
               tmpCollection.shared_with,
               tmpCollection.enrichment_pipelines,
@@ -253,6 +260,7 @@ function DocumentCollectionForm() {
           <Container>
             <SpaceBetween key="sb1" direction="vertical" size="l">
               {!urlCollectionId ?
+              <>
               <FormField key='collection_name' label="Collection Name">
               <Input
                 key='collection_name'
@@ -260,7 +268,20 @@ function DocumentCollectionForm() {
                 value={ currentCollection ? currentCollection.name: ''}
               />
               </FormField>
+              <FormField key='vector_ingestion_enabled' label="Vector Ingestion Enabled?">
+              <Checkbox
+                key='vector_ingestion_enabled'
+                onChange={({ detail }) => updateCurrentCollection("vectorIngestionEnabled", detail.checked)}
+                checked={currentCollection && 
+                  currentCollection.hasOwnProperty('vectorIngestionEnabled') 
+                  ? currentCollection.vectorIngestionEnabled 
+                  : true
+                }
+              />
+              </FormField>
+              </>
               : 
+              <>
               <FormField key='collection_name' label="Collection Name">
               <Input
                 key='collection_name'
@@ -269,7 +290,35 @@ function DocumentCollectionForm() {
                 disabled
               />
               </FormField>
+              <FormField key='vector_ingestion_enabled' label="Vector Ingestion Enabled?">
+              <Checkbox
+                key='vector_ingestion_enabled'
+                onChange={({ detail }) => updateCurrentCollection("vectorIngestionEnabled", detail.checked)}
+                checked={currentCollection && 
+                  currentCollection.hasOwnProperty('vectorIngestionEnabled') 
+                  ? currentCollection.vectorIngestionEnabled 
+                  : true
+                }
+                disabled
+              />
+              </FormField>
+              </>
               }
+              <FormField 
+                key='file_storage_tool_enabled' 
+                label="File Storage Tool Enabled?" 
+                description="Enabling this will allow the file storage tool to find this document collection, and be able to GET, LIST, and PUT docs to/from here. Deletes are not enabled from the tool, but files may be deleted from the Uploaded Files table below."
+              >
+              <Checkbox
+                key='file_storage_tool_enabled'
+                onChange={({ detail }) => updateCurrentCollection("fileStorageToolEnabled", detail.checked)}
+                checked={currentCollection && 
+                  currentCollection.hasOwnProperty('fileStorageToolEnabled') 
+                  ? currentCollection.fileStorageToolEnabled 
+                  : false
+                }
+              />
+              </FormField>
               <FormField key='collection_description' label="Collection Description">
               <Input
                 key='collection_description'
@@ -345,15 +394,18 @@ function DocumentCollectionForm() {
             "collection_name": currentCollection.name,
             "description": currentCollection.description,
             "vector_db_type": "opensearch_managed",
+            "vector_ingestion_enabled": currentCollection.vectorIngestionEnabled,
+            "file_storage_tool_enabled": currentCollection.fileStorageToolEnabled,
             "shared_with": [],
-            "enrichment_pipelines": currentCollection.enrichmentPipelines
+            "enrichment_pipelines": currentCollection.enrichmentPipelines,
+            "graph_schema": currentCollection.graphSchema
           }
       }
       if (urlCollectionId) {
         postObject.document_collection.collection_id = urlCollectionId
       }
-      // console.log("Posting data");
-      // console.dir(postObject);
+      console.log("Posting data");
+      console.dir(postObject);
       setIsLoading(true)
       const result = await api.upsertDocCollection(postObject);
       console.log("result from upsertDocCollection:")
@@ -368,6 +420,8 @@ function DocumentCollectionForm() {
         collection.collection_name,
         collection.description,
         collection.vector_db_type,
+        collection.vector_ingestion_enabled,
+        collection.file_storage_tool_enabled,
         collection.collection_id,
         collection.shared_with,
         collection.enrichment_pipelines,

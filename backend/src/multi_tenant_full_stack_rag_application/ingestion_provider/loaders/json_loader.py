@@ -8,7 +8,7 @@ from datetime import datetime
 from copy import deepcopy
 from hashlib import md5 
 
-from multi_tenant_full_stack_rag_application.ingestion_provider.loaders import Loader
+from .loader import Loader
 from multi_tenant_full_stack_rag_application.ingestion_provider.splitters import Splitter, OptimizedParagraphSplitter
 from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_document import VectorStoreDocument
 from multi_tenant_full_stack_rag_application import utils
@@ -211,7 +211,7 @@ class JsonLoader(Loader):
                 f"{collection_id}/{filename}",
                 etag,
                 0, 
-                f'ERROR: {e.args[0]}',
+                f'ERROR: {e.__dict__}',
                 self.my_origin
             )
             raise e

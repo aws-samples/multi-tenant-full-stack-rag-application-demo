@@ -13,7 +13,6 @@ RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/utils
 COPY utils/* /var/task/multi_tenant_full_stack_rag_application/utils/
 RUN pip3 install -t /var/task -r /var/task/multi_tenant_full_stack_rag_application/utils/utils_requirements.txt
 RUN pip3 install -t /var/task -r /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/vector_ingestion_requirements.txt
-RUN pip3 install -t /var/task -r /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/loaders/docx_loader_requirements.txt
+RUN pip3 install --upgrade -t /var/task -r /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/loaders/docx_loader_requirements.txt
 RUN pip3 install -t /var/task -r /var/task/multi_tenant_full_stack_rag_application/ingestion_provider/loaders/pdf_image_loader_requirements.txt
 CMD [ "multi_tenant_full_stack_rag_application.ingestion_provider.vector_ingestion_provider.handler" ]
-
