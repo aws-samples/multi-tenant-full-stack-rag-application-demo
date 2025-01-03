@@ -81,9 +81,7 @@ class ToolsProvider:
     def invoke_tool(self, handler_evt):
         tool_name = handler_evt.args['tool_name']
         del handler_evt.args['tool_name']
-        user_id = None
-        if hasattr(handler_evt, 'user_id'):
-            user_id = handler_evt
+        
         if 'user_id' in handler_evt.args:
             del handler_evt.args['user_id']
         # the remaining keys of args should be the same as the input
@@ -119,9 +117,10 @@ class ToolsProvider:
             # if there are any keys left in the args then they were unexpected
             raise Exception(f"ERROR: ToolsProvider received unexpected args {handler_evt.args}.")
 
-        if user_id:
-            args['user_id'] = user_id
+
+        args['user_id'] = handler_evt.user_id
         # proceed to use the tool
+        print(f"Invoking tool with args {args}")
         response = self.tool_classes[tool_name]().handler({
             "operation": args['operation'],
             "origin": handler_evt.origin,
@@ -129,7 +128,7 @@ class ToolsProvider:
         })
         print(f"Got result from tool: {response}")
         result = response['body']
-
+        
         return result
 
     def list_tools(self):

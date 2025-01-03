@@ -16,6 +16,7 @@ class FileStorageTool(ToolProvider):
             self.s3 = boto3.client('s3')
         else:
             self.s3 = s3_client
+        self.my_origin = self.utils.get_ssm_params('origin_tools_provider')
 
     @staticmethod
     def get_inputs():
@@ -67,14 +68,18 @@ class FileStorageTool(ToolProvider):
         }
 
     def handler(self, evt):
+        print(f"FileStorageTool.handler received evt {evt}")
         handler_evt = FileStorageToolEvent().from_lambda_event(evt)
-        doc_collections = self.utils.get_document_collections()
+        doc_collections = self.utils.get_document_collections(
+            handler_evt.user_id,
+            origin=self.my_origin
+        )
         print(f"Got document collections {doc_collections}")
         enabled_storage_collections = []
         for collection_name in doc_collections.keys():
             collection = doc_collections[collection_name]
             print(f"Got document collection {collection}")
-            if collection.file_storage_enabled:
+            if collection['file_storage_tool_enabled']:
                 enabled_storage_collections.append(collection)
         print(f"document collections enabled for storage: {enabled_storage_collections}")
         if len(enabled_storage_collections) == 0:
@@ -87,8 +92,9 @@ class FileStorageTool(ToolProvider):
 
     def get_object(self, args):
         response = self.s3.get_object(**args)
+        key = self.sanitize_key(args['Key'])
         results = {
-            args["Key"]: {
+            key: {
                 "contents": response['Body'].read()
             }
         }
@@ -99,8 +105,11 @@ class FileStorageTool(ToolProvider):
         results = {
             "Files": []
         }
+        print(f"list_objects got response {response}")
         for file in response['Contents']:
-            results['files'].append(file['Key'])
+            results['Files'].append(
+                self.sanitize_key(file['Key'])
+            )
         if response['IsTruncated']:
             results['NextContinuationToken'] = response['NextContinuationToken']
         return results
@@ -110,7 +119,7 @@ class FileStorageTool(ToolProvider):
         if 'ETag' in response:
             # succeeded
             result = {
-                "Key": args["Key"],
+                "Key": self.sanitize_key(args["Key"]),
             }
         else:
             raise Exception(f"Failed to upload object with args {args}")
@@ -118,9 +127,9 @@ class FileStorageTool(ToolProvider):
 
     def run_tool(self, handler_evt, enabled_storage_collections):
         op = handler_evt.operation
-        s3_root_path = f"/private/{handler_evt.user_id}"
-        path = s3_root_path + handler_evt.key
-
+        s3_root_path = f"private/{handler_evt.user_id}"
+        path = f"{s3_root_path}/{handler_evt.key}"
+        
         args = {
             "Bucket": self.bucket,
         }
@@ -133,12 +142,12 @@ class FileStorageTool(ToolProvider):
             results = self.list_objects(args)  
 
         elif op == 'GET':
-            args['Key'] = handler_evt.key
+            args['Key'] = path
             results = self.get_object(args)
 
         elif op == 'PUT':
             args['Body'] = handler_evt.body
-            args['Key'] = handler_evt.key
+            args['Key'] = path
             results = self.put_object(args)
 
         print(f"Got results {results}")
@@ -146,4 +155,9 @@ class FileStorageTool(ToolProvider):
             "statusCode": '200',
             "body": results
         }
+
+    def sanitize_key(self, key):
+        if key.startswith('private/'):
+            key = key.split('/', 2)[-1]
+        return key
 

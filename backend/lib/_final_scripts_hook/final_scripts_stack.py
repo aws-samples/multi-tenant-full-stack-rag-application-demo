@@ -176,7 +176,9 @@ class FinalScriptsStack(NestedStack):
         #     }
         # ))
         tools_provider_function.grant_invoke(generation_handler_function.grant_principal)
-
+        doc_collections_handler_function.grant_invoke(tools_provider_function.grant_principal)
+        ingestion_bucket.grant_read_write(tools_provider_function.grant_principal)
+        
         bedrock_provider_function.grant_invoke(extraction_principal)
         doc_collections_handler_function.grant_invoke(extraction_principal)
         graph_store_provider_function.grant_invoke(extraction_principal)

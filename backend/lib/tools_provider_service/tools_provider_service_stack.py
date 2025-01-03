@@ -102,3 +102,9 @@ class ToolsProviderStack(Stack):
             string_value=self.tools_provider_function.function_name
         )
         tools_provider_function_name_param.apply_removal_policy(RemovalPolicy.DESTROY)
+
+        tools_provider_origin_param = ssm.StringParameter(self, 'ToolsProviderOriginParam',
+            parameter_name=f'/{parent_stack_name}/origin_tools_provider',
+            string_value=self.tools_provider_function.function_name
+        )
+        tools_provider_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)

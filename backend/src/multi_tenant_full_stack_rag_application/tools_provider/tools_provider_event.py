@@ -18,6 +18,8 @@ class ToolsProviderEvent:
         self.origin = evt['origin']
         if 'args' in evt:
             self.args = evt['args']
+            if 'user_id' in self.args:
+                self.user_id = self.args['user_id']
         else:
             self.args = {}
         
