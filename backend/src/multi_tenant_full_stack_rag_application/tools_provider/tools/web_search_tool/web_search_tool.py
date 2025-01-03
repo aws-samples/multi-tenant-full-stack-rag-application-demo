@@ -133,7 +133,7 @@ class WebSearchTool(ToolProvider):
             for item in result_items:
                 # print(dir(item))
                 # print(item.__dict__)
-                url = item.url
+                url = item['url']
                 result = self.download(url, clean_elems, kill_tags)
                 results[url] = result
 

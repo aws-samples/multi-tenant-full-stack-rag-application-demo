@@ -5,9 +5,11 @@ Welcome! The goal of this stack is to demonstrate:
 * how to create a multi-tenant RAG application using AWS generative AI services.
 * how to use OpenSearch Managed directly as a vector store provider.
 * how to handle event-based ingestion of documents, without requiring manual or programmatic triggering of new document ingestion.
-* how to implement sharing of document collections with other users.
-* how to do multi-RAG query orchestration across multiple document collections
+* how to do multi-RAG, multi-tool query orchestration
 * how to do graph RAG, by providing example entity extraction pipelines and example prompt orchestration of user prompts across vector or graph databases, depending on the user prompt contents.
+* A tools provider service that currently includes:
+    * a web search tool, to enable dynamic web lookups for context, or on-demand web surfing like "fetch the top news articles.
+    * a file storage tool backed by S3
 
 ## Getting started
 To get started, do the following. If you have CDK installed on your machine and working in your account alread, skip to [using a pre-existing CDK installation](#using-a-pre-existing-cdk-installation).
