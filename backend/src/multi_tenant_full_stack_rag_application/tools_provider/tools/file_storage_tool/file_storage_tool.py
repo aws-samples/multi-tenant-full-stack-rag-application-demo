@@ -26,10 +26,10 @@ class FileStorageTool(ToolProvider):
                 "type": "string",
                 "description": "The operation to execute on the tool. Currently GET, LIST, or PUT"
             },
-            "Body": {
-                "required": "depends",
+            "FileContents": {
+                "required": "True when using PUT operations.",
                 "type": "bytes",
-                "description": "The contents of the file to save. Only required when operation is PUT."
+                "description": "The contents of the file to save."
             },
             "Key": {
                 "comment": "does not include the s3://bucket_name/ prefix, just the key.",
@@ -146,7 +146,7 @@ class FileStorageTool(ToolProvider):
             results = self.get_object(args)
 
         elif op == 'PUT':
-            args['Body'] = handler_evt.body
+            args['FileContents'] = handler_evt.body
             args['Key'] = path
             results = self.put_object(args)
 

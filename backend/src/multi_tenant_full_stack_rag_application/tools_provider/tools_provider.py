@@ -39,7 +39,7 @@ class ToolsProvider:
         print(f"Scanning tools_dir {tools_dir}")
         self.tool_descriptions = {}
         self.tool_classes = {}
-        self.fn_name_prefix = os.getenv('STACK_NAME').replace('-','') + 'ToolSandbox'
+        self.bucket = utils.get_ssm_params('ingestion_bucket_name')
 
         for entry in os.scandir(tools_dir):
             tool_path = os.path.exists(f"{tools_dir}/{entry.name}/{entry.name}.py")
@@ -121,6 +121,9 @@ class ToolsProvider:
         args['user_id'] = handler_evt.user_id
         # proceed to use the tool
         print(f"Invoking tool with args {args}")
+        if tool_name == 'code_sandbox_tool':
+            args['build_artifacts_zip_s3uri'] = f"s3://{self.bucket}/private/{handler_evt.user_id}/{args['build_artifacts_zip_s3uri']}"
+
         response = self.tool_classes[tool_name]().handler({
             "operation": args['operation'],
             "origin": handler_evt.origin,

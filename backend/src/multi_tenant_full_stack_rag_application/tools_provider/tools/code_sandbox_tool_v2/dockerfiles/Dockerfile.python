@@ -1,0 +1,10 @@
+FROM python:3.12-slim-bullseye
+RUN mkdir /tmp/tmpfolder
+RUN mkdir /tmp/containerd
+RUN apt update && apt install wget containerd -y
+RUN wget https://github.com/containerd/nerdctl/releases/download/v1.5.0/nerdctl-1.5.0-linux-amd64.tar.gz
+RUN tar -zxf nerdctl-1.5.0-linux-amd64.tar.gz nerdctl
+RUN mv nerdctl /usr/bin/nerdctl
+RUN rm nerdctl-1.5.0-linux-amd64.tar.gz
+RUN echo "[grpc]" >> /etc/containerd/config.toml
+RUN echo "  address = \"/tmp/containerd/containerd.sock\"" >> /etc/containerd/config.toml

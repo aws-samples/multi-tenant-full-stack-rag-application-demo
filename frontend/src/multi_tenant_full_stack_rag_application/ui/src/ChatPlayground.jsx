@@ -203,7 +203,11 @@ function ChatPlayground(props) {
     let options = []
     if (promptData != []) {
       promptData.forEach(promptObj => {
-        if (promptObj.model_ids.includes(selectedLlm.value)) {
+        let tmpLlmId = selectedLlm.value
+        if (tmpLlmId.startsWith('us.')) {
+          tmpLlmId = tmpLlmId.replace('us.', '')
+        }
+        if (promptObj.model_ids.includes(tmpLlmId)) {
           options.push({
             label: promptObj.template_name,
             value: promptObj.template_id

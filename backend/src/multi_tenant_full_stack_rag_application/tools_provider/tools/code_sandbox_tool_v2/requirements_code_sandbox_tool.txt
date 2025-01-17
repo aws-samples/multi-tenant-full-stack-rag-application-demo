@@ -1,0 +1,3 @@
+requests
+awslambdaric
+boto3

@@ -1,0 +1,93 @@
+FROM public.ecr.aws/docker/library/python:3.12-slim
+ENV HOME=/app
+RUN mkdir $HOME
+ENV PYTHONPATH=.
+RUN touch $HOME/.bash_profile
+RUN apt update && apt install curl unzip git podman -y
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN ./aws/install
+WORKDIR $HOME
+RUN /usr/bin/git config --global user.email code_sandbox_tool_v2@mtfsrad.amazon.com
+RUN /usr/bin/git config --global user.name code_sandbox_tool_v2
+RUN mkdir -p $HOME/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2
+RUN mkdir -p $HOME/multi_tenant_full_stack_rag_application/utils
+COPY utils/*.py $HOME/multi_tenant_full_stack_rag_application/utils/
+COPY utils/*.txt $HOME/multi_tenant_full_stack_rag_application/utils/
+RUN pip install -t $HOME -r $HOME/multi_tenant_full_stack_rag_application/utils/utils_requirements.txt
+COPY tools_provider/*.py $HOME/multi_tenant_full_stack_rag_application/tools_provider/
+COPY tools_provider/tools/*.py $HOME/multi_tenant_full_stack_rag_application/tools_provider/tools/
+COPY tools_provider/tools/code_sandbox_tool_v2/*.py $HOME/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/
+COPY tools_provider/tools/code_sandbox_tool_v2/requirements_code_sandbox_tool.txt multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/
+RUN pip install -t $HOME -r $HOME/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/requirements_code_sandbox_tool.txt
+RUN /usr/sbin/adduser sandbox
+RUN mkdir $HOME/.local 
+RUN chown -R sandbox $HOME
+RUN chmod 700 $HOME/.local
+# USER sandbox
+# WORKDIR $HOME
+# ENV PYTHONPATH=.
+# ENV AWS_DEFAULT_REGION=us-west-2
+# RUN cat > /etc/systemd/system/user@sandbox.service <<EOF
+# [Unit]
+# Description=User Manager for UID %i
+# After=systemd-user-sessions.service
+
+# After=user-runtime-dir@%i.service
+# Wants=user-runtime-dir@%i.service
+
+# [Service]
+# LimitNOFILE=infinity
+# LimitNPROC=infinity
+# User=%i
+# PAMName=systemd-user
+# Type=notify
+
+# PermissionsStartOnly=true
+# ExecStartPre=/bin/loginctl enable-linger %i
+# ExecStart=-/lib/systemd/systemd --user
+# Slice=user-%i.slice
+# KillMode=mixed
+# Delegate=yes
+# TasksMax=infinity
+# Restart=always
+# RestartSec=15
+
+# [Install]
+# WantedBy=default.target
+# EOF
+# RUN wget https://github.com/moby/buildkit/releases/download/v0.18.2/buildkit-v0.18.2.linux-amd64.tar.gz
+# RUN tar -xzvf buildkit-v0.18.2.linux-amd64.tar.gz
+# ENV PATH=$PATH:$HOME/bin
+# RUN systemctl enable --now buildkit
+# RUN cat >> /etc/buildkit/buildkitd.toml <<EOF
+# [worker.oci]
+#   enabled = false
+
+# [worker.containerd]
+#   enabled = true
+#   # namespace should be "k8s.io" for Kubernetes (including Rancher Desktop)
+#   namespace = "default"
+# EOF
+
+# RUN systemctl daemon-reload
+# RUN systemctl start
+# RUN systemctl enable sandbox
+# RUN systemctl start sandbox
+# USER sandbox
+# RUN CONTAINERD_NAMESPACE=default containerd-rootless-setuptool.sh install-buildkit-containerd
+# USER sandbox
+# WORKDIR $HOME
+#ENTRYPOINT ["multi_tenant_full_stack_rag_application.tools_provider.tools_provider.handler"]
+# RUN mkdir -p $HOME/.aws-lambda-rie && curl -Lo $HOME/.aws-lambda-rie/aws-lambda-rie \
+# https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie \
+# && chmod +x $HOME/.aws-lambda-rie/aws-lambda-rie  
+
+# ENTRYPOINT ["python", "-m", "awslambdaric" ]
+USER sandbox
+WORKDIR $HOME
+ENV PYTHONPATH=.
+# ENV AWS_DEFAULT_REGION=us-west-2
+CMD [ "multi_tenant_full_stack_rag_application.tools_provider.tools.code_sandbox_tool_v2.code_sandbox_tool_v2.handler" ]
+# CMD ['python', 'multi_tenant_full_stack_rag_application /tools_provider/tools/code_sandbox_tool_v2/code_sandbox_tool_v2.py']
+

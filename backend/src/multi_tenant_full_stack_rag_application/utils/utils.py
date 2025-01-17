@@ -431,7 +431,7 @@ def invoke_lambda(function_name, payload={}, *, lambda_client=None):
 
     print(f"Invoking {function_name}")
     print(f"Invoking lambda with payload: {payload}")
-    print(f"Payload keys: {payload.keys()}")
+
     # if 'args' in payload.keys():
     #     print(f"args keys: {payload['args'].keys()}")
     #     # print(f"model_id is {payload['args']['model_id']}")

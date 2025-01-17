@@ -58,7 +58,8 @@ class WebSearchTool(ToolProvider):
             "operation": {
                 "required": True,
                 "type": "string",
-                "description": "The operation to execute on the tool. Options are [DOWNLOAD | SEARCH | SEARCH_AND_DOWNLOAD]"
+                "description": "The operation to execute on the tool. Options are [DOWNLOAD | SEARCH | SEARCH_AND_DOWNLOAD]",
+                "default": "SEARCH_AND_DOWNLOAD"
             },
             "search_query": {
                 "required": True,
@@ -144,8 +145,9 @@ class WebSearchTool(ToolProvider):
         }
 
     def search(self, search_query, top_x):
+        print(f"Searching f")
         response = search(search_query, num_results=top_x, advanced=True)
-        print(f"Response from search: {response}")
+        # print(f"Response from search: {response.__dict__}")
         print(dir(response))
         result_items = []
         for item in response:

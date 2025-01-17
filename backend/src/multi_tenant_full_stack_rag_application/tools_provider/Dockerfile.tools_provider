@@ -6,15 +6,16 @@ RUN touch $HOME/.bash_profile
 RUN mkdir -p /opt/cni/bin
 WORKDIR /opt/cni/bin
 RUN /usr/bin/dnf install wget tar containerd nerdctl git -y
-RUN wget https://github.com/containernetworking/plugins/releases/download/v1.6.1/cni-plugins-linux-amd64-v1.6.1.tgz
-RUN /usr/bin/tar -xzvf cni-plugins-linux-amd64-v1.6.1.tgz
+# RUN wget https://github.com/containernetworking/plugins/releases/download/v1.6.1/cni-plugins-linux-amd64-v1.6.1.tgz
+# RUN /usr/bin/tar -xzvf cni-plugins-linux-amd64-v1.6.1.tgz
 WORKDIR /var/task
 RUN /usr/bin/git config --global user.email tools_provider@mtfsrad.amazon.com
 RUN /usr/bin/git config --global user.name tools_provider
-RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool
+RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools
 COPY tools_provider/*.py /var/task/multi_tenant_full_stack_rag_application/tools_provider/
 COPY tools_provider/tools/*.py /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/
-COPY tools_provider/tools/code_sandbox_tool/*.py /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool/
+RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2
+COPY tools_provider/tools/code_sandbox_tool_v2/*.py /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/
 RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/file_storage_tool
 COPY tools_provider/tools/file_storage_tool/*.py /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/file_storage_tool/
 RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/web_search_tool
@@ -25,7 +26,10 @@ COPY utils/*.py /var/task/multi_tenant_full_stack_rag_application/utils/
 COPY utils/*.txt /var/task/multi_tenant_full_stack_rag_application/utils/
 RUN pip3 install -t /var/task -r /var/task/multi_tenant_full_stack_rag_application/utils/utils_requirements.txt
 RUN pip3 install -t /var/task -r /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/web_search_tool/requirements_web_search_tool.txt
-RUN containerd start &
+RUN echo "[grpc]" >> /etc/containerd/config.toml
+RUN echo "  address = \"/tmp/containerd/containerd.sock\"" >> /etc/containerd/config.toml
+RUN cat /etc/containerd/config.toml
+RUN containerd &
 # ENTRYPOINT ["multi_tenant_full_stack_rag_application.tools_provider.tools_provider.handler"]
 CMD [ "multi_tenant_full_stack_rag_application.tools_provider.tools_provider.handler" ]
 

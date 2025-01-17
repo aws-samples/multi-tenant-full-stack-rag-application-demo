@@ -1,15 +1,13 @@
+IncomingMessage
 OutgoingMessage {
     width: 600px !important;
 }
-.chatPlayground {
-    /* min-height: 100%;*/
-}
+
 .customSlider-thumb {
     background-color: #6ea9d7;
     color:black !important;
 }
-.chatInput {
-}
+
 .chatOutput {
     /* min-height: 200px; */
     height:100%;

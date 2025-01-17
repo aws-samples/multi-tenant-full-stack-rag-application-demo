@@ -3,6 +3,7 @@
 
 import boto3
 import json
+import markdown
 from lxml import objectify
 import os
 from importlib import import_module
@@ -19,7 +20,7 @@ GET /generation: list models
 POST /generation: invoke model
 """
 
-search_query_model = 'anthropic.claude-3-5-haiku-20241022-v1:0'
+# search_query_model = 'anthropic.claude-3-5-haiku-20241022-v1:0'
 # search_query_model = 'us.amazon.nova-pro-v1:0'
 default_top_k = 5
 
@@ -163,7 +164,7 @@ class GenerationHandler:
         response = self.utils.invoke_bedrock(
             "invoke_model",
             {
-                "modelId": search_query_model,
+                "modelId": msg_obj['model']['model_id'],
                 "messages": [{
                     "role": "user",
                     "content": [{
@@ -186,46 +187,50 @@ class GenerationHandler:
             return None
         response = response['response']
         print(f"generation_handler.get_orchestration got response {response}")
+        response = response.replace('</NONE>', '').replace('<NONE>', '').strip()
         if '<final_answer>' in response and \
             '</final_answer>' not in response:
             response += '</final_answer>'
-        if not '</SELECTIONS>' in response:
+        if '<SELECTIONS>' in response and \
+        not '</SELECTIONS>' in response:
             # it shouldn't be there because it's the stop seq, but the xml
             # parser will complain if the initial <SELECTIONS> tag remains unclosed.
             response += '</SELECTIONS>'
-        root = objectify.fromstring(response)
+        
         result = {}
 
-        for child in root.getchildren():
-            if child == '':
-                break
-            else:
-                if child.tag == 'final_answer':
-                    result = {"final_answer": str(child.text)}
-                elif child.tag == 'document_collections_selected':
-                    for collection in child.getchildren():
-                        coll_id = str(collection.id.text)
-                        if coll_id not in result:
-                            result[coll_id] = {}
-                        if hasattr(collection, 'search_terms'):
-                            result[coll_id]['search_terms'] = str(collection.search_terms.text)
-                        if hasattr(collection, 'graph_database_query'):
-                            result[coll_id]['graph_database_query'] = str(collection.graph_database_query.text)
-                        if hasattr(collection, 'reasoning'):
-                            result[coll_id]['reasoning'] = str(collection.reasoning.text)
+        if response:
+            root = objectify.fromstring(response)
+            for child in root.getchildren():
+                if child == '':
+                    break
+                else:
+                    if child.tag == 'final_answer':
+                        result = {"final_answer": str(child.text)}
+                    elif child.tag == 'document_collections_selected':
+                        for collection in child.getchildren():
+                            coll_id = str(collection.id.text)
+                            if coll_id not in result:
+                                result[coll_id] = {}
+                            if hasattr(collection, 'search_terms'):
+                                result[coll_id]['search_terms'] = str(collection.search_terms.text)
+                            if hasattr(collection, 'graph_database_query'):
+                                result[coll_id]['graph_database_query'] = str(collection.graph_database_query.text)
+                            if hasattr(collection, 'reasoning'):
+                                result[coll_id]['reasoning'] = str(collection.reasoning.text)
 
-                elif  child.tag == 'tools_selected':
-                    for tool in child.getchildren():
-                        tool_name = str(tool.id.text)
-                        print(f"Tool inputs are type: {type(str(tool.tool_inputs.text))},dir: {dir(tool.tool_inputs)}, value: {str(tool.tool_inputs.text)}")
-                        inputs = json.loads(str(tool.tool_inputs.text))
-                        inputs["tool_name"] = tool_name
-                        inputs['user_id'] = handler_evt.user_id
-                        print(f"final inputs for tool: {inputs}")
-                        result[tool_name] = {
-                            'tool_name': tool_name,
-                            'tool_inputs': inputs,
-                        }
+                    elif  child.tag == 'tools_selected':
+                        for tool in child.getchildren():
+                            tool_name = str(tool.id.text)
+                            print(f"Tool inputs are type: {type(str(tool.tool_inputs.text))},dir: {dir(tool.tool_inputs)}, value: {str(tool.tool_inputs.text)}")
+                            inputs = json.loads(str(tool.tool_inputs.text))
+                            inputs["tool_name"] = tool_name
+                            inputs['user_id'] = handler_evt.user_id
+                            print(f"final inputs for tool: {inputs}")
+                            result[tool_name] = {
+                                'tool_name': tool_name,
+                                'tool_inputs': inputs,
+                            }
 
         print(f"Get_orchestration returning {result}")
         return result
@@ -340,7 +345,7 @@ class GenerationHandler:
 
             if 'final_answer' in recommendations.keys() and \
                 recommendations['final_answer']:
-                result = recommendations['final_answer']
+                result = markdown.markdown(recommendations['final_answer'])
             else:
                 for item_id in list(recommendations.keys()):
                     if 'tool_inputs' in recommendations[item_id].keys():
@@ -401,7 +406,7 @@ class GenerationHandler:
                 if result["statusCode"] != 200:
                     raise Exception(f"Failed to invoke bedrock {result}")
                 else:
-                    result = result['response']
+                    result = markdown.markdown(result['response'])
         response = self.utils.format_response(status, result, handler_evt.origin)
         print(f"generation_handler returning response {response}")
         return response
@@ -419,6 +424,7 @@ class GenerationHandler:
         )
         print(f"Got invoke_tool response {response}")
         return json.loads(response['body'])
+
 
 def handler(event, context):
     global generation_handler
