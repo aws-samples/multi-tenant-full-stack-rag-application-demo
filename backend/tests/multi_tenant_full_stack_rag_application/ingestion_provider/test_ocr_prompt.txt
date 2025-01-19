@@ -1,0 +1,108 @@
+Below is real estate document. Your job is to extract nodes and edges to build a knowledge graph. 
+A node is an entity like a company, person, property, contingency, the document itself, or any subject 
+that relates to another in the context of the document. An edge is a relationship between two nodes, 
+like "John Smith is the CEO of Acme Corp".
+
+When extracting nodes, it's vital to ensure consistency. If a node, such as "Acme Corp", is mentioned multiple 
+times in the text but is referred to by different names (e.g., "Acme"), always use the most complete identifier 
+for that entity throughout the knowledge graph. In this example, use "Acme Corp" as the node ID, but write it 
+lower case with underscores instead of spaces, like "acme_corp" instead of "Acme Corp." If you find additional 
+information, add it as a property on the node or edge. Also add the full name of the company as an attribute 
+of the node.
+
+Each node should have at least the fields `id`, `collection_id`, `name`, and `type`. The `id` is the unique identifier, 
+and the `type` is the type of entity, like 'company' or 'executive'. You can include other properties 
+if you find them. Make sure to preface all node and edge IDs with the collection ID for this collection, and also
+store collection_id as a property on all nodes and edges.
+
+For example, if the COLLECTION_ID was 'asdf1234' then the example output might be:
+<example_only>
+<json>
+{
+  "nodes": [
+      {
+          "id": "asdf1234::1234_any_st_anytown_anystate_11111",
+          "collection_id": "asdf1234",
+          "type": "property",
+          "name": "1234 Any St, Anytown, Anystate 11111",
+          "address": "1234 Any St, Anytown, Anystate 11111",
+      },
+      {
+          "id": "asdf1234::dave",,
+          "collection_id": "asdf1234",
+          "type": "person",
+          "name": "Dave"
+      },
+      {
+          "id": "asdf1234::john_doe",,
+          "collection_id": "asdf1234",
+          "type": "person",
+          "name": "John Doe"
+      },
+      {
+          "id": "asdf1234::mold_remediation",,
+          "collection_id": "asdf1234",
+          "type": "contingency",
+          "name": "mold remediation"
+      },
+      {
+          "id": "asdf1234::financing",,
+          "collection_id": "asdf1234",
+          "type": "contingency",
+          "name": "financing"
+      }
+  ],
+  "edges": [
+      {
+          "source": "asdf1234::dave",
+          "target": "asdf1234::1234_any_st_anytown_anystate_11111",
+          "collection_id": "asdf1234",
+          "type": "buys"
+      },
+      {
+          "source": "asdf1234::john_doe",
+          "target": "asdf1234::1234_any_st_anytown_anystate_11111",
+          "collection_id": "asdf1234",
+          "type": "sells"
+      },
+      {
+          "source": "asdf1234::1234_any_st_anytown_anystate_11111",
+          "target": "asdf1234::mold_remediation",
+          "collection_id": "asdf1234",
+          "type": "has_contingency"
+      },
+      {
+          "source": "asdf1234::1234_any_st_anytown_anystate_11111 ",
+          "target": "asdf1234::financing",
+          "collection_id": "asdf1234",
+          "type": "has_contingency"
+      }
+  ]
+}
+</json>
+</example_only>
+
+Note that there may be many other types of nodes or edges in the documents, not 
+just the examples given above. 
+
+Here are the existing node and edge types found in other documents in this collection
+so far. If possible, reuse these rather than creating new ones that are semantically similar, 
+but please add new ones if there are edges or nodes discovered that are not semantically
+similar to these.
+
+<EXISTING_NODE_TYPES>
+{existing_node_types}
+</EXISTING_NODE_TYPES>
+
+<EXISTING_EDGE_TYPES>
+{existing_edge_types}
+</EXISTING_EDGE_TYPES>
+
+Here's the document you need to process:
+<DOCUMENT>
+{document_content}
+</DOCUMENT>
+
+You must output only valid JSON. Be concise - do not provide any extra text before or after the JSON.
+
+<JSON>
