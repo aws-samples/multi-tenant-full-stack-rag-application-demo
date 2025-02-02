@@ -24,7 +24,7 @@ from aws_cdk import (
 )
 
 from constructs import Construct
-from .code_sandbox_host import CodeSandboxHost
+from .code_sandbox_service import CodeSandboxService
 
 # from lib.shared.utils_permissions import UtilsPermissions
 
@@ -41,8 +41,13 @@ class ToolsProviderStack(Stack):
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        # self.code_sandbox_host = CodeSandboxHost(self, 'CodeSandboxToolHost',
+        #     app_security_group=app_security_group,
+        #     parent_stack_name=parent_stack_name,
+        #     vpc=vpc
+        # )
 
-        self.code_sandbox_host = CodeSandboxHost(self, 'CodeSandboxHost',
+        self.code_sandbox_service = CodeSandboxService(self, 'CodeSandboxService',
             app_security_group=app_security_group,
             parent_stack_name=parent_stack_name,
             vpc=vpc
@@ -87,27 +92,27 @@ class ToolsProviderStack(Stack):
         ))
 
         stack_prefix = parent_stack_name.replace('-', '')
-        self.tools_provider_function.add_to_role_policy(iam.PolicyStatement(
-            effect=iam.Effect.ALLOW,
-            actions=[
-                'lambda:CreateFunction',
-                'lambda:DeleteFunction',
-                'lambda:InvokeFunction',
-            ],
-            resources=[
-                f"arn:aws:lambda:{self.region}:{self.account}:function:{stack_prefix}ToolSandbox*"
-            ]
-        ))
+        # self.tools_provider_function.add_to_role_policy(iam.PolicyStatement(
+        #     effect=iam.Effect.ALLOW,
+        #     actions=[
+        #         'lambda:CreateFunction',
+        #         'lambda:DeleteFunction',
+        #         'lambda:InvokeFunction',
+        #     ],
+        #     resources=[
+        #         f"arn:aws:lambda:{self.region}:{self.account}:function:{stack_prefix}ToolSandbox*"
+        #     ]
+        # ))
 
-        self.tools_provider_function.add_to_role_policy(iam.PolicyStatement(
-            effect=iam.Effect.ALLOW,
-            actions=[
-                'iam:PassRole'
-            ],
-            resources=[
-                self.tools_provider_function.role.role_arn
-            ]
-        ))
+        # self.tools_provider_function.add_to_role_policy(iam.PolicyStatement(
+        #     effect=iam.Effect.ALLOW,
+        #     actions=[
+        #         'iam:PassRole'
+        #     ],
+        #     resources=[
+        #         self.tools_provider_function.role.role_arn
+        #     ]
+        # ))
 
         tools_provider_function_name_param = ssm.StringParameter(self, 'ToolsProviderFunctionNameParam',
             parameter_name=f'/{parent_stack_name}/tools_provider_function_name',
@@ -120,45 +125,3 @@ class ToolsProviderStack(Stack):
             string_value=self.tools_provider_function.function_name
         )
         tools_provider_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
-
-        # Create Task Execution Role
-        # task_execution_role = iam.Role(self, "CodeSandboxTaskExecutionRole",
-        #     assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
-        #     managed_policies=[
-        #         iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AmazonECSTaskExecutionRolePolicy")
-        #     ]
-        # )
-
-        # # Create Task Definition
-        # task_definition = ecs.FargateTaskDefinition(self, "CodeSandboxTaskDefinition",
-        #     memory_limit_mib=512,
-        #     cpu=256,
-        #     task_role=task_execution_role,
-        #     execution_role=task_execution_role
-        # )
-
-        # # Add Container to Task Definition
-        # task_definition.add_container("SandboxContainer",
-        #     image=ecs.ContainerImage.from_asset(
-        #         'src/multi_tenant_full_stack_rag_application/',
-        #         file="tools_provider/Dockerfile.code_sandbox_tool_v2"
-        #     ),  # Path to local Dockerfile directory
-        #     port_mappings=[ecs.PortMapping(container_port=80)],
-        #     logging=ecs.LogDriver.aws_logs(
-        #         stream_prefix="code-sandbox-logs",
-        #         log_group=logs.LogGroup(self, "CodeSandboxContainerLogGroup",
-        #             log_group_name="/ecs/code-sandbox-logs",
-        #             removal_policy=RemovalPolicy.DESTROY
-        #         )
-        #     )
-        # )
-
-        # # Create Fargate Service
-        # ecs.FargateService(self, "CodeSandboxFargateService",
-        #     cluster=code_sandbox_cluster,
-        #     task_definition=task_definition,
-        #     desired_count=2,
-        #     assign_public_ip=False,
-        #     service_name="code-sandbox-service",
-        #     platform_version=ecs.FargatePlatformVersion.LATEST
-        # )

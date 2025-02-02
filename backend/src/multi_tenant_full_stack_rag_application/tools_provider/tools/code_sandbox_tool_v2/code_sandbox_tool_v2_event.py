@@ -28,12 +28,12 @@ languages_to_tdd_commands = {
 }
 
 languages_to_requirements_install_cmd = {
-    'python': 'pip install -t /var/task pytes'
+    'python': 'pip install -t $APP_HOME pytest'
 }
 
 
 class CodeSandboxToolV2Event(ToolProviderEvent):
-    def __init__(self, 
+    def __init__(self, *, 
         business_logic_code: str='',
         cpus: int=default_cpus,
         entrypoint_path: str='',
@@ -44,39 +44,25 @@ class CodeSandboxToolV2Event(ToolProviderEvent):
         operation = 'invoke_code_sandbox_tool_v2'
         super().__init__(operation)
         self.event_id = uuid4().hex
-        tmpdir = f"/tmp/{self.event_id}"
-        os.makedirs(tmpdir)
+        app_home = os.getenv('APP_HOME')
+        print(f"Got business_logic_code {business_logic_code}")
+        print(f"Got iac_code {iac_code}")
 
-        
-        self.business_logic_code = business_logic_code
         self.code_language = self.detect_code_language(business_logic_code)
-        self.code_base_image = docker_base_images[self.code_language]
         self.cpus = cpus
         self.entrypoint_path = entrypoint_path
-        self.iac_code = iac_code
         self.iac_language = self.detect_code_language(iac_code)
         self.memory_mb = memory_mb
-        self.tdd_code = tdd_code
-
         self.code_image = docker_base_images[self.code_language]
         self.iac_image = docker_base_images[self.iac_language]
         
-        if business_logic_code and self.code_language:
-            self.business_logic_filename = f"{tmpdir}/business_logic.{executables_to_extensions[self.code_language]}"
-            with open(self.business_logic_filename, 'w') as f:
-                f.write(business_logic_code)
-        if iac_code and self.iac_language:
-            self.iac_filename = f"{tmpdir}/iac.{executables_to_extensions[self.iac_language]}"
-            with open(self.iac_filename, 'w') as f:
-                f.write(iac_code)
-        if tdd_code and self.code_language:
-            self.tdd_filename = f"{tmpdir}/tdd.{executables_to_extensions[self.code_language]}"
-            with open(self.tdd_filename, 'w') as f:
-                f.write(t_code)
-        self.tmpdir = tmpdir
+        self.business_logic_code = business_logic_code.replace(f'```{self.code_language}\n', '').replace('```', '')
+        self.iac_code = iac_code.replace(f'```{self.iac_language}\n', '').replace('```', '')
+        self.tdd_code = tdd_code.replace(f'```{self.code_language}\n', '').replace('```', '')
         self.tdd_command = languages_to_tdd_commands[self.code_language]
         self.install_tdd_reqs = languages_to_requirements_install_cmd[self.code_language]
-    
+
+
     def detect_code_language(self, input_str):
         lines = input_str.split("\n")
         firstline = lines[0].replace('```','').split()[0]

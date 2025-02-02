@@ -10,7 +10,6 @@ __pycache__
 .lxml-venv
 aws-exports.js
 cdk.out
-tests
 cfn_templates
 .input_values_cache
 install.py

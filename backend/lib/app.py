@@ -216,7 +216,7 @@ class MultiTenantRagStack(Stack):
             vpc=vpc_stack.vpc
         )
 
-        tools_provider_stack = ToolsProviderStack(self, 'ToolsProviderStack',
+        tools_provider_stack = ToolsProviderStack(self, 'Tools-Provider-Stack',
             app_security_group=vpc_stack.app_security_group,
             auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
             parent_stack_name=self.stack_name,

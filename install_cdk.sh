@@ -15,6 +15,9 @@ f=1
 # pass in -b to skip backend install. Only use if doing frontend
 # dev work and haven't changed the backend.
 b=1
+# pass in -n to add --no-rollback to the CDK command.
+n=''
+
 
 while getopts "yhfb" opt; do
   case ${opt} in
@@ -29,6 +32,9 @@ while getopts "yhfb" opt; do
       ;;
     b )
       b=0
+      ;;
+    n )
+      n=' --no-rollback'
       ;;
   esac
 done
@@ -52,7 +58,7 @@ if [ $b -eq 1 ]; then
   echo
   echo "Installing backend stack. Please wait. It takes a while the first time through."
   echo
-  cdk deploy --all --asset-parallelism true --concurrency 50 --outputs-file ../frontend/backend_outputs.json $y $h 
+  cdk deploy --all --asset-parallelism true --concurrency 50 --outputs-file ../frontend/backend_outputs.json $n $y $h 
   if [ $? -ne 0 ]; then
     echo "cdk deploy failed. Exiting."
     exit
@@ -69,7 +75,7 @@ if [ $f -eq 1 ]; then
   echo "Installing frontend stack. Goes faster, but there's a CloudFront distribution, so that takes a good 15 minutes or so the first time."
   export BUILD_UID=$UID 
   echo "BUILD_UID is $BUILD_UID" 
-  cdk deploy --all --asset-parallelism true --concurrency 50 $y $h 
+  cdk deploy --all --asset-parallelism true --concurrency 50 $n $y $h 
   if [ $? -ne 0 ]; then
     echo "cdk deploy failed. Exiting."
     exit
