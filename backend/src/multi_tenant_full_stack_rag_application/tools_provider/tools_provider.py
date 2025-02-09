@@ -117,12 +117,12 @@ class ToolsProvider:
             # if there are any keys left in the args then they were unexpected
             raise Exception(f"ERROR: ToolsProvider received unexpected args {handler_evt.args}.")
 
-
-        args['user_id'] = handler_evt.user_id
+        if hasattr(handler_evt, 'user_id'):
+            args['user_id'] = handler_evt.user_id
         # proceed to use the tool
         print(f"Invoking tool with args {args}")
-        if tool_name == 'code_sandbox_tool':
-            args['build_artifacts_zip_s3uri'] = f"s3://{self.bucket}/private/{handler_evt.user_id}/{args['build_artifacts_zip_s3uri']}"
+        # if tool_name == 'code_sandbox_tool':
+        #     args['build_artifacts_zip_s3uri'] = f"s3://{self.bucket}/private/{handler_evt.user_id}/{args['build_artifacts_zip_s3uri']}"
 
         response = self.tool_classes[tool_name]().handler({
             "operation": args['operation'],

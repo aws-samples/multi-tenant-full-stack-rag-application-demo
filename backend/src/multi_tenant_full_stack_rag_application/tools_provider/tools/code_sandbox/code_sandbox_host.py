@@ -8,7 +8,7 @@ import time
 import zipfile 
 from threading import Thread
 
-from multi_tenant_full_stack_rag_application.tools_provider.tools.code_sandbox_tool_v2.code_sandbox_host_event import CodeSandboxHostEvent
+from multi_tenant_full_stack_rag_application.tools_provider.tools.code_sandbox.code_sandbox_host_event import CodeSandboxHostEvent
 
 logging.basicConfig(filename='/var/log/codesandbox/codesandbox.log', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,10 +30,12 @@ class CodeSandboxHost:
     #   iac_code: str=''
     #   test_code: str=''      
     def build_image(self, handler_evt):
-        tmp_folder = handler_evt.tmpdir
-        image_id = tmp_folder.split('/')[-1]
+        tmpdir = handler_evt.tmpdir
+        commands = handler_evt.tdd_command.split()
+        commands.append(handler_evt.tdd_filename)
+        image_id = tmpdir.split('/')[-1]
         dockerfile_contents = f"FROM {handler_evt.code_image}\n"
-        dockerfile_contents += f"RUN mkdir {tmp_folder}\n"
+        dockerfile_contents += f"RUN mkdir {tmpdir}\n"
         # dockerfile_contents += f"RUN mkdir /tmp/containerd\n"
         # dockerfile_contents += f"RUN apt update && apt install -y\n"
         # dockerfile_contents += f"RUN wget https://github.com/containerd/nerdctl/releases/download/v1.5.0/nerdctl-1.5.0-linux-amd64.tar.gz\n"
@@ -44,30 +46,29 @@ class CodeSandboxHost:
         # dockerfile_contents += "RUN echo \"  address = \\\"/tmp/containerd/containerd.sock\\\"\" >> /etc/containerd/config.toml\n"
         # dockerfile_contents += "RUN cat /etc/containerd/config.toml\n"
         dockerfile_contents += f"RUN apt update\n"
+        dockerfile_contents += f"RUN apt install --upgrade -y python3\n"
+        dockerfile_contents += f"RUN python3 -m venv /app\n"
+        dockerfile_contents += f"RUN /app/bin/python3 -m ensurepip\n"
         dockerfile_contents += f"RUN {handler_evt.install_tdd_reqs}\n"
-        dockerfile_contents += f"COPY {handler_evt.business_logic_filename} {tmp_folder}/\n"
-        dockerfile_contents += f"COPY {handler_evt.tdd_filename} {tmp_folder}/\n"
-        dockerfile_contents += "RUN mount --make-rshared /\n"
-        # dockerfile_contents += f"RUN cp -aR /run/containerd /tmp/ && rm -Rf /run/containerd && ln -s /tmp/containerd /run/containerd"
+        dockerfile_contents += f"COPY {handler_evt.business_logic_filename} {tmpdir}/\n"
+        dockerfile_contents += f"COPY {handler_evt.tdd_filename} {tmpdir}/\n"
         dockerfile_contents += f"RUN ls -la {handler_evt.tdd_filename}\n"
-        dockerfile_contents += f"RUN ls -la {handler_evt.tdd_command}\n"
-        dockerfile_contents += f"CMD ['{handler_evt.tdd_command}', '{handler_evt.tdd_filename}']\n"
+        dockerfile_contents += f"CMD {json.dumps(commands)}\n"
         logger.info(f"Dockerfile contents:\n{dockerfile_contents}")
-        with open(f"{tmp_folder}/Dockerfile", "w") as f_out:
+        with open(f"{tmpdir}/Dockerfile", "w") as f_out:
             f_out.write(dockerfile_contents)
-        
-        proc_result = subprocess.run(
-            [
-                '/usr/bin/docker', 
-                'build',
-                '-t', 
-                image_id, 
-                '-f', 
-                f"{tmp_folder}/Dockerfile", 
-                tmp_folder
-            ],
-            cwd='/app'
-        )
+                    
+        args = [
+            '/usr/bin/docker', 
+            'build',
+            '-t', 
+            image_id, 
+            '-f', 
+            f"{tmpdir}/Dockerfile", 
+            '/'
+        ]
+        logger.info(f"Running docker build with args {' '.join(args)}")
+        proc_result = subprocess.run(args)
         logger.info(f"Got build_image proc result {proc_result}")
         
         return {
@@ -116,9 +117,9 @@ class CodeSandboxHost:
         }
 
     def handler(self, evt):
-        logger.info(f"CodeSandboxToolV2 received Lambda event {evt}")
-        handler_evt = CodeSandboxToolV2Event(**evt.__dict__)
-        logger.info(f"CodeSandboxToolV2Event is now {handler_evt.__dict__}")
+        logger.info(f"CodeSandboxHost received Lambda event {evt}")
+        handler_evt = CodeSandboxHostEvent(**evt.__dict__)
+        logger.info(f"CodeSandboxHostEvent is now {handler_evt.__dict__}")
         build_results = self.build_image(handler_evt)
         logger.info(f"Got build_results {build_results}")
         if build_results['exit_code'] != 0:
@@ -148,23 +149,14 @@ class CodeSandboxHost:
         entrypoint_path='',
         memory_mb=128,
     ):
+        print(f"Run tool got memory {memory_mb}")
         args = [
-            '/usr/bin/docker', 
-            'run',
-            '--rm',
-            '--group-add keep-groups',
-            '--gidmap="g+102000:@2000"',
-            '--volumme "$PWD:/data:ro"',
-            '--workdir /data',
-            '-it',
-            '--memory',
-            str(memory_mb),
-            '--cpus',
-            str(cpus),
+            "/usr/bin/docker", 
+            "run"
         ]
-        if entrypoint_path:
-            args.append('--entrypoint')
-            args.append(entrypoint_path)
+        # if entrypoint_path:
+        #     args.append('--entrypoint')
+        #     args.append(entrypoint_path)
         # the image_id here is the name tag of the
         # container built above. It should be the
         # last argument for the docker run command
@@ -172,14 +164,19 @@ class CodeSandboxHost:
         logger.info(f"Running tool with args: {args}")
         # don't append any more to args between the
         # two lines above and below this comment.
-        proc_result = subprocess.run(args)
-        logger.info(f"Got run_tool proc result {proc_result}")
-        return {
-            "image_id": image_id,
-            "stderr": proc_result.stderr,
-            "stdout": proc_result.stdout,
-            "exit_code": proc_result.returncode
-        }
+        try:
+            logger.info(f"Running docker run with args {' '.join(args)}")
+            proc_result = subprocess.run(args, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            logger.info(f"Got run_tool proc result {proc_result.__dict__}")                
+            return {
+                "image_id": image_id,
+                "stderr": proc_result.stderr,
+                "stdout": proc_result.stdout,
+                "exit_code": proc_result.returncode
+            }
+        except Exception as e:
+            logger.error(f"Got exception {e}")
+            raise e
     
     # def start_containerd(self):
     #     logger.info("Starting containerd...")
@@ -250,11 +247,11 @@ class CodeSandboxHost:
 
 def handler(evt, ctx):
     global csh
-    logger.info(f"code_sandbox_tool_v2.handler got event {evt}")
+    logger.info(f"code_sandbox_host.handler got event {evt}")
     orig_evt = evt.copy()
 
     if not csh:
-        csh = CodeSandboxToolV2()
+        csh = CodeSandboxHost()
     if 'node' in evt and 'inputs' in evt['node']:
         # this came from a bedrock prompt flow so the format
         # is a little different than in this stack. Modify

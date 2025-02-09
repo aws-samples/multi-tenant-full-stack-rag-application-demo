@@ -8,18 +8,18 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 RUN unzip awscliv2.zip
 RUN ./aws/install
 WORKDIR $HOME
-RUN /usr/bin/git config --global user.email code_sandbox_tool_v2@mtfsrad.amazon.com
-RUN /usr/bin/git config --global user.name code_sandbox_tool_v2
-RUN mkdir -p $HOME/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2
+RUN /usr/bin/git config --global user.email code_sandbox@mtfsrad.amazon.com
+RUN /usr/bin/git config --global user.name code_sandbox
+RUN mkdir -p $HOME/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox
 RUN mkdir -p $HOME/multi_tenant_full_stack_rag_application/utils
 COPY utils/*.py $HOME/multi_tenant_full_stack_rag_application/utils/
 COPY utils/*.txt $HOME/multi_tenant_full_stack_rag_application/utils/
 RUN pip install -t $HOME -r $HOME/multi_tenant_full_stack_rag_application/utils/utils_requirements.txt
 COPY tools_provider/*.py $HOME/multi_tenant_full_stack_rag_application/tools_provider/
 COPY tools_provider/tools/*.py $HOME/multi_tenant_full_stack_rag_application/tools_provider/tools/
-COPY tools_provider/tools/code_sandbox_tool_v2/*.py $HOME/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/
-COPY tools_provider/tools/code_sandbox_tool_v2/requirements_code_sandbox_tool.txt multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/
-RUN pip install -t $HOME -r $HOME/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/requirements_code_sandbox_tool.txt
+COPY tools_provider/tools/code_sandbox/*.py $HOME/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/
+COPY tools_provider/tools/code_sandbox/requirements_code_sandbox_tool.txt multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/
+RUN pip install -t $HOME -r $HOME/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/requirements_code_sandbox_tool.txt
 RUN /usr/sbin/adduser sandbox
 RUN mkdir $HOME/.local 
 RUN chown -R sandbox $HOME
@@ -88,6 +88,6 @@ USER sandbox
 WORKDIR $HOME
 ENV PYTHONPATH=.
 # ENV AWS_DEFAULT_REGION=us-west-2
-CMD [ "multi_tenant_full_stack_rag_application.tools_provider.tools.code_sandbox_tool_v2.code_sandbox_tool_v2.handler" ]
-# CMD ['python', 'multi_tenant_full_stack_rag_application /tools_provider/tools/code_sandbox_tool_v2/code_sandbox_tool_v2.py']
+CMD [ "multi_tenant_full_stack_rag_application.tools_provider.tools.code_sandbox.code_sandbox.handler" ]
+# CMD ['python', 'multi_tenant_full_stack_rag_application /tools_provider/tools/code_sandbox/code_sandbox.py']
 

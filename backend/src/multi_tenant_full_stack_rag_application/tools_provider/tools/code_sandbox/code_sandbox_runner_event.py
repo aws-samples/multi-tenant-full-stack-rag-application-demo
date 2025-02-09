@@ -23,16 +23,16 @@ executables_to_extensions = {
 }
 
 languages_to_tdd_commands = {
-    'python': 'pytest -x -s',
+    'python': '/app/bin/pytest -x -s',
     'yaml': 'aws cloudformation validate-template --template-body',
 }
 
 languages_to_requirements_install_cmd = {
-    'python': 'pip install -t $APP_HOME pytest'
+    'python': '/app/bin/pip3 install --upgrade pytest boto3'
 }
 
 
-class CodeSandboxToolV2Event(ToolProviderEvent):
+class CodeSandboxRunnerEvent(ToolProviderEvent):
     def __init__(self, *, 
         business_logic_code: str='',
         cpus: int=default_cpus,
@@ -41,7 +41,7 @@ class CodeSandboxToolV2Event(ToolProviderEvent):
         memory_mb: int=default_memory_mb,
         tdd_code: str='',
     ):
-        operation = 'invoke_code_sandbox_tool_v2'
+        operation = 'invoke_code_sandbox'
         super().__init__(operation)
         self.event_id = uuid4().hex
         app_home = os.getenv('APP_HOME')
@@ -50,7 +50,7 @@ class CodeSandboxToolV2Event(ToolProviderEvent):
 
         self.code_language = self.detect_code_language(business_logic_code)
         self.cpus = cpus
-        self.entrypoint_path = entrypoint_path
+        self.entrypoint_path = entrypoint_path 
         self.iac_language = self.detect_code_language(iac_code)
         self.memory_mb = memory_mb
         self.code_image = docker_base_images[self.code_language]

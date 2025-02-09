@@ -29,12 +29,12 @@ executables_to_extensions = {
 }
 
 languages_to_tdd_commands = {
-    'python': 'pytest -x -s',
+    'python': '/app/bin/pytest -x -s',
     'yaml': 'aws cloudformation validate-template --template-body',
 }
 
 languages_to_requirements_install_cmd = {
-    'python': '/app/bin/pip3 install pytest'
+    'python': '/app/bin/pip3 install --upgrade pytest boto3'
 }
 
 
@@ -55,6 +55,7 @@ class CodeSandboxHostEvent(BaseModel):
     tdd_code: str=''
     tdd_command: str=''
     tdd_filename: str=''
+    tmpdir: str=''
 
     def __init__(self, **kwargs):
         logger.info(f'code_sandbox_host_event got kwargs {kwargs}')
@@ -79,11 +80,14 @@ class CodeSandboxHostEvent(BaseModel):
         logger.info(f"Got iac_filename {self.iac_filename}")
         with open(self.business_logic_filename, 'w') as f:
             f.write(self.business_logic_code)
+        print(f"Wrote {self.business_logic_filename}")
         with open(self.iac_filename, 'w') as f:
             f.write(self.iac_code)
+        print(f"Wrote {self.iac_filename}")
         with open(self.tdd_filename, 'w') as f:
             f.write(self.tdd_code)
-
+        print(f"Wrote {self.tdd_filename}")
+        
         self.tmpdir = tmpdir
         self.tdd_command = kwargs['tdd_command']
         self.install_tdd_reqs = kwargs['install_tdd_reqs']

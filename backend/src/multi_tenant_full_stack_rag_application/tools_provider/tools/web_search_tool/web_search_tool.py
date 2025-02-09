@@ -64,7 +64,7 @@ class WebSearchTool(ToolProvider):
             "search_query": {
                 "required": True,
                 "type": "string",
-                "description": "The query string for the search. For the D"
+                "description": "The query string for the search."
             },
             "top_x": {
                 "required": False,

@@ -13,6 +13,7 @@ class BedrockProviderEvent:
         model_id='',
         operation='',
         origin='',
+        prompt_id='',
     ):
         # now assign all variables to self.
         self.chunk_text = chunk_text
@@ -23,6 +24,7 @@ class BedrockProviderEvent:
         self.model_id = model_id
         self.operation = operation
         self.origin = origin
+        self.prompt_id = prompt_id
 
     def from_lambda_event(self, event):
         self.operation = event['operation']
@@ -37,6 +39,9 @@ class BedrockProviderEvent:
         if self.operation == 'embed_text':
             self.input_text = args['input_text']
         
+        elif self.operation == 'get_prompt':
+            self.prompt_id = args['promptId']
+
         elif self.operation == 'get_semantic_similarity':
             self.chunk_text = args['chunk_text']
             self.search_text= args['search_text']

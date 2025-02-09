@@ -1,18 +1,27 @@
 from aws_cdk import (
-    aws_ec2 as ec2,
-    aws_iam as iam,
-    aws_lambda as lambda_,
-    aws_s3_assets as s3_assets,
-    BundlingFileAccess,
-    BundlingOptions,
-    BundlingOutput,
-    DockerImage,
-    Duration,
-    NestedStack,
-    CfnOutput
+  aws_bedrock as bedrock,
+  aws_ec2 as ec2,
+  aws_iam as iam,
+  aws_lambda as lambda_,
+  aws_s3_assets as s3_assets,
+  aws_ssm as ssm,
+  BundlingFileAccess,
+  BundlingOptions,
+  BundlingOutput,
+  DockerImage,
+  Duration,
+  NestedStack,
+  CfnOutput
 )
 
 from constructs import Construct
+
+from lib.tools_provider_service.prompts.architect import prompt as architect_prompt
+from lib.tools_provider_service.prompts.business_logic_dev import prompt as business_logic_dev_prompt
+from lib.tools_provider_service.prompts.iac_dev import prompt as iac_dev_prompt
+from lib.tools_provider_service.prompts.loop_orchestrator import prompt as loop_orchestrator_prompt
+from lib.tools_provider_service.prompts.tdd_dev import prompt as tdd_dev_prompt
+import json
 
 
 class CodeSandboxService(NestedStack):
@@ -30,10 +39,10 @@ class CodeSandboxService(NestedStack):
             "zip -r /asset-output/mtfsrad.zip . -i multi_tenant_full_stack_rag_application/utils/*.{py,txt}",
             "zip -r /asset-output/mtfsrad.zip . -i multi_tenant_full_stack_rag_application/tools_provider/*.py",
             "zip -r /asset-output/mtfsrad.zip . -i multi_tenant_full_stack_rag_application/tools_provider/tools/*.py",
-            "zip -r /asset-output/mtfsrad.zip . -i multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/*.{py,txt}",
+            "zip -r /asset-output/mtfsrad.zip . -i multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/*.{py,txt}",
             "chown 1000:1000 /asset-output/mtfsrad.zip"
         ]
-        asset = s3_assets.Asset(self, "CodeSandboxAssetv1.18",
+        asset = s3_assets.Asset(self, "CodeSandboxAssetv1.43",
             path="src",
             bundling=BundlingOptions(
                 user="root",
@@ -48,7 +57,7 @@ class CodeSandboxService(NestedStack):
         # Create the CDK resource for an EC2 instance running Amazon Linux 2023
         code_sandbox_host = ec2.Instance(
             self,
-            "CodeSandboxEc2Host1.18",
+            "CodeSandboxEc2Host1.43",
             block_devices=[ec2.BlockDevice(
                 device_name="/dev/xvda",
                 volume=ec2.BlockDeviceVolume.ebs(100, encrypted=True),
@@ -91,7 +100,7 @@ class CodeSandboxService(NestedStack):
                 ec2.InitCommand.shell_command('python3 -m venv /app'),
                 ec2.InitCommand.shell_command('/app/bin/python3 -m ensurepip'),
                 ec2.InitCommand.shell_command('/app/bin/pip3 install --upgrade -r /app/multi_tenant_full_stack_rag_application/utils/utils_requirements.txt'),
-                ec2.InitCommand.shell_command('/app/bin/pip3 install --upgrade -r /app/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/requirements_code_sandbox_host.txt'),
+                ec2.InitCommand.shell_command('/app/bin/pip3 install --upgrade -r /app/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/requirements_code_sandbox_host.txt'),
                 # ec2.InitCommand.shell_command('/app/bin/pip3 install fastapi[standard] certbot certbot-dns-route53'),
                 ec2.InitCommand.shell_command('ln -s /app/bin/certbot /usr/bin/certbot'),
                 ec2.InitFile.from_string('/etc/letsencrypt/cli.ini', f"""
@@ -276,7 +285,7 @@ Environment="APP_HOME=/app"
 ExecStart=/app/bin/fastapi run api_server.py
 Restart=always
 RestartSec=5
-WorkingDirectory=/app/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2
+WorkingDirectory=/app/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox
 StandardOutput=inherit
 StandardError=inherit
 [Install]
@@ -306,18 +315,187 @@ WantedBy=default.target
             resources=["*"]
         ))
 
+        # deploy code sandbox service Bedrock prompts
+        architect = bedrock.CfnPrompt(self, "ArchitectPrompt",
+          name=f"{parent_stack_name}_code_sandbox_architect",
+          # the properties below are optional
+          variants=[bedrock.CfnPrompt.PromptVariantProperty(
+              name="default",
+              template_configuration=bedrock.CfnPrompt.PromptTemplateConfigurationProperty(
+                  text=bedrock.CfnPrompt.TextPromptTemplateConfigurationProperty(
+                      text=architect_prompt["text"],
+                      input_variables=[bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="use_case_details"
+                      )]
+                  )
+              ),
+              template_type="TEXT",
+              inference_configuration=bedrock.CfnPrompt.PromptInferenceConfigurationProperty(
+                  text=bedrock.CfnPrompt.PromptModelInferenceConfigurationProperty(
+                      max_tokens=architect_prompt['max_tokens'],
+                      stop_sequences=architect_prompt["stop_seqs"],
+                      temperature=architect_prompt['temperature'],
+                      top_p=architect_prompt['top_p']
+                  )
+              ),
+              model_id=architect_prompt['model']
+          )]
+        )
+        architect_prompt['id'] = architect.attr_id
+
+        business_logic_dev = bedrock.CfnPrompt(self, "BusinessLogicDevPrompt",
+          name=f"{parent_stack_name}_code_sandbox_business_logic_dev",
+          # the properties below are optional
+          variants=[bedrock.CfnPrompt.PromptVariantProperty(
+              name="default",
+              template_configuration=bedrock.CfnPrompt.PromptTemplateConfigurationProperty(
+                  text=bedrock.CfnPrompt.TextPromptTemplateConfigurationProperty(
+                      text=business_logic_dev_prompt["text"],
+                      input_variables=[
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="use_case_details"
+                        ),
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="architecture_plan"
+                        )
+                      ]
+                  )
+              ),
+              template_type="TEXT",
+              inference_configuration=bedrock.CfnPrompt.PromptInferenceConfigurationProperty(
+                  text=bedrock.CfnPrompt.PromptModelInferenceConfigurationProperty(
+                      max_tokens=business_logic_dev_prompt['max_tokens'],
+                      stop_sequences=business_logic_dev_prompt["stop_seqs"],
+                      temperature=business_logic_dev_prompt['temperature'],
+                      top_p=business_logic_dev_prompt['top_p']
+                  )
+              ),
+              model_id=business_logic_dev_prompt['model']
+          )]
+        )
+        business_logic_dev_prompt['id'] = business_logic_dev.attr_id
+
+        iac_dev = bedrock.CfnPrompt(self, "IacDevPrompt",
+          name=f"{parent_stack_name}_code_sandbox_iac_dev",
+          # the properties below are optional
+          variants=[bedrock.CfnPrompt.PromptVariantProperty(
+              name="default",
+              template_configuration=bedrock.CfnPrompt.PromptTemplateConfigurationProperty(
+                  text=bedrock.CfnPrompt.TextPromptTemplateConfigurationProperty(
+                      text=iac_dev_prompt["text"],
+                      input_variables=[
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="use_case_details"
+                        ),
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="architecture_plan"
+                        ),
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="business_logic_code"
+                        )
+                      ]
+                  )
+              ),
+              template_type="TEXT",
+              inference_configuration=bedrock.CfnPrompt.PromptInferenceConfigurationProperty(
+                  text=bedrock.CfnPrompt.PromptModelInferenceConfigurationProperty(
+                      max_tokens=iac_dev_prompt['max_tokens'],
+                      stop_sequences=iac_dev_prompt["stop_seqs"],
+                      temperature=iac_dev_prompt['temperature'],
+                      top_p=iac_dev_prompt['top_p']
+                  )
+              ),
+              model_id=iac_dev_prompt['model']
+          )]
+        )
+
+        iac_dev_prompt['id'] = iac_dev.attr_id
+
+        loop_orchestrator = bedrock.CfnPrompt(self, "LoopOrchestratorPrompt",
+          name=f"{parent_stack_name}_code_sandbox_loop_orchestrator",
+          # the properties below are optional
+          variants=[bedrock.CfnPrompt.PromptVariantProperty(
+              name="default",
+              template_configuration=bedrock.CfnPrompt.PromptTemplateConfigurationProperty(
+                  text=bedrock.CfnPrompt.TextPromptTemplateConfigurationProperty(
+                      text=loop_orchestrator_prompt["text"],
+                      input_variables=[
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="business_logic_code"
+                        ),
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="iac_code"
+                        ),
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="previous_results"
+                        ),
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="tdd_code"
+                        ),
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="use_case_details"
+                        ),
+                      ]
+                  )
+              ),
+              template_type="TEXT",
+              inference_configuration=bedrock.CfnPrompt.PromptInferenceConfigurationProperty(
+                  text=bedrock.CfnPrompt.PromptModelInferenceConfigurationProperty(
+                      max_tokens=loop_orchestrator_prompt['max_tokens'],
+                      stop_sequences=loop_orchestrator_prompt["stop_seqs"],
+                      temperature=loop_orchestrator_prompt['temperature'],
+                      top_p=loop_orchestrator_prompt['top_p']
+                  )
+              ),
+              model_id=loop_orchestrator_prompt['model']
+          )]
+        )
+        loop_orchestrator_prompt['id'] = loop_orchestrator.attr_id
+
+        tdd_dev = bedrock.CfnPrompt(self, "TddDevPrompt",
+          name=f"{parent_stack_name}_code_sandbox_tdd_dev",
+          # the properties below are optional
+          variants=[bedrock.CfnPrompt.PromptVariantProperty(
+              name="default",
+              template_configuration=bedrock.CfnPrompt.PromptTemplateConfigurationProperty(
+                  text=bedrock.CfnPrompt.TextPromptTemplateConfigurationProperty(
+                      text=tdd_dev_prompt["text"],
+                      input_variables=[
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="use_case_details"
+                        ),
+                        bedrock.CfnPrompt.PromptInputVariableProperty(
+                          name="business_logic_code"
+                        )
+                      ]
+                  )
+              ),
+              template_type="TEXT",
+              inference_configuration=bedrock.CfnPrompt.PromptInferenceConfigurationProperty(
+                  text=bedrock.CfnPrompt.PromptModelInferenceConfigurationProperty(
+                      max_tokens=tdd_dev_prompt['max_tokens'],
+                      stop_sequences=tdd_dev_prompt["stop_seqs"],
+                      temperature=tdd_dev_prompt['temperature'],
+                      top_p=tdd_dev_prompt['top_p']
+                  )
+              ),
+              model_id=tdd_dev_prompt['model']
+          )]
+        )
+        tdd_dev_prompt['id'] = tdd_dev.attr_id
+
         build_cmds = [
             "pip3 install -t /asset-output requests",
-            'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/',
+            'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/',
             "cp /asset-input/tools_provider/tools/*.py /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/",
-            "cp /asset-input/tools_provider/tools/code_sandbox_tool_v2/*.py /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/",
+            "cp /asset-input/tools_provider/tools/code_sandbox/*.py /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/",
             'pip3 install -t /asset-output -r /asset-input/utils/utils_requirements.txt',
             'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils/',
-            'pip3 install -t /asset-output -r /asset-input/tools_provider/tools/code_sandbox_tool_v2/requirements_code_sandbox_tool.txt',
+            'pip3 install -t /asset-output -r /asset-input/tools_provider/tools/code_sandbox/requirements_code_sandbox_tool.txt',
             "cp -r /asset-input/utils/* /asset-output/multi_tenant_full_stack_rag_application/utils/",
         ]
-
-        self.code_sandbox_function = lambda_.Function(self, 'CodeSandboxFunction',
+        
+        self.code_sandbox_runner_function = lambda_.Function(self, 'CodeSandboxRunnerFunction',
             code=lambda_.Code.from_asset('src/multi_tenant_full_stack_rag_application/',
                 bundling=BundlingOptions(
                     image=lambda_.Runtime.PYTHON_3_11.bundling_image,
@@ -330,7 +508,7 @@ WantedBy=default.target
             memory_size=128,
             runtime=lambda_.Runtime.PYTHON_3_11,
             architecture=lambda_.Architecture.ARM_64,
-            handler='multi_tenant_full_stack_rag_application.tools_provider.tools.code_sandbox_tool_v2.code_sandbox_tool_v2.handler',
+            handler='multi_tenant_full_stack_rag_application.tools_provider.tools.code_sandbox.code_sandbox.handler',
             timeout=Duration.seconds(900),
             environment={
                 "STACK_NAME": parent_stack_name,
@@ -344,7 +522,7 @@ WantedBy=default.target
             security_groups=[app_security_group]
         )
         
-        self.code_sandbox_function.add_to_role_policy(
+        self.code_sandbox_runner_function.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
                     "bedrock:Invoke*",
@@ -352,3 +530,72 @@ WantedBy=default.target
                 resources=["*"],
             )
         )
+        code_sandbox_runner_fn_name_param = ssm.StringParameter(self, 'CodeSandboRunnerFnParamName',
+            parameter_name=f'/{parent_stack_name}/code_sandbox_runner_function_name',
+            string_value=self.code_sandbox_runner_function.function_name
+        )
+
+        build_cmds = [
+            "pip3 install -t /asset-output requests",
+            'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/',
+            "cp /asset-input/tools_provider/tools/*.py /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/",
+            "cp /asset-input/tools_provider/tools/code_sandbox/*.py /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/",
+            'pip3 install -t /asset-output -r /asset-input/utils/utils_requirements.txt',
+            'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils/',
+            'pip3 install -t /asset-output -r /asset-input/tools_provider/tools/code_sandbox/requirements_code_sandbox_tool.txt',
+            "cp -r /asset-input/utils/* /asset-output/multi_tenant_full_stack_rag_application/utils/",
+        ]
+        
+        self.code_sandbox_orchestrator_function = lambda_.Function(self, 'CodeSandboxOrchestratorFunction',
+            code=lambda_.Code.from_asset('src/multi_tenant_full_stack_rag_application/',
+                bundling=BundlingOptions(
+                    image=lambda_.Runtime.PYTHON_3_11.bundling_image,
+                    bundling_file_access=BundlingFileAccess.VOLUME_COPY,
+                    command=[
+                        "bash", "-c", " && ".join(build_cmds)
+                    ]
+                )
+            ),
+            memory_size=128,
+            runtime=lambda_.Runtime.PYTHON_3_11,
+            architecture=lambda_.Architecture.ARM_64,
+            handler='multi_tenant_full_stack_rag_application.tools_provider.tools.code_sandbox.code_sandbox_orchestrator.handler',
+            timeout=Duration.seconds(900),
+            environment={
+                "STACK_NAME": parent_stack_name,
+                "CODE_SANDBOX_HOST": code_sandbox_host.instance_private_ip,
+                "APP_HOME": "/var/task",
+                "PROMPTS": json.dumps({
+                    "architect": architect_prompt['id'],
+                    "business_logic_dev": business_logic_dev_prompt['id'],
+                    "iac_dev": iac_dev_prompt['id'],
+                    "loop_orchestrator": loop_orchestrator_prompt['id'],
+                    "tdd_dev": tdd_dev_prompt['id']
+                })
+            },
+            vpc=vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
+            ),
+            security_groups=[app_security_group]
+        )
+        
+        self.code_sandbox_orchestrator_function.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "bedrock:Invoke*",
+                ],
+                resources=["*"],
+            )
+        )
+
+        code_sandbox_orchestrator_fn_name_param = ssm.StringParameter(self, 'CodeSandboxOrchestratorFnNameParam',
+            parameter_name=f'/{parent_stack_name}/code_sandbox_orchestrator_function_name',
+            string_value=self.code_sandbox_runner_function.function_name
+        )
+
+        code_sandbox_orchestrator_origin_param = ssm.StringParameter(self, 'CodeSandboxOrchestratorOriginParam',
+            parameter_name=f'/{parent_stack_name}/origin_code_sandbox_orchestrator',
+            string_value=self.code_sandbox_runner_function.function_name
+        )
+        

@@ -14,8 +14,8 @@ RUN /usr/bin/git config --global user.name tools_provider
 RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools
 COPY tools_provider/*.py /var/task/multi_tenant_full_stack_rag_application/tools_provider/
 COPY tools_provider/tools/*.py /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/
-RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2
-COPY tools_provider/tools/code_sandbox_tool_v2/*.py /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox_tool_v2/
+RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox
+COPY tools_provider/tools/code_sandbox/*.py /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/
 RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/file_storage_tool
 COPY tools_provider/tools/file_storage_tool/*.py /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/file_storage_tool/
 RUN mkdir -p /var/task/multi_tenant_full_stack_rag_application/tools_provider/tools/web_search_tool

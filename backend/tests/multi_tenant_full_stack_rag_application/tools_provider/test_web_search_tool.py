@@ -17,7 +17,7 @@ def web_search_tool():
 
 def test_create_web_search_tool(web_search_tool):
     evt = {
-        "operation": "search_and_download",
+        "operation": "SEARCH_AND_DOWNLOAD",
         "args": {
             "search_query": "today's google news headlines",
             "top_x": 5

@@ -156,7 +156,6 @@ def get_bedrock_client():
         bedrock_client_singleton = BotoClientProvider.get_client('bedrock')
     return bedrock_client_singleton
 
-
 def get_bedrock_runtime_client():
     global bedrock_runtime_client_singleton
     if not bedrock_runtime_client_singleton:
@@ -272,6 +271,10 @@ def  get_model_max_tokens(origin, model_id):
     )
 
 
+def get_prompt_bedrock(prompt_id, version='DRAFT'):
+    return invoke_bedrock('get_prompt', {'prompt_id': prompt_id})
+
+
 def get_prompt_template(template_id, user_id, origin, *, account_id=None, lambda_client=None):
     global lambda_client_singleton
     if not lambda_client:
@@ -301,6 +304,7 @@ def get_prompt_template(template_id, user_id, origin, *, account_id=None, lambda
     )
     # print(f"get_prompt_template got response from lambda {response}")
     return response
+
 
 def get_s3_client():
     global s3_client_singleton
@@ -349,6 +353,7 @@ def get_ssm_params(param=None,*, ssm_client=None):
                 next_token = response['NextToken']
             else:
                 next_token = None
+    print(f"All ssm_params: {json.dumps(ssm_params, indent=2)}")
     if param:
         # print(f"Got here and param is {param}")
         return_vals = {}

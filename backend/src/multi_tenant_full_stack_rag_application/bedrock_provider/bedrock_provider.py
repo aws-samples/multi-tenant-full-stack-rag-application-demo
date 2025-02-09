@@ -36,6 +36,9 @@ event {
         for get_model_max_tokens:
             "model_id": str
 
+        for get_prompt:
+            "prompt_id"
+
         for get_semantic_similarity:
             "chunk_text": str,
             "model_id": str,
@@ -228,6 +231,12 @@ class BedrockProvider():
         #     token_ct = int(token_ct * titan_max_tokens_modifier)
         return token_ct
         
+    def get_prompt(self, prompt_id, version="DRAFT"):
+        return self.bedrock_agent.get_prompt(
+            promptIdentifier=prompt_id,
+            promptVersion=version
+        )
+
     # only supports cosine similarity currently
     def get_semantic_similarity(
         self, search_text, chunk_text, model_id, dimensions, *, input_type='search_query'
@@ -235,12 +244,6 @@ class BedrockProvider():
         s_emb = self.embed_text(search_text, model_id, input_type, dimensions=dimensions)
         c_emb = self.embed_text(chunk_text, model_id, input_type, dimensions=dimensions)
         return np.dot(s_emb, c_emb) / (norm(s_emb) * norm(c_emb))
-
-    # def get_token_count(self, input_text):
-    #     # this provides a conservative estimate that tends
-    #     # to overestimate number of tokens, so you'll have a 
-    #     # buffer to stay under the token limits.
-    #     return ceil(len(input_text.split()) * 1.3)
 
     def handler(self, event, context):
         print(f"Got event {event}")
@@ -264,12 +267,13 @@ class BedrockProvider():
             response = self.embed_text(text, model_id, dimensions=dimensions)
         
         elif operation == 'get_model_dimensions':
-            model_id = handler_evt.model_id
-            response = self.get_model_dimensions(model_id)
+            response = self.get_model_dimensions(handler_evt.model_id)
         
         elif operation == 'get_model_max_tokens':
-            model_id = handler_evt.model_id
-            response = self.get_model_max_tokens(model_id)
+            response = self.get_model_max_tokens(handler_evt.model_id)
+
+        elif operation == 'get_prompt':
+            response = self.get_prompt(handler_evt.prompt_id)
 
         elif operation == 'get_semantic_similarity':
             search_text = handler_evt.search_text
