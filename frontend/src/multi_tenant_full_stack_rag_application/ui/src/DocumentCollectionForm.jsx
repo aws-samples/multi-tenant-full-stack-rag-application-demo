@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import Api from './commons/api';
 import { Button, Checkbox, Container, Form, FormField, Header, Input, SpaceBetween, Spinner, Tabs } from '@cloudscape-design/components';
-import { json, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import DeleteConfirmationModal from './DeleteConfirmationModal'
 import DocumentCollection from './DocumentCollection'
 import DocumentCollectionEnrichmentPipelines from './DocumentCollectionEnrichmentPipelines'
@@ -69,6 +69,11 @@ export const uploadedFilesState = atom({
   default: []
 })
 
+export const deleteModalVisibleState = atom({
+  key: 'DocumentCollectionForm.deleteModalVisibleState',
+  default: false
+})
+
 
 function DocumentCollectionForm() {
   let tmpParams = useParams()
@@ -81,7 +86,7 @@ function DocumentCollectionForm() {
   const [confirmationModal, setConfirmationModal] = useState(null)
   const [currentPageIndex, setCurrentPageIndex] = useState(0)
   const [deleteConfirmationMessage, setDeleteConfirmationMessage] = useState('')
-  // const [deleteModalVisible, setDeleteModalVisible] = useRecoilState(deleteModalVisibleState)
+  const [deleteModalVisible, setDeleteModalVisible] = useRecoilState(deleteModalVisibleState)
   const [filesVal, setFilesVal] = useRecoilState(filesValState)
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -502,4 +507,3 @@ function DocumentCollectionForm() {
 }
 
 export default DocumentCollectionForm;
-

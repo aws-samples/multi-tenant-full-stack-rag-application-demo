@@ -19,7 +19,7 @@ b=1
 n=''
 
 
-while getopts "yhfb" opt; do
+while getopts "nyhfb" opt; do
   case ${opt} in
     y )
       y=' --require-approval never'
@@ -58,7 +58,7 @@ if [ $b -eq 1 ]; then
   echo
   echo "Installing backend stack. Please wait. It takes a while the first time through."
   echo
-  cdk deploy --all --asset-parallelism true --concurrency 50 --outputs-file ../frontend/backend_outputs.json $n $y $h 
+  cdk deploy --all --outputs-file ../frontend/backend_outputs.json $n $y $h 
   if [ $? -ne 0 ]; then
     echo "cdk deploy failed. Exiting."
     exit

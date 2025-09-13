@@ -19,6 +19,9 @@ class EmbeddingsProviderFactory:
             raise Exception('You must set EMBEDDINGS_PROVIDER_PY_PATH in the environment or pass it in.')
         if args == []:
             args = json.loads(os.getenv('EMBEDDINGS_PROVIDER_ARGS', '[]'))
+            if isinstance(args, dict):
+                args = args.values()
+        print(f"Got py_path {py_path} embeddings_provider_args {args}")
         # # print(f"EmbeddingsProviderFactory loading provider {py_path} with args {args}")
         parts = py_path.split('.')
         provider_file = '.'.join(parts[:-1])

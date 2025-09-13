@@ -164,14 +164,14 @@ class GenerationHandler:
         response = self.utils.invoke_bedrock(
             "invoke_model",
             {
-                "modelId": msg_obj['model']['model_id'],
+                "model_id": msg_obj['model']['model_id'],
                 "messages": [{
                     "role": "user",
                     "content": [{
                         "text": prompt
                     }]
                 }],
-                "inferenceConfig": {
+                "inference_config": {
                     "maxTokens": 1000,
                     "temperature": 0,
                     "topP": 0.999,
@@ -391,14 +391,14 @@ class GenerationHandler:
                 result = self.utils.invoke_bedrock(
                     'invoke_model', 
                     {
-                        "modelId": msg_obj['model']['model_id'], 
+                        "model_id": msg_obj['model']['model_id'], 
                         "messages": [{
                             "role": "user",
                             "content": [{
                                 "text": prompt
                             }]
                         }], 
-                        "inferenceConfig": model_args
+                        "inference_config": model_args
                     },
                     self.my_origin
                 )

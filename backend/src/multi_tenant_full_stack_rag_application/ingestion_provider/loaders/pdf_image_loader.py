@@ -128,7 +128,7 @@ class PdfImageLoader(Loader):
                 "invoke_model",
                 {
                     "messages": msgs,
-                    "modelId": self.ocr_model_id,
+                    "model_id": self.ocr_model_id,
                 },
                 self.utils.get_ssm_params('origin_ingestion_provider')
             )
@@ -232,6 +232,8 @@ class PdfImageLoader(Loader):
             print(f"Got split results {split_results}", flush=True)
             docs: [VectorStoreDocument] = self.llm_ocr(split_results['splits'], source, extra_header_text, extra_metadata)
             print(f"Returning {len(docs)} docs: {docs}", flush=True)
+            print(f"vector_ingestion_provider.ingest_file saving docs {docs}")
+            self.utils.save_vector_docs(docs, file_dict['collection_id'], self.my_origin)
             return docs
         except Exception as e:
             print(dir(e))

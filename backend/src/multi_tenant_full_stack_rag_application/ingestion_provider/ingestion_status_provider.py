@@ -155,7 +155,7 @@ class IngestionStatusProvider:
                 handler_evt.doc_id, 
             )
             result = self.statuses_to_list(response)
-            # print(f"get_ingestion_status response = {result}")
+            print(f"get_ingestion_status response = {result}")
 
         elif handler_evt.operation == 'create_ingestion_status':
             response = self.set_ingestion_status(
@@ -168,7 +168,7 @@ class IngestionStatusProvider:
                     # set presigned url
                 )
             )
-            # print(f"set_ingestion_status response {response}")
+            print(f"set_ingestion_status response {response}")
             status = response["ResponseMetadata"]["HTTPStatusCode"]
             result = {
                 "message": "SUCCESS"
@@ -185,7 +185,7 @@ class IngestionStatusProvider:
     
         else:
             raise Exception(f'Unexpected method {handler_evt.method}')
-        
+        print(f"IngestionStatusProvider returning result {result}")
         return self.utils.format_response(status, result, handler_evt.origin)
 
     def set_ingestion_status(self, ingestion_status: IngestionStatus): 

@@ -62,7 +62,7 @@ class PromptTemplateHandlerStack(Stack):
         self.prompt_template_handler_function = lambda_.Function(self, 'PromptTemplateHandlerFunction',
             code=lambda_.Code.from_asset('src/multi_tenant_full_stack_rag_application/',
                 bundling=BundlingOptions(
-                    image=lambda_.Runtime.PYTHON_3_11.bundling_image,
+                    image=lambda_.Runtime.PYTHON_3_13.bundling_image,
                     bundling_file_access=BundlingFileAccess.VOLUME_COPY,
                     command=[
                         "bash", "-c", " && ".join(build_cmds)
@@ -70,8 +70,8 @@ class PromptTemplateHandlerStack(Stack):
                 )
             ),
             memory_size=128,
-            runtime=lambda_.Runtime.PYTHON_3_11,
-            architecture=lambda_.Architecture.X86_64,
+            runtime=lambda_.Runtime.PYTHON_3_13,
+            architecture=lambda_.Architecture.ARM_64,
             handler='multi_tenant_full_stack_rag_application.prompt_template_handler.prompt_template_handler.handler',
             timeout=Duration.seconds(60),
             environment={

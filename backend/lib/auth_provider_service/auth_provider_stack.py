@@ -32,7 +32,7 @@ class AuthProviderStack(Stack):
         parent_stack_name: str,
         verification_message_body: str,
         verification_message_subject: str,
-        vpc=ec2.IVpc,
+        vpc: ec2.IVpc,
         **kwargs
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)

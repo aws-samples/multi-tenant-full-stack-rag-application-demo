@@ -63,7 +63,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
             {
                 "dimensions": dimensions,
                 "input_text": text,
-                "modelId": model_id,
+                "model_id": model_id,
                 "input_type": input_type
             },
             self.utils.get_ssm_params('embeddings_provider_function_name')
@@ -77,7 +77,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
         response = self.utils.invoke_bedrock(
             "get_model_dimensions",
             {
-                "modelId": model_id
+                "model_id": model_id
             },
             self.utils.get_ssm_params('embeddings_provider_function_name')
         )
@@ -91,7 +91,7 @@ class BedrockEmbeddingsProvider(EmbeddingsProvider):
         response = self.utils.invoke_bedrock(
             "get_model_max_tokens",
             {
-                "modelId": model_id
+                "model_id": model_id
             },
             self.utils.get_ssm_params('embeddings_provider_function_name')
         )

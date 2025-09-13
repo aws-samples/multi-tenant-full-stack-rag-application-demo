@@ -6,7 +6,6 @@ import boto3
 import json
 import os
 
-from moto import mock_aws
 from multi_tenant_full_stack_rag_application.document_collections_handler import DocumentCollection, DocumentCollectionsHandler
 from multi_tenant_full_stack_rag_application import utils
 

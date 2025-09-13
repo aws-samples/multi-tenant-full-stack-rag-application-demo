@@ -41,17 +41,11 @@ class ToolsProviderStack(Stack):
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # self.code_sandbox_host = CodeSandboxHost(self, 'CodeSandboxToolHost',
+        # self.code_sandbox_service = CodeSandboxService(self, 'CodeSandboxService',
         #     app_security_group=app_security_group,
         #     parent_stack_name=parent_stack_name,
         #     vpc=vpc
         # )
-
-        self.code_sandbox_service = CodeSandboxService(self, 'CodeSandboxService',
-            app_security_group=app_security_group,
-            parent_stack_name=parent_stack_name,
-            vpc=vpc
-        )
 
         self.tools_provider_function = lambda_.Function(self, 'ToolsProviderFunction',
             code=lambda_.Code.from_asset_image(
@@ -60,7 +54,7 @@ class ToolsProviderStack(Stack):
             ),
             memory_size=256,
             runtime=lambda_.Runtime.FROM_IMAGE,
-            # runtime=lambda_.Runtime.PYTHON_3_11,
+            # runtime=lambda_.Runtime.PYTHON_3_13,
             architecture=lambda_.Architecture.X86_64,
             handler=lambda_.Handler.FROM_IMAGE,
             # handler='multi_tenant_full_stack_rag_application.tools_provider.tools_provider.handler',

@@ -51,20 +51,6 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
     def create_index(self, collection_id):
         os_vector_db = self.get_vector_store(collection_id)
         
-    # "settings": {
-    #     "index": {
-    #     "knn": true
-    #     }
-    # },
-    # "mappings": {
-    #     "properties": {
-    #     "my_vector": {
-    #         "type": "knn_vector",
-    #         "dimension": 3,
-    #         "space_type": "l2",
-    #         "method": {
-    #         "name": "hnsw",
-    #         "engine": "faiss"
         response = self.utils.get_model_dimensions(self.my_origin)
         print(f"response from get_model_dimensions: {response}")
         dims = json.loads(response['body'])['response']
@@ -88,6 +74,7 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             }
         }
         try: 
+            print(f"Checking if collection id {collection_id} exists")
             if not os_vector_db.indices.exists(collection_id):
                 os_vector_db.indices.create(
                     index=collection_id, 
@@ -136,7 +123,10 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
                 f"{self.proto}://{self.vector_store_endpoint}:{self.port}",
                 **kwargs
             )
+           
+            print(f"Checking if collection id {collection_id} exists")
             if not self.vector_db_client.indices.exists(collection_id):
+                print(f"Creating vector index {collection_id}")
                 self.create_index(collection_id)
     
         return self.vector_db_client
@@ -154,27 +144,28 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             result = {"error": "Access denied"}
             
         elif handler_evt.operation == 'create_index':
-            result = self.create_index(handler_evt.collection_id)
+            result = self.create_index(handler_evt.args['collection_id'])
     
         elif handler_evt.operation == 'delete_index':
-            result = self.delete_index(handler_evt.collection_id)
+            result = self.delete_index(handler_evt.args['collection_id'])
         
         elif handler_evt.operation == 'delete_record':
-            result = self.delete_record(handler_evt.collection_id, handler_evt.doc_id)
+            result = self.delete_record(handler_evt.args['collection_id'], handler_evt.args['doc_id'])
 
         elif handler_evt.operation == 'query':
-            result = self.query(handler_evt.collection_id, handler_evt.query)
+            print(f"Got collection_id {handler_evt.args['collection_id']}, query {handler_evt.args['query']}")
+            result = self.query(handler_evt.args['collection_id'], handler_evt.args['query'])
 
         elif handler_evt.operation == 'save':
-            result = self.save(handler_evt.documents, handler_evt.collection_id)
+            result = self.save(handler_evt.args['documents'], handler_evt.args['collection_id'])
 
         elif handler_evt.operation == 'semantic_query':
-            result = self.semantic_query(handler_evt.search_recommendations, handler_evt.top_k)
+            result = self.semantic_query(handler_evt.args['search_recommendations'], handler_evt.args['top_k'])
 
         else:
             status = 400
             result = {'error', 'Unknown operation'}
-
+        print(f"OpenSearchVectorStoreProvider returning {result}")
         return self.utils.format_response(status, result, self.my_origin)
     
     def query(self, collection_id, query):
@@ -189,27 +180,27 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
         payload = ''
         print(f"Saving {len(doc_chunks)} (type {type(doc_chunks[0])}) documents to vector store {collection_id}")
         doc_ids = []
-        if isinstance(doc_chunks[0], VectorStoreDocument):
-            doc = doc.to_dict()
-            
+
         for doc in doc_chunks:
+            if isinstance(doc, VectorStoreDocument):
+                doc = doc.to_json()
             print(f"saving doc {doc}")
-            doc_id = doc['id']
+            doc_id = doc['doc_id']
             doc_ids.append(doc_id)
             if doc_id.startswith(f"{collection_id}/"):
                 doc_id = doc_id.replace(f"{collection_id}/", "")
             # print(f"ingesting document {doc}")
-            if 'id' in list(doc.keys()):
-                del doc['id']
+            if 'doc_id' in list(doc.keys()):
+                del doc['doc_id']
             # delattr(doc, 'id')
             doc['vector'] = self.utils.embed_text(doc['content'], self.my_origin)
             payload += '{"index": { "_index": "' + collection_id + '", "_id": "' + doc_id + '"}}\n' + json.dumps(doc) + "\n"
         
         print(f"Saving payload {payload}")
-        result = os_vector_db.bulk(payload, params={
-            'refresh': 'true'
-        })
-
+        result = os_vector_db.bulk(
+            body=payload
+        )
+        print(f"Result from os bulk call {result}")
         if result['errors']:
             raise Exception(f"Error saving to vector store: {result}")
             

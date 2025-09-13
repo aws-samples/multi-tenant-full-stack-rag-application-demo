@@ -40,23 +40,23 @@ class OptimizedParagraphSplitter(Splitter):
         
         stack_name = os.getenv('STACK_NAME')
     
-        self.emb_provider_fn_name = self.utils.get_ssm_params('embeddings_provider_function_name')
+        # self.emb_provider_fn_name = self.utils.get_ssm_params('embeddings_provider_function_name')
     
         self.max_tokens_per_chunk = max_tokens_per_chunk
 
     def get_model_max_tokens(self, model_id):
         if not self.max_tokens_per_chunk:
-            response = invoke_lambda(
-                self.emb_provider_fn_name, 
-                {
-                    'operation': 'get_model_max_tokens',
-                    'origin': self.utils.get_ssm_params('ingestion_provider_function_name'),
-                    'args': {
-                        'model_id': model_id
-                    }
-                }, 
-                lambda_client=self.lambda_
-            )
+            # response = invoke_lambda(
+            #     self.emb_provider_fn_name, 
+            #     {
+            #         'operation': 'get_model_max_tokens',
+            #         'origin': self.utils.get_ssm_params('ingestion_provider_function_name'),
+            #         'args': {
+            #             'model_id': model_id
+            #         }
+            #     }, 
+            #     lambda_client=self.lambda_
+            # )
             print(f"response from get_model_max_tokens: {response}")
             self.max_tokens_per_chunk = json.loads(response['body'])['response']
         print(f"Got max_tokens_per_chunk {self.max_tokens_per_chunk}")

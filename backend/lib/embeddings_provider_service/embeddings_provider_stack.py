@@ -25,7 +25,6 @@ class EmbeddingsProviderStack(Stack):
     def __init__(self, scope: Construct, construct_id: str,
         auth_fn: lambda_.IFunction,
         auth_role_arn: str,
-        embeddings_model_id: str,
         parent_stack_name: str,
         user_pool_client_id: str,
         user_pool_id:str,
@@ -49,21 +48,21 @@ class EmbeddingsProviderStack(Stack):
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/embeddings_provider",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
             "cp /asset-input/embeddings_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/embeddings_provider/",
+            "cp /asset-input/service_provider* /asset-output/multi_tenant_full_stack_rag_application/",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
             "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
             "pip3 install -r /asset-input/embeddings_provider/bedrock_embeddings_provider_requirements.txt -t /asset-output"
         ]
 
-        embeddings_provider_args = [
-            embeddings_model_id
-        ]
-        
-        embeddings_provider_py_path = 'multi_tenant_full_stack_rag_application_demo.embeddings_provider.bedrock_embeddings_provider.BedrockEmbeddingsProvider'
-        
+        embeddings_model_id = self.node.get_context('embeddings_model_id')
+        embeddings_provider_args = self.node.get_context('embeddings_provider_args')
+        embeddings_provider_py_path = self.node.get_context('embeddings_provider_py_path')
+        handler_path = '.'.join(embeddings_provider_py_path.split('.')[:-1]) + '.handler'
+
         self.embeddings_provider_function = lambda_.Function(self, 'EmbeddingsProviderFunction',
             code=lambda_.Code.from_asset('src/multi_tenant_full_stack_rag_application/',
                 bundling=BundlingOptions(
-                    image=lambda_.Runtime.PYTHON_3_11.bundling_image,
+                    image=lambda_.Runtime.PYTHON_3_13.bundling_image,
                     bundling_file_access=BundlingFileAccess.VOLUME_COPY,
                     command=[
                         "bash", "-c", " && ".join(build_cmds)
@@ -71,9 +70,9 @@ class EmbeddingsProviderStack(Stack):
                 )
             ),
             memory_size=256,
-            runtime=lambda_.Runtime.PYTHON_3_11,
-            architecture=lambda_.Architecture.X86_64,
-            handler='multi_tenant_full_stack_rag_application.embeddings_provider.bedrock_embeddings_provider.handler',
+            runtime=lambda_.Runtime.PYTHON_3_13,
+            architecture=lambda_.Architecture.ARM_64,
+            handler=handler_path,
             timeout=Duration.seconds(60),
             environment={
                 # 'IDENTITY_POOL_ID': cognito_identity_pool_id,
@@ -92,6 +91,20 @@ class EmbeddingsProviderStack(Stack):
             }
         )
 
+        if 'sagemaker' in self.node.get_context('embeddings_provider_py_path'):
+            endpoint_name = self.node.get_context('embeddings_provider_args')['endpoint_name']
+            self.embeddings_provider_function.add_to_role_policy(iam.PolicyStatement(
+                effect=iam.Effect.ALLOW,
+                actions=[
+				    "sagemaker:InvokeEndpointAsync",
+				    "sagemaker:InvokeEndpointWithResponseStream",
+    				"sagemaker:InvokeEndpoint"
+                ],
+                resources=[
+                    f"arn:aws:sagemaker:{self.region}:{self.account}:endpoint/{endpoint_name}"
+                ]
+            ))
+        
         emb_provider_fn_name_param =ssm.StringParameter(self, 'EmbeddingsProviderFunctionName',
             parameter_name=f'/{parent_stack_name}/embeddings_provider_function_name',
             string_value=self.embeddings_provider_function.function_name

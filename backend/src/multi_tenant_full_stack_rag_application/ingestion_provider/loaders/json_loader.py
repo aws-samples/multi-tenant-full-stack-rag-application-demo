@@ -62,7 +62,7 @@ class JsonLoader(Loader):
             json_record = json.loads(json_record)
         for id_field in self.json_id_fields_order:
             if id_field in list(json_record.keys()):
-                return f"{collection_id}/{json_record[id_field]}"
+                return f"{collection_id}/{filename}:row:{json_record[id_field]}"
         
     def create_content(self, json_record):
         if isinstance(json_record, str):
@@ -88,7 +88,7 @@ class JsonLoader(Loader):
         print(f"Got line to extract: {json_obj}")
         meta = deepcopy(json_obj)
         keys = list(json_obj.keys())
-        print(f"extract_line gotot source {source}")
+        print(f"extract_line got source {source}")
         collection_id = source.split('/')[-2]
         filename = source.split('/')[-1]
         doc_id = self.create_ingestion_id(json_obj, filename, collection_id)
@@ -107,28 +107,24 @@ class JsonLoader(Loader):
         
         etag = md5(jsonline.encode('utf-8')).hexdigest()
         meta['etag'] = etag
-        lines_processed = 1
-        status = 'IN_PROGRESS'
-        print(f"Saving ingestion status with path {doc_id}")
-        ing_status = self.utils.set_ingestion_status(
-            user_id,
-            doc_id,
-            etag,
-            lines_processed,
-            status,
-            self.my_origin
-        )
+
+
 
         if not (content and doc_id and title):
             raise Exception(f"Couldn't find at least one of content ({content}), doc_id ({doc_id}), and title ({title})")
         else:
             print(f"Found doc_id {doc_id}, title {title}, content\n{content}\n\n")
-            return VectorStoreDocument.from_dict({
+
+            doc = VectorStoreDocument.from_dict({
                 "id": doc_id,
                 "content": content,
                 "metadata": meta,
-                "vector": self.emb_provider.embed_text(content)
+                "vector": self.utils.embed_text(content, self.my_origin, 'search_document')
             })
+            print(f"vector_ingestion_provider.ingest_file saving doc {doc}")
+            self.utils.save_vector_docs([doc],  collection_id, self.my_origin)
+        return doc
+
                     
     def load(self, path, user_id, json_lines=False, source=None):
         if not path: 
@@ -142,9 +138,7 @@ class JsonLoader(Loader):
             if not json_lines:
                 # docs.append(self.extract_line(f.read().replace("\n", "").strip()), source, user_id)
                 return self.extract_line(f.read().replace("\n", "").strip(), source, user_id)
-                
             else:
-                line_ctr = 1
                 # jsonlines format
                 line = f.readline()
                 while line:
@@ -153,7 +147,6 @@ class JsonLoader(Loader):
                     #   new_doc.id = f"{filename}:{new_doc.id}:L{line_ctr}"
                     # print(f"Loaded doc {new_doc.to_json()}")
                     # docs.append(new_doc)
-                    # line_ctr += 1
                     line = f.readline()
 
     
@@ -165,45 +158,19 @@ class JsonLoader(Loader):
         print(f"source split to parts {parts}")
         collection_id = parts[-2]
         filename = parts[-1]
-
-        self.utils.set_ingestion_status(
-            user_id, 
-            f"{collection_id}/{filename}",
-            etag,
-            0, 
-            'IN_PROGRESS',
-            self.my_origin
-        )
         try: 
             final_docs = []
             docs_processed = 0
             print(f"load_and_split received path {path}, source {source}, collection_id {collection_id}, json_lines {json_lines}")
             for doc in self.load(path, user_id, json_lines, source):
                 print(f"self.load yielded doc {doc.to_json()}")
-                # new_docs= self.split(doc, source, extra_header_text, extra_metadata, return_dicts)
-                # result = self.save_vectors(new_docs, collection_id)
-                # print(f"Result from saving vector records: {result}")
-                # docs_processed += result
-
-                # for new_doc in new_docs:
-                #     if not 'etag' in new_doc.metadata:
-                #         new_doc.metadata['etag'] = md5(new_doc.to_json().encode('utf-8')).hexdigest()
-                #     print(f"vectordoc: {new_doc.to_json()}")
-                if isinstance(doc, VectorStoreDocument):
+                if return_dicts:
                     doc = doc.to_dict()
-                
                 final_docs.append(doc)
-                ing_status = self.utils.set_ingestion_status(
-                    user_id,
-                    doc['id'],
-                    doc['metadata']['etag'],
-                    1,
-                    'INGESTED',
-                    self.my_origin
-                )
-
-                print(f"Processed {docs_processed} document chunks")
+                docs_processed += 1
+            print(f"Processed {docs_processed} document chunks")
             return final_docs
+        
         except Exception as e:
             print(f"Error loading {path}: {e}")
             self.utils.set_ingestion_status(
@@ -216,52 +183,5 @@ class JsonLoader(Loader):
             )
             raise e
 
-    # def split(self, doc, source, extra_header_text='', extra_metadata={}, return_dicts=False):
-    #     filename = source.split('/')[-1]
-    #     if not 'source' in extra_metadata:
-    #         extra_metadata['source'] = source
-    #     if not 'title' in extra_metadata:
-    #         extra_metadata['title'] = filename
-    #     if 'FILENAME' not in extra_header_text.upper():
-    #         extra_header_text += f"\nFILENAME: {filename}\n{extra_header_text}\n"
-    #         extra_header_text = extra_header_text.replace("\n\n", "\n").lstrip("\n")
-    #     extra_metadata['upsert_date'] = datetime.now().isoformat()
-        
-    #     doc = doc.to_dict()
-    #     text_chunks = self.splitter.split(
-    #         doc['content'], 
-    #         doc['id'], 
-    #         extra_header_text=extra_header_text,
-    #         extra_metadata=extra_metadata,
-    #         return_dicts=return_dicts
-    #     )
-    #     ctr = 0
-    #     final_docs = []
-    #     for chunk in text_chunks:
-    #         doc_id = f"{doc['id']}:{ctr}"
-    #         print(f"doc_id is now {doc_id}")
-    #         vector = self.emb_provider.embed_text(chunk)
-    #         if not return_dicts:
-    #             new_doc = VectorStoreDocument(
-    #                 doc_id,
-    #                 chunk,
-    #                 extra_metadata,
-    #                 vector
-    #             )
-    #             print(f"new_doc.to_json() {new_doc.to_json()}")
-    #             final_docs.append(new_doc)
-    #         else:
-    #             new_doc = {
-    #                 'id': doc_id,
-    #                 'content': chunk,
-    #                 'metadata': extra_metadata,
-    #                 'vector': vector
-    #             }
-    #             print(f"new_doc.to_json() {new_doc.to_json()}")
-    #             final_docs.append(new_doc)
-    #         ctr += 1
-    #     return final_docs
-        
-        
 
             

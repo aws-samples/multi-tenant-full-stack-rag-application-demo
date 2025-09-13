@@ -52,7 +52,7 @@ class GenerationHandlerStack(Stack):
         self.generation_handler_function = lambda_.Function(self, 'GenerationHandlerFunction',
             code=lambda_.Code.from_asset('src/multi_tenant_full_stack_rag_application/',
                 bundling=BundlingOptions(
-                    image=lambda_.Runtime.PYTHON_3_11.bundling_image,
+                    image=lambda_.Runtime.PYTHON_3_13.bundling_image,
                     bundling_file_access=BundlingFileAccess.VOLUME_COPY,
                     command=[
                         "bash", "-c", " && ".join(bundling_cmds)
@@ -60,8 +60,8 @@ class GenerationHandlerStack(Stack):
                 )
             ),
             memory_size=768,
-            runtime=lambda_.Runtime.PYTHON_3_11,
-            architecture=lambda_.Architecture.X86_64,
+            runtime=lambda_.Runtime.PYTHON_3_13,
+            architecture=lambda_.Architecture.ARM_64,
             handler='multi_tenant_full_stack_rag_application.generation_handler.generation_handler.handler',
             timeout=Duration.seconds(120),
             environment={

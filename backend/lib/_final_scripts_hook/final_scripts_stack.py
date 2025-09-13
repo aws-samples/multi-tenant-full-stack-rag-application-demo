@@ -33,7 +33,6 @@ class FinalScriptsStack(NestedStack):
         ingestion_status_provider_function: lambda_.IFunction,
         ingestion_status_table: ddb.ITable,
         prompt_templates_handler_function: lambda_.IFunction,
-        tools_provider_function: lambda_.IFunction,
         vector_store_provider_function: lambda_.IFunction,
         **kwargs
     ) -> None:
@@ -52,13 +51,17 @@ class FinalScriptsStack(NestedStack):
             index_write_access=True
         )
 
+        enrichment_dlq = sqs.Queue(self, "deadLetterQueue")
         enrichment_evt_source = lambda_event_sources.DynamoEventSource(
             ingestion_status_table,
             starting_position=lambda_.StartingPosition.LATEST,
-            batch_size=1,
+            batch_size=20,
+            parallelization_factor=10,
             retry_attempts=2,
+            bisect_batch_on_error=True,
+            on_failure=lambda_event_sources.SqsDlq(enrichment_dlq),
             filters=[
-                lambda_.FilterCriteria.filter({"eventName": lambda_.FilterRule.is_equal("MODIFY")}),
+                lambda_.FilterCriteria.filter({"eventName": ["INSERT", "MODIFY"]})
             ]
         )
 
@@ -129,34 +132,34 @@ class FinalScriptsStack(NestedStack):
         #     ]
         # ))
 
-        tools_provider_function.add_to_role_policy(iam.PolicyStatement(
-            effect=iam.Effect.ALLOW,
-            actions=[
-                "s3:PutObject",
-                "s3:GetObject",
-            ],  
-            resources=[
-                f"{ingestion_bucket.bucket_arn}/private/{'${cognito-identity.amazonaws.com:sub}'}/*",
-            ]
-        ))
+        # tools_provider_function.add_to_role_policy(iam.PolicyStatement(
+        #     effect=iam.Effect.ALLOW,
+        #     actions=[
+        #         "s3:PutObject",
+        #         "s3:GetObject",
+        #     ],  
+        #     resources=[
+        #         f"{ingestion_bucket.bucket_arn}/private/{'${cognito-identity.amazonaws.com:sub}'}/*",
+        #     ]
+        # ))
 
-        tools_provider_function.add_to_role_policy(iam.PolicyStatement(
-            effect=iam.Effect.ALLOW,
-            actions=[
-                's3:ListBucket'
-            ],
-            resources=[
-                f"{ingestion_bucket.bucket_arn}"
-            ],
-            conditions={
-                "StringLike": {
-                    "s3:prefix": [
-                        "private/${cognito-identity.amazonaws.com:sub}/",
-                        "private/${cognito-identity.amazonaws.com:sub}/*"
-                    ]
-                }
-            }
-        ))
+        # tools_provider_function.add_to_role_policy(iam.PolicyStatement(
+        #     effect=iam.Effect.ALLOW,
+        #     actions=[
+        #         's3:ListBucket'
+        #     ],
+        #     resources=[
+        #         f"{ingestion_bucket.bucket_arn}"
+        #     ],
+        #     conditions={
+        #         "StringLike": {
+        #             "s3:prefix": [
+        #                 "private/${cognito-identity.amazonaws.com:sub}/",
+        #                 "private/${cognito-identity.amazonaws.com:sub}/*"
+        #             ]
+        #         }
+        #     }
+        # ))
 
         # doc_collections_handler_function.add_to_role_policy(iam.PolicyStatement(
         #     effect=iam.Effect.ALLOW,
@@ -175,9 +178,9 @@ class FinalScriptsStack(NestedStack):
         #         }
         #     }
         # ))
-        tools_provider_function.grant_invoke(generation_handler_function.grant_principal)
-        doc_collections_handler_function.grant_invoke(tools_provider_function.grant_principal)
-        ingestion_bucket.grant_read_write(tools_provider_function.grant_principal)
+        # tools_provider_function.grant_invoke(generation_handler_function.grant_principal)
+        # doc_collections_handler_function.grant_invoke(tools_provider_function.grant_principal)
+        # ingestion_bucket.grant_read_write(tools_provider_function.grant_principal)
         
         bedrock_provider_function.grant_invoke(extraction_principal)
         doc_collections_handler_function.grant_invoke(extraction_principal)

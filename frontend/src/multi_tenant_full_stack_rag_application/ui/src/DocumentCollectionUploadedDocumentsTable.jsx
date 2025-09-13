@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import Api from './commons/api'
-import { Button, Container, Form, FileUpload, Header, Input, SpaceBetween, Table } from '@cloudscape-design/components'
+import { Button, Container, Form, FileUpload, Header, Input, SpaceBetween, Table, Pagination, Select } from '@cloudscape-design/components'
 import { UPLOADED_DOCUMENTS_COLUMN_DEFINITIONS } from './commons/details-config'
 import { atom, selector, useRecoilState, useRecoilValue} from 'recoil'
 import { 
@@ -16,7 +16,14 @@ import {
 import DeleteConfirmationModal from './DeleteConfirmationModal'
 
 const api = new Api()
-const filePageSize = 20
+
+// Page size options for the dropdown
+const pageSizeOptions = [
+  { label: '10', value: 10 },
+  { label: '20', value: 20 },
+  { label: '50', value: 50 },
+  { label: '100', value: 100 }
+]
 
 
 async function getTableProvider(collectionId, limit=20, lastEvalKey='') {
@@ -45,9 +52,16 @@ function DocumentCollectionUploadedDocumentsTable() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
   const [filesVal, setFilesVal] = useRecoilState(filesValState)
   const [isLoading, setIsLoading] = useRecoilState(filesValIsLoadingState)
-  const [lastEvalKey, setLastEvalKey] = useState(null)
   const [selectedFileUpload, setSelectedFileUpload] = useRecoilState(selectedFileUploadState)
-  const [uploadedFiles, setUploadedFiles] = useRecoilState(uploadedFilesState)
+  
+  // Use local state for uploaded files instead of Recoil to avoid conflicts
+  const [uploadedFiles, setUploadedFiles] = useState([])
+  
+  // Pagination state
+  const [pageSize, setPageSize] = useState(20)
+  const [currentPageIndex, setCurrentPageIndex] = useState(1)
+  const [hasNextPage, setHasNextPage] = useState(false)
+  const [pageTokens, setPageTokens] = useState(['']) // Store tokens for each page, starting with empty string for first page
   
   const deleteConfirmationMessageState = atom({
     key: 'UploadedDocumentsTable.deleteConfirmationMessageState',
@@ -63,13 +77,100 @@ function DocumentCollectionUploadedDocumentsTable() {
     },
   });
 
-  useEffect(() => {
-    if (currentCollection.hasOwnProperty('collectionId') && 
-        currentCollection.collectionId.length == 32 ) {
-      (async () => {
-        setIsLoading(true)
-        let tmpFiles = await getTableProvider(currentCollection.collectionId, filePageSize, lastEvalKey)
-        console.log("Got tmpFiles:")
+  // Pagination functions - moved before useEffect to fix hoisting issues
+  async function loadPage(pageIndex) {
+    if (!currentCollection.collectionId) return
+    
+    setIsLoading(true)
+    setCurrentPageIndex(pageIndex)
+    
+    // Get the token for the requested page
+    const token = pageTokens[pageIndex - 1] || ''
+    console.log(`Loading page ${pageIndex} with token: "${token}"`)
+    
+    try {
+      // Request one extra item to detect if there are more pages
+      let tmpFiles = await getTableProvider(currentCollection.collectionId, pageSize + 1, token)
+      console.log(`Got tmpFiles for page ${pageIndex}:`, tmpFiles)
+      
+      if (!tmpFiles || tmpFiles.length == 0) {
+        tmpFiles = [{
+          "key": "no-files-uploaded",
+          "file_name": "No files uploaded yet.",
+          "status": "",
+          "disabled": true
+        }]
+        setHasNextPage(false)
+      } else {
+        console.log(`API returned ${tmpFiles.length} files, pageSize is ${pageSize}`)
+        
+        // Check if we got more results than pageSize (indicates more pages available)
+        const hasMore = tmpFiles.length > pageSize
+        
+        // Limit the results to exactly pageSize for display
+        if (tmpFiles.length > pageSize) {
+          console.log(`API returned ${tmpFiles.length} files, showing ${pageSize}. More pages available.`)
+          tmpFiles = tmpFiles.slice(0, pageSize)
+        }
+        
+        for (let i = 0; i < tmpFiles.length; i++) {
+          tmpFiles[i].key = `tmpFile_${i}`
+          tmpFiles[i].onClick = async () => await api.downloadFile(
+            currentCollection.collectionId, 
+            tmpFiles[i].file_name
+          );
+        }
+        
+        setHasNextPage(hasMore)
+        
+        // Update page tokens - ensure we have the token for the next page
+        if (hasMore && pageIndex >= pageTokens.length) {
+          // For now, use the filename as the token since the backend expects it
+          // In a proper implementation, this would be the DynamoDB LastEvaluatedKey
+          const nextPageToken = tmpFiles[tmpFiles.length - 1]['file_name']
+          console.log(`Adding token for page ${pageIndex + 1}: "${nextPageToken}"`)
+          setPageTokens(prev => {
+            const newTokens = [...prev]
+            newTokens[pageIndex] = nextPageToken // Token for NEXT page
+            return newTokens
+          })
+        }
+      }
+      
+      console.log(`Setting uploadedFiles to ${tmpFiles.length} items`)
+      setUploadedFiles(tmpFiles)
+      
+    } catch (error) {
+      console.error('Error loading page:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  function handlePreviousPage() {
+    if (currentPageIndex > 1) {
+      loadPage(currentPageIndex - 1)
+    }
+  }
+
+  function handleNextPage() {
+    if (hasNextPage) {
+      loadPage(currentPageIndex + 1)
+    }
+  }
+
+  function handlePageSizeChange(selectedOption) {
+    const newSize = selectedOption.value
+    setPageSize(newSize)
+    setCurrentPageIndex(1)
+    setPageTokens([''])
+    setHasNextPage(false)
+    
+    // Immediately load first page with new page size
+    if (currentCollection.collectionId) {
+      setIsLoading(true)
+      // Request one extra item to detect if there are more pages
+      getTableProvider(currentCollection.collectionId, newSize + 1, '').then(tmpFiles => {
         if (!tmpFiles || tmpFiles.length == 0) {
           tmpFiles = [{
             "key": "no-files-uploaded",
@@ -77,9 +178,19 @@ function DocumentCollectionUploadedDocumentsTable() {
             "status": "",
             "disabled": true
           }]
-        }
-        else {
-          console.dir(tmpFiles)
+          setHasNextPage(false)
+        } else {
+          console.log(`handlePageSizeChange: API returned ${tmpFiles.length} files, newSize is ${newSize}`)
+          
+          // Check if we got more results than newSize (indicates more pages available)
+          const hasMore = tmpFiles.length > newSize
+          
+          // Limit the results to exactly newSize for display
+          if (tmpFiles.length > newSize) {
+            console.log(`handlePageSizeChange: API returned ${tmpFiles.length} files, showing ${newSize}. More pages available.`)
+            tmpFiles = tmpFiles.slice(0, newSize)
+          }
+          
           for (let i = 0; i < tmpFiles.length; i++) {
             tmpFiles[i].key = `tmpFile_${i}`
             tmpFiles[i].onClick = async () => await api.downloadFile(
@@ -87,30 +198,36 @@ function DocumentCollectionUploadedDocumentsTable() {
               tmpFiles[i].file_name
             );
           }
-          setUploadedFiles(tmpFiles)
-          setLastEvalKey(tmpFiles[tmpFiles.length - 1]['file_name'])
+          
+          setHasNextPage(hasMore)
+          
+          if (hasMore) {
+            const nextPageToken = tmpFiles[tmpFiles.length - 1]['file_name']
+            setPageTokens(['', nextPageToken])
+          }
         }
+        
+        console.log(`handlePageSizeChange: Setting uploadedFiles to ${tmpFiles.length} items`)
+        setUploadedFiles(tmpFiles)
         setIsLoading(false)
-      })()
+      }).catch(error => {
+        console.error('Error loading page with new size:', error)
+        setIsLoading(false)
+      })
     }
-  }, [currentCollection, lastEvalKey])
+  }
 
+  // useEffects - placed after function definitions to avoid hoisting issues
   useEffect(() => {
-    // console.log("Set uploaded files to ")
-    // console.dir(uploadedFiles)
-    if (uploadedFiles) {
-      setIsLoading(false)
+    if (currentCollection.hasOwnProperty('collectionId') && 
+        currentCollection.collectionId.length == 32 ) {
+      // Reset pagination state when collection changes
+      setCurrentPageIndex(1)
+      setPageTokens([''])
+      setHasNextPage(false)
+      loadPage(1)
     }
-    // setIsLoading(false)
-  }, [uploadedFiles])
-
-  useEffect(() => {
-    // console.log("Set selected file upload to ")
-    // console.dir(selectedFileUpload)
-    if (!selectedFileUpload) {
-      setIsLoading(false)
-    }
-  }, [selectedFileUpload])
+  }, [currentCollection])
 
   useEffect(() => {
     (async () => {
@@ -122,16 +239,11 @@ function DocumentCollectionUploadedDocumentsTable() {
         console.dir(result)
         setFilesVal([])
         console.log('done uploading files.')
-        let tmpFiles = await getTableProvider(currentCollection.collectionId, filePageSize, lastEvalKey)
-        console.log("after filesVal, Got tmpFiles:")
-        console.dir(tmpFiles)
-        if (tmpFiles.length > 0) {
-          setUploadedFiles(tmpFiles)
-          setLastEvalKey(tmpFiles[tmpFiles.length - 1]['file_name'])
-        }
-        else {
-          setUploadedFiles([])
-        }
+        // Reset pagination and reload first page after upload
+        setCurrentPageIndex(1)
+        setPageTokens([''])
+        setHasNextPage(false)
+        loadPage(1)
       }
     })()
   }, [currentCollection, filesVal])
@@ -168,12 +280,11 @@ function DocumentCollectionUploadedDocumentsTable() {
   }
 
   function reloadTable(evt) {
-    (async () => {
-      setIsLoading(true)
-      let tmpFiles = await getTableProvider(currentCollection.collectionId, filePageSize, lastEvalKey)
-      setUploadedFiles(tmpFiles)
-      setIsLoading(false)
-    })()
+    // Reset pagination and reload first page
+    setCurrentPageIndex(1)
+    setPageTokens([''])
+    setHasNextPage(false)
+    loadPage(1)
     // evt.preventDefault()
   }
 
@@ -236,10 +347,27 @@ function DocumentCollectionUploadedDocumentsTable() {
           // // console.dir(detail.selectedItems[0])
           setSelectedFileUpload(detail.selectedItems[0])
         }}
+        pagination={
+          <Pagination
+            currentPageIndex={currentPageIndex}
+            pagesCount={hasNextPage ? currentPageIndex + 1 : currentPageIndex}
+            onPreviousPageClick={handlePreviousPage}
+            onNextPageClick={handleNextPage}
+            previousPageAriaLabel="Previous page"
+            nextPageAriaLabel="Next page"
+            disabled={isLoading}
+          />
+        }
         header={
           <Header
             actions={
               <SpaceBetween direction='horizontal' size='xs'>
+                <Select
+                  selectedOption={pageSizeOptions.find(option => option.value === pageSize)}
+                  onChange={({detail}) => handlePageSizeChange(detail.selectedOption)}
+                  options={pageSizeOptions}
+                  placeholder="Page size"
+                />
                 <Button formAction="none" onClick={reloadTable} iconName="refresh" variant="normal" />
                 <FileUpload        
                   onChange={({detail}) => updateFilesVal(detail.value)}        

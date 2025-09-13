@@ -64,9 +64,16 @@ async function getTableProvider() {
 
 
 function DocumentCollectionsTable() {
-  useResetRecoilState(currentCollectionState)();
-  useResetRecoilState(urlCollectionIdState)();
-  useResetRecoilState(uploadedFilesState)();
+  const resetCurrentCollection = useResetRecoilState(currentCollectionState);
+  const resetUrlCollectionId = useResetRecoilState(urlCollectionIdState);
+  const resetUploadedFiles = useResetRecoilState(uploadedFilesState);
+  
+  useEffect(() => {
+    resetCurrentCollection();
+    resetUrlCollectionId();
+    resetUploadedFiles();
+  }, [resetCurrentCollection, resetUrlCollectionId, resetUploadedFiles]);
+  
   const [docCollections, setDocCollections] = useRecoilState(docCollectionsState);
   // const [files, setFiles] = useState([]);
   const [selectedItem, setSelectedItem] = useState({});

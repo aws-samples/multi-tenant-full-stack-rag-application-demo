@@ -23,7 +23,9 @@ sqs_client_singleton = None
 ssm_client_singleton = None
 ssm_params = None
 stack_name = os.getenv('STACK_NAME')
-
+if not stack_name:
+    raise Exception('STACK_NAME variable must be set in the lambda environment.')
+    
 # def delete_sqs_message(rcpt_handle:str, queue_url: str, *, sqs_client=None): 
 #     if not sqs_client:
 #         if not sqs_client_singleton:
@@ -65,6 +67,8 @@ def upsert_doc_collection(collection, origin, *, account_id=None, lambda_client=
         lambda_client=lambda_client
     )
     print(f"responses = {response}")
+    if "errorMessage" in response:
+        raise Exception(f"Error invoking lambda function {doc_collections_fn_name}: {json.dumps(response.__dict__())}")
     return response
 
 
@@ -94,7 +98,7 @@ def download_from_s3(bucket, s3_path):
     # print(f"Success? {os.path.exists(local_file_path)}")
     return local_file_path
 
-def embed_text(text, origin, *, dimensions=1024, lambda_client=None):
+def embed_text(text, origin, embedding_type='search_query', *, dimensions=1024, lambda_client=None):
     print(f'utils.embed_text got text {text}, origin {origin}')
     response = invoke_lambda(
         get_ssm_params('embeddings_provider_function_name'),
@@ -103,7 +107,8 @@ def embed_text(text, origin, *, dimensions=1024, lambda_client=None):
             'origin': origin, 
             'args': {
                 'input_text': text,
-                'dimensions': dimensions
+                'dimensions': dimensions,
+                'embedding_type': embedding_type
             }
         }, 
         lambda_client=lambda_client
@@ -118,7 +123,7 @@ def format_response(status, body, origin, *, dont_sanitize_fields=[]):
     # print(f"format_response got status {status}, body {body}, origin {origin}")
     body = sanitize_response(body, dont_sanitize_fields=dont_sanitize_fields)
     response = {
-        'statusCode': str(status),
+        'statusCode': status,
         'headers': {
             'Access-Control-Allow-Headers': 'Authorization, Content-Type, x-csrf-token, X-Api-Key, *',
             'Access-Control-Allow-Credentials': 'true',
@@ -180,7 +185,7 @@ def get_bedrock_runtime_client():
 #     body = json.loads(response['body'])
 #     return body['creds']
 
-def get_document_collections(user_id, collection_id=None, *, account_id=None, lambda_client=None, origin=None):
+def get_document_collections(user_id, collection_id=None, *, account_id=None, consistent=False, lambda_client=None, origin=None):
     if not user_id:
         raise Exception("Must send user ID with request to get document collections.")
     print(f"Called utils.get_document_collections with user_id {user_id} and collection_id {collection_id}")
@@ -207,7 +212,8 @@ def get_document_collections(user_id, collection_id=None, *, account_id=None, la
                 "user_id": user_id
             },
             "body": {
-                "user_id": user_id
+                "user_id": user_id,
+                "consistent_read": consistent
             }
         },
         lambda_client=lambda_client
@@ -326,7 +332,7 @@ def get_ssm_params(param=None,*, ssm_client=None):
     global ssm_params
     if not ssm_client:
         ssm_client = get_ssm_client()
-    print(f"Stack name is {stack_name}")
+    # print(f"Stack name is {stack_name}")
     if not ssm_params:  
         ssm_params = {}
         next_token = ''
@@ -353,7 +359,7 @@ def get_ssm_params(param=None,*, ssm_client=None):
                 next_token = response['NextToken']
             else:
                 next_token = None
-    print(f"All ssm_params: {json.dumps(ssm_params, indent=2)}")
+    # print(f"All ssm_params: {json.dumps(ssm_params, indent=2)}")
     if param:
         # print(f"Got here and param is {param}")
         return_vals = {}
@@ -437,17 +443,6 @@ def invoke_lambda(function_name, payload={}, *, lambda_client=None):
     print(f"Invoking {function_name}")
     print(f"Invoking lambda with payload: {payload}")
 
-    # if 'args' in payload.keys():
-    #     print(f"args keys: {payload['args'].keys()}")
-    #     # print(f"model_id is {payload['args']['model_id']}")
-    #     # if 'messages' in payload['args'].keys():
-    #     #     print(f"message keys: {payload['args']['messages'][0].keys()}")
-    #     #     msg = payload['args']['messages'][0]
-    #     #     if msg['mime_type'] == 'image/jpeg':
-    #     #         print(f"Type of content is {type(msg['content'])}")
-    # elif 'body' in payload.keys():
-    #     print(f"body keys: {payload['body'].keys()}")
-    # # print(f"Payload is {payload}")
     payload_bytes = json.dumps(payload).encode('utf-8')
     print(f"Payload bytes: {payload_bytes}")
     response = lambda_client.invoke(
@@ -456,9 +451,6 @@ def invoke_lambda(function_name, payload={}, *, lambda_client=None):
         Payload=payload_bytes
     )
     response = json.loads(response['Payload'].read().decode("utf-8"))
-    # print(f"Got response {response}")
-    # body = json.loads(response['body'])
-    # # print(f"Response body {body}")
     return response
 
 

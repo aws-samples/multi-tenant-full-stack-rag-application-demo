@@ -67,7 +67,7 @@ class CodeSandboxService(NestedStack):
                 ec2.InstanceSize.SMALL,
             ),
             machine_image=ec2.MachineImage.latest_amazon_linux2023(
-                cpu_type=ec2.AmazonLinuxCpuType.X86_64
+                cpu_type=ec2.AmazonLinuxCpuType.ARM_64
             ),
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(
@@ -498,7 +498,7 @@ WantedBy=default.target
         self.code_sandbox_runner_function = lambda_.Function(self, 'CodeSandboxRunnerFunction',
             code=lambda_.Code.from_asset('src/multi_tenant_full_stack_rag_application/',
                 bundling=BundlingOptions(
-                    image=lambda_.Runtime.PYTHON_3_11.bundling_image,
+                    image=lambda_.Runtime.PYTHON_3_13.bundling_image,
                     bundling_file_access=BundlingFileAccess.VOLUME_COPY,
                     command=[
                         "bash", "-c", " && ".join(build_cmds)
@@ -506,7 +506,7 @@ WantedBy=default.target
                 )
             ),
             memory_size=128,
-            runtime=lambda_.Runtime.PYTHON_3_11,
+            runtime=lambda_.Runtime.PYTHON_3_13,
             architecture=lambda_.Architecture.ARM_64,
             handler='multi_tenant_full_stack_rag_application.tools_provider.tools.code_sandbox.code_sandbox.handler',
             timeout=Duration.seconds(900),
@@ -549,7 +549,7 @@ WantedBy=default.target
         self.code_sandbox_orchestrator_function = lambda_.Function(self, 'CodeSandboxOrchestratorFunction',
             code=lambda_.Code.from_asset('src/multi_tenant_full_stack_rag_application/',
                 bundling=BundlingOptions(
-                    image=lambda_.Runtime.PYTHON_3_11.bundling_image,
+                    image=lambda_.Runtime.PYTHON_3_13.bundling_image,
                     bundling_file_access=BundlingFileAccess.VOLUME_COPY,
                     command=[
                         "bash", "-c", " && ".join(build_cmds)
@@ -557,7 +557,7 @@ WantedBy=default.target
                 )
             ),
             memory_size=128,
-            runtime=lambda_.Runtime.PYTHON_3_11,
+            runtime=lambda_.Runtime.PYTHON_3_13,
             architecture=lambda_.Architecture.ARM_64,
             handler='multi_tenant_full_stack_rag_application.tools_provider.tools.code_sandbox.code_sandbox_orchestrator.handler',
             timeout=Duration.seconds(900),

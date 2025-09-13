@@ -6,7 +6,8 @@ import os
 import time
 from .auth_provider import AuthProvider
 from .cognito_auth_provider_event import CognitoAuthProviderEvent
-from multi_tenant_full_stack_rag_application import utils 
+from ..service_provider import ServiceProvider
+from multi_tenant_full_stack_rag_application import utils
 
 cognito_auth_provider = None
 
@@ -22,7 +23,7 @@ cognito_auth_provider = None
 #                   user_id: cognito identity pool identity id,
 
 
-class CognitoAuthProvider(AuthProvider):
+class CognitoAuthProvider(AuthProvider, ServiceProvider):
     def __init__(self, 
         cognito_identity_pool_id: str,
         cognito_user_pool_id: str, 
@@ -100,18 +101,19 @@ class CognitoAuthProvider(AuthProvider):
         # print(f'got response {response}')
         return response['IdentityId']        
 
-    def handler(self, event, context):
-        print(f"CognitoAuthProvider.handler got event {event}")
-        # print(f"CognitoAuthProvider.handler got context {context}")
-        # print(f"Invoked function arn is {context}, dir: {dir(context)}")
-        # self.account_id = context.invoked_function_arn.split(':')[4] if hasattr(context, 'invoked_function_arn') else ''
-        handler_evt = CognitoAuthProviderEvent().from_lambda_event(event)
-        handler_evt.account_id = self.account_id
-    
+    def handler(self, handler_evt: CognitoAuthProviderEvent, context):
+        print(f"CognitoAuthProvider got event {handler_evt}")
+        if isinstance(handler_evt, dict):
+            handler_evt = CognitoAuthProviderEvent(**handler_evt)
+
         status = 200
 
-        if hasattr(handler_evt, 'auth_token') and handler_evt.auth_token is not None:
-            handler_evt.user_id = self.get_userid_from_token(handler_evt.auth_token)
+        if handler_evt.args['auth_token'] and handler_evt.args['auth_token'] != '':
+            print(f"Getting user_id from auth token")
+            user_id = self.get_userid_from_token(handler_evt.args['auth_token'])
+            print(f"Got user_id: {user_id}")
+            # Create a new instance with the updated user_id since Pydantic models are immutable by default
+            handler_evt = handler_evt.model_copy(update={'user_id': user_id})
         
         # print(f"Is origin allowed? is {handler_evt.origin} in {self.allowed_origins.values()}?")
         if handler_evt.origin not in self.allowed_origins.values():
@@ -127,10 +129,10 @@ class CognitoAuthProvider(AuthProvider):
             status = 400
 
         final_response = self.utils.format_response(status, result, '', dont_sanitize_fields=['user_id'])
-        # print(f"Returning {final_response}")
+        print(f"Returning {final_response}")
         return final_response
         
-def handler(event, context):
+def handler(event: CognitoAuthProviderEvent, context):
     global cognito_auth_provider
     if not cognito_auth_provider:
         cognito_auth_provider = CognitoAuthProvider(
@@ -139,6 +141,3 @@ def handler(event, context):
             region=os.getenv('AWS_REGION', '')
         )
     return cognito_auth_provider.handler(event, context)
-
-
-    

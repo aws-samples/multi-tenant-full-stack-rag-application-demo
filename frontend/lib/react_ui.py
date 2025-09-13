@@ -66,7 +66,7 @@ class ReactUiStack(Stack):
                     'USER_POOL_ID': user_pool_id,
                     'PROMPT_TEMPLATES_API_URL': prompt_templates_api_url
                 },
-                image=DockerImage.from_registry('alpine'),
+                image=DockerImage.from_registry('debian'),
                 command=["/bin/sh", "-c", '/asset-input/build_website_deployment.sh'],
               )
             )],

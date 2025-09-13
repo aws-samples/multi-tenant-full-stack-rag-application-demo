@@ -28,81 +28,13 @@ from lib.generation_handler_service.generation_handler_stack import GenerationHa
 from lib.graph_store_provider_service.graph_store_provider_stack import GraphStoreProviderStack
 from lib.ingestion_provider_service.ingestion_provider_stack import  IngestionProviderStack
 from lib.prompt_template_handler_service.prompt_template_handler_stack import PromptTemplateHandlerStack
-from lib.tools_provider_service.tools_provider_service_stack import ToolsProviderStack
+# from lib.tools_provider_service.tools_provider_service_stack import ToolsProviderStack
 from lib.vector_store_provider_service.vector_store_provider_stack import VectorStoreProviderStack
 from lib.shared.vpc import VpcStack
 
 class MultiTenantRagStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-
-        # intialize parameters:
-        param_stack_name = CfnParameter(self, 'ParamStackName',
-            default=self.node.get_context('stack_name_backend')
-        )
-        param_removal_policy = CfnParameter(self, 'ParamRemovalPolicy',
-            default=self.node.get_context('removal_policy')
-        )
-        param_app_name = CfnParameter(self, 'ParamAppName',
-            default=self.node.get_context('app_name')
-        )
-        param_embeddings_model_id = CfnParameter(self, 'ParamEmbeddingsModelId',
-            default=self.node.get_context('embeddings_model_id')
-        )
-        param_entity_extraction_model_id = CfnParameter(self, 'ParamEntityExtractionModelId',
-            default=self.node.get_context('extraction_model_id')
-        )
-        param_ocr_model_id = CfnParameter(self, 'ParamOcrModelId',
-            default=self.node.get_context('ocr_model_id')
-        )
-        param_allowed_email_domains = CfnParameter(self, 'ParamAllowedEmailDomains',
-            default=self.node.get_context('allowed_email_domains')
-        )
-        param_verification_email_subject = CfnParameter(self, 'ParamVerificationEmailSubject',
-            default=self.node.get_context('verification_email_subject')
-        )
-        param_verification_email_body = CfnParameter(self, 'ParamVerificationEmailBody',
-            default=self.node.get_context('verification_email_body')
-        )
-        param_opensearch_data_node_ct = CfnParameter(self, 'ParamOpenSearchDataNodeCt',
-            default=self.node.get_context('os_data_instance_ct')
-        )
-        param_opensearch_data_node_type = CfnParameter(self, 'ParamOpenSearchDataNodeType',
-            default=self.node.get_context('os_data_instance_type')
-        )
-        param_opensearch_data_node_volume_size_gb = CfnParameter(self, 'ParamOpenSearchDataNodeVolSizeGb',
-            default=self.node.get_context('os_data_instance_volume_size_gb')
-        )
-        param_opensearch_master_node_ct = CfnParameter(self, 'ParamOpenSearchMasterNodeCt',
-            default=self.node.get_context('os_master_instance_ct')
-        )
-        param_opensearch_master_node_type = CfnParameter(self, 'ParamOpenSearchMasterNodeType',
-            default=self.node.get_context('os_master_instance_type')
-        )
-        param_opensearch_multiaz_standby_enabled = CfnParameter(self, 'ParamOpenSearchMultiAzStandbyEnabled',
-            default=self.node.get_context('os_multiaz_with_standby_enabled')
-        )
-        param_opensearch_dashboards_ec2_cert_country = CfnParameter(self, 'ParamOsDashboardsCertCountry',
-            default=self.node.get_context('os_dashboards_ec2_cert_country')
-        )
-        param_opensearch_dashboards_ec2_cert_state = CfnParameter(self, 'ParamOsDashboardsCertState',
-            default=self.node.get_context('os_dashboards_ec2_cert_state')
-        )
-        param_opensearch_dashboards_ec2_cert_city = CfnParameter(self, 'ParamOsDashboardsCertCity',
-            default=self.node.get_context('os_dashboards_ec2_cert_city')
-        )
-        param_opensearch_dashboards_ec2_cert_hostname = CfnParameter(self, 'ParamOsDashboardsCertHostname',
-            default=self.node.get_context('os_dashboards_ec2_cert_hostname')
-        )
-        param_opensearch_dashboards_ec2_cert_email_address = CfnParameter(self, 'ParamOsDashboardsCertEmailAddress',
-            default=self.node.get_context('os_dashboards_ec2_cert_email_address')
-        )
-        param_opensearch_dashboards_ec2_enable_traffic_from_ip = CfnParameter(self, 'ParamOsDashboardsEnableTrafficFromIpCidr',
-            default=self.node.get_context('os_dashboards_ec2_enable_traffic_from_ip')
-        )
-        param_neptune_instance_type = CfnParameter(self, 'NeptuneDbInstanceType',
-            default=self.node.get_context('neptune_instance_type')
-        )
 
         vpc_stack = VpcStack(self, 'Vpc')
 
@@ -135,7 +67,6 @@ class MultiTenantRagStack(Stack):
             self, 'EmbeddingsProviderStack',
             auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,            
             auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
-            embeddings_model_id=self.node.try_get_context('embeddings_model_id'),
             parent_stack_name=self.stack_name,
             user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
             user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
@@ -216,14 +147,14 @@ class MultiTenantRagStack(Stack):
             vpc=vpc_stack.vpc
         )
 
-        tools_provider_stack = ToolsProviderStack(self, 'Tools-Provider-Stack',
-            app_security_group=vpc_stack.app_security_group,
-            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
-            parent_stack_name=self.stack_name,
-            vpc=vpc_stack.vpc
-        )
+        # tools_provider_stack = ToolsProviderStack(self, 'Tools-Provider-Stack',
+        #     app_security_group=vpc_stack.app_security_group,
+        #     auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
+        #     parent_stack_name=self.stack_name,
+        #     vpc=vpc_stack.vpc
+        # )
 
-        FinalScriptsStack(self, 'FinalScriptsStack',
+        final_scripts_stack = FinalScriptsStack(self, 'FinalScriptsStack',
             bedrock_provider_function=bedrock_provider_stack.bedrock_provider_function,
             doc_collections_handler_function=doc_collections_stack.doc_collections_function,
             domain=vector_store_provider_stack.vector_store_stack.domain,
@@ -240,18 +171,9 @@ class MultiTenantRagStack(Stack):
             ingestion_status_provider_function=ingestion_provider_stack.ingestion_status_function,
             ingestion_status_table=ingestion_provider_stack.ingestion_status_table.table,
             prompt_templates_handler_function=prompt_templates_handler_stack.prompt_template_handler_function,
-            tools_provider_function=tools_provider_stack.tools_provider_function,
+            # tools_provider_function=tools_provider_stack.tools_provider_function,
             vector_store_provider_function=vector_store_provider_stack.vector_store_stack.vector_store_provider,
         )
-
-        # initialization_stack = InitializationHandlerStack(self, 
-        #     'InitializationHandlerStack',
-        #     auth_role_arn=cognito_stack.authenticated_role_arn,
-        #     # system_settings_table=system_settings_table_stack.table,
-        #     parent_stack_name=self.stack_name,
-        #     user_pool_client_id=cognito_stack.user_pool_client.user_pool_client_id,
-        #     user_pool_id=cognito_stack.user_pool.user_pool_id
-        # )
         
         CfnOutput(self, 'AppName', value=self.node.get_context('app_name'))
         CfnOutput(self, 'RemovalPolicy', value=self.node.get_context('removal_policy'))

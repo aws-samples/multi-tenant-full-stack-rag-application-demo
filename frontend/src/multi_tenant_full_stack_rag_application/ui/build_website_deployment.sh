@@ -1,12 +1,16 @@
 #!/bin/sh
 # export HOME=/asset-input
 # touch /asset-input/.bash_profile
-apk add npm yarn && \
+echo "Starting build_website_deployment.sh" && \
+echo "running apt update && install" && \
+apt update && apt install node-corepack -y && \
+echo "running corepack enable && install" && \
+corepack enable && corepack install --all -g && \
 cd /asset-input && \
+echo "removing previous dist" && \
 if [ -d dist ]; then rm -Rf dist; fi && \
-rm -Rf dist && \
+echo "removing cache" && \
 if [ -d .cache ]; then rm -Rf .cache; fi && \
-rm -Rf .cache && \
 echo 'creating aws-exports.js with required backend stack values' && \
 echo "HTTP API endpoint is $DOC_COLLECTIONS_API_URL" && \
 export ESCAPED_URL=$(echo $DOC_COLLECTIONS_API_URL | sed 's/\//\\\//g') && \
@@ -42,6 +46,8 @@ sed -i "s/<IDENTITY_POOL_ID>/$IDENTITY_POOL_ID/g" aws-exports.js && \
 sed -i "s/<USER_POOL_ID>/$USER_POOL_ID/g" aws-exports.js && \
 sed -i "s/<USER_POOL_CLIENT_ID>/$USER_POOL_CLIENT_ID/g" aws-exports.js && \
 mv aws-exports.js src/ && \
+echo "aws-exports.js after updates:" && \
+cat src/aws-exports.js && \
 echo "running yarn to install deps" && \
 yarn && \
 echo 'Running build' && \
@@ -50,4 +56,5 @@ echo 'build output in dist/?' && \
 ls  && \
 echo 'Copying dist/* to /asset-output' && \
 mv dist/* /asset-output && \
+echo "running chown -R $BUILD_UID node_modules" && \
 chown -R $BUILD_UID node_modules

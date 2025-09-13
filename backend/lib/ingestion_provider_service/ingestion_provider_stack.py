@@ -69,7 +69,7 @@ class IngestionProviderStack(Stack):
         self.ingestion_status_function = lambda_.Function(self, 'IngestionStatusProviderFunction',
             code=lambda_.Code.from_asset('src/multi_tenant_full_stack_rag_application/',
                 bundling=BundlingOptions(
-                    image=lambda_.Runtime.PYTHON_3_11.bundling_image,
+                    image=lambda_.Runtime.PYTHON_3_13.bundling_image,
                     bundling_file_access=BundlingFileAccess.VOLUME_COPY,
                     command=[
                         "bash", "-c", " && ".join(build_cmds)
@@ -77,8 +77,8 @@ class IngestionProviderStack(Stack):
                 )
             ),
             memory_size=128,
-            runtime=lambda_.Runtime.PYTHON_3_11,
-            architecture=lambda_.Architecture.X86_64,
+            runtime=lambda_.Runtime.PYTHON_3_13,
+            architecture=lambda_.Architecture.ARM_64,
             handler='multi_tenant_full_stack_rag_application.ingestion_provider.ingestion_status_provider.handler',
             timeout=Duration.seconds(60),
             environment={
@@ -142,7 +142,7 @@ class IngestionProviderStack(Stack):
             ),
             runtime=lambda_.Runtime.FROM_IMAGE,
             handler=lambda_.Handler.FROM_IMAGE,
-            architecture=lambda_.Architecture.X86_64,
+            architecture=lambda_.Architecture.ARM_64,
             timeout=Duration.minutes(15),
             security_groups=[app_security_group],
             environment={ 

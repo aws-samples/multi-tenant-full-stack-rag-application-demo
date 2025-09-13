@@ -9,13 +9,15 @@ class EmbeddingsProviderEvent:
         input_text='',
         model_id='',
         operation='',
-        origin=''
+        origin='',
+        embedding_type='search_query'
     ):
         self.dimensions = dimensions
         self.input_text = input_text
         self.model_id = model_id
         self.operation = operation
         self.origin = origin
+        self.embedding_type = embedding_type
         
 
     def from_lambda_event(self, event):
@@ -32,6 +34,10 @@ class EmbeddingsProviderEvent:
             self.input_text = self.args['input_text']
         if 'model_id' in self.args:
             self.model_id = self.args['model_id']
+        if 'embedding_type' in self.args:
+            self.embedding_type = self.args['embedding_type']
+        else:
+            self.embedding_type = 'search_query'
         return self
 
     def __str__(self):

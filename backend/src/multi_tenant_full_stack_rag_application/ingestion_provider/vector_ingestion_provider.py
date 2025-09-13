@@ -11,7 +11,7 @@ from urllib.parse import unquote_plus
 
 from multi_tenant_full_stack_rag_application import utils
 
-from .loaders.docx_loader import DocxLoader
+# from .loaders.docx_loader import DocxLoader
 from .loaders.json_loader import JsonLoader
 from .loaders.pdf_image_loader import PdfImageLoader
 from .loaders.text_loader import TextLoader
@@ -162,7 +162,7 @@ class VectorIngestionProvider:
         user_id = file_dict['user_id']
         collection_id = file_dict['collection_id']
         filename = file_dict['filename']
-
+        doc_id = f"{collection_id}/{filename}"
         s3_prefix = f"private/{user_id}/{collection_id}"
         s3_key = f"{s3_prefix}/{filename}"
         print(f"Ingesting {s3_key}")
@@ -186,21 +186,31 @@ class VectorIngestionProvider:
             return
 
         local_path = self.download_s3_file(file_dict['bucket'], s3_key)
+        ingestion_status_args = [
+            user_id,
+            doc_id,
+            file_dict['etag'],
+            0,
+            "IN_PROGRESS",
+            self.my_origin
+        ]
+        ing_status = self.utils.set_ingestion_status(*ingestion_status_args)
 
-        result = self.ingest_file(local_path, file_dict)
-        print(f"Got result {result}")
-
+        enrichment_enabled= False
         if 'enrichment_pipelines' in verified_doc_collection and \
             verified_doc_collection['enrichment_pipelines'] not in [{}, "{}"]:
-            self.utils.set_ingestion_status(
-                user_id,
-                f"{collection_id}/{filename}",
-                file_dict['etag'],
-                0,
-                "AWAITING_ENRICHMENT",
-                self.my_origin
-            )
-        
+            enrichment_enabled = True
+        result = self.ingest_file(local_path, file_dict)
+        print(f"Got result {result}")
+        ingestion_status_args = [
+            user_id,
+            doc_id,
+            file_dict['etag'],
+            0,
+            "AWAITING_ENRICHMENT" if enrichment_enabled else "INGESTED",
+            self.my_origin
+        ]
+        ing_status = self.utils.set_ingestion_status(*ingestion_status_args)
         return result
                
     def handler(self, event, context):
@@ -266,7 +276,7 @@ class VectorIngestionProvider:
                     raise e
         
             self.delete_message(rcpt_handle, queue_url)
-            
+        print("VectorIngestionProvider returning SUCCESS") 
         return {
             "status": 200,
             "body": "SUCCESS"
@@ -276,87 +286,64 @@ class VectorIngestionProvider:
     # The loader will yield documents until it's complete. For a multi-document
     # format like jsonlines, that means you'll get one doc back out per
     # line in the file, as a VectorDocument object. 
-    def ingest_file(self, local_path, file_dict, extra_meta={}): #  source, user_id, extra_meta={}) -> [VectorStoreDocument]:
+    def ingest_file(self, local_path, file_dict): #  source, user_id, extra_meta={}) -> [VectorStoreDocument]:
         docs = []
         try:
             # collection_id = file_dict['collection_id']  # source.split('/')[0]
             if local_path.lower().endswith('.jsonl'):
+                print(f'Ingesting jsonl file.')
                 docs = self.ingest_json_file(local_path, file_dict, json_lines=True)
             elif local_path.lower().endswith('.json'): 
                 docs = self.ingest_json_file(local_path, file_dict, json_lines=False)
             elif local_path.lower().endswith('.pdf'):
                 docs = self.ingest_pdf_file(local_path, file_dict)
-            elif local_path.lower().endswith('.docx'):
-                docs = self.ingest_docx_file(local_path, file_dict)
+            # elif local_path.lower().endswith('.docx'):
+            #     docs = self.ingest_docx_file(local_path, file_dict)
             else:
                 # local_path.endswith('.txt'):
                 # assume you can parse it as text for now
                 docs = self.ingest_text_file(local_path, file_dict)
-            # else:
-            #     raise Exception(f'unsupported file type: {local_path}\nMore file types coming soon.')
-            print(f"vector_ingestion_provider.ingest_file saving docs {docs}")
-            self.utils.save_vector_docs(docs, file_dict['collection_id'], self.my_origin)
-            self.utils.set_ingestion_status(
-                file_dict['user_id'],
-                f"{file_dict['collection_id']}/{file_dict['filename']}",
-                file_dict['etag'],
-                0,
-                'INGESTED',
-                self.my_origin
-            )
             return docs
         except Exception as e:
-            print(f"Error occurred while ingesting file: {e}")
+            print(f"Error occurred while ingesting file: {e.args[0]}")
             self.utils.set_ingestion_status(
                 file_dict['user_id'],
                 f"{file_dict['collection_id']}/{file_dict['filename']}",
                 file_dict['etag'],
                 0,
-                f"ERROR: {e.__dict__}",
+                f"ERROR: {e.args[0]}",
                 self.my_origin
             )
             raise e
 
-    def ingest_docx_file(self, local_path, file_dict):
-        loader = DocxLoader(splitter=self.splitter)
-        docs = loader.load_and_split(local_path, file_dict['user_id'])
-        return docs
+    # def ingest_docx_file(self, local_path, file_dict, *, extra_meta={}):
+    #     loader = DocxLoader(splitter=self.splitter)
+    #     docs = loader.load_and_split(local_path, file_dict['user_id'])
+    #     return docs
 
     def ingest_json_file(self, local_path, file_dict, *, json_lines=True, extra_meta={}):
         # print(f"ingest_json_file got local path {local_path}")
         loader = JsonLoader(
-            splitter=self.splitter,
-            # json_content_fields_order = ["page_content", "content", "text"],
-            # json_id_fields_order = ['id','url', 'source'],
-            # json_title_fields_order = ['title', 'url', 'source', 'id']
+            splitter=self.splitter
         )
         if not 'etag' in extra_meta:
             extra_meta['etag'] = file_dict['etag']
-            
-        loader.load_and_split(local_path, file_dict['user_id'], f"{file_dict['collection_id']}/{file_dict['filename']}", extra_metadata=extra_meta, json_lines=json_lines)
+        docs = loader.load_and_split(local_path, file_dict['user_id'], f"{file_dict['collection_id']}/{file_dict['filename']}", extra_metadata=extra_meta, json_lines=json_lines)
         # docs = loader.load_and_split(local_path, user_id, source, extra_metadata=extra_meta, json_lines=json_lines)
-        # return docs
+        return docs
 
     def ingest_pdf_file(self, local_path, file_dict, *, extra_meta={}, ocr_model_id=None):
         # print(f"Ingesting pdf file {local_path}")
         if not ocr_model_id:
             ocr_model_id = self.ocr_model_id
 
-        # loader = PdfImageLoader(
-        #     max_tokens_per_chunk=self.max_tokens_per_chunk,
-        #     ocr_model_id=ocr_model_id
-        # )
-        
         docs = self.pdf_loader.load_and_split(local_path, file_dict['user_id'], f"{file_dict['collection_id']}/{file_dict['filename']}", etag=file_dict['etag'], extra_metadata=extra_meta)
         print(f"ingest_pdf_file returning {docs}")
         return docs
 
-    def ingest_text_file(self, local_path, file_dict, extra_meta={}):
+    def ingest_text_file(self, local_path, file_dict, *, extra_meta={}):
         # print(f"Ingesting text file {local_path}")
         loader = TextLoader(
-            # emb_provider=self.emb_provider, 
-            # ingestion_status_provider=self.ingestion_status_provider,
-            # save_vectors_fn=self.vector_store_provider.save,
             splitter=self.splitter
         )
         docs = loader.load_and_split(local_path, f"{file_dict['collection_id']}/{file_dict['filename']}", extra_metadata=extra_meta)
@@ -402,36 +389,6 @@ class VectorIngestionProvider:
                  return new_key
         else:
             return s3_key
-
-    # def set_ingestion_status_batch(self, docs_batch, status, file_dict):
-    #         ing_status = IngestionStatus(
-    #             file_dict['user_id'],
-    #             file_dict['etag'],
-    #             file_dict['lines_processed'],
-    #             status
-    #         )
-    #         self.utils.set_ingestion_status(**ing_status, origin=self.my_origin)
-
-    # def save_docs(self, out_queue, collection_id, user_id): 
-    #     docs_batch = []
-    #     doc = out_queue.get()
-    #     while doc:
-    #         docs_batch.append(doc)
-    #         if len(docs_batch) >= self.os_batch_size:
-    #             # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
-    #             self.vector_store_provider.save(docs_batch, collection_id)
-    #             self.set_ingestion_status_batch(
-    #                 docs_batch,
-    #                 'INGESTED'
-    #             )
-    #             docs_batch = []
-    #         doc = out_queue.get()
-        
-    #     if len(docs_batch) > 0:
-    #         # print(f"saving {len(docs_batch)} docs to the vector index", flush=True)
-    #         self.vector_store_provider.save(docs_batch,  collection_id)
-    #         self.set_ingestion_status_batch(docs_batch, 'INGESTED')
-    #     out_queue.put(None)
 
     def verify_collection(self, collection_dict, *, lambda_client=None): 
         print(f"Verifying collection for file dict {collection_dict}")

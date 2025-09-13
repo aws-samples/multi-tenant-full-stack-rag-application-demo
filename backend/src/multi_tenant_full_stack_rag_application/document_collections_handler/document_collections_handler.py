@@ -68,6 +68,7 @@ class DocumentCollectionsHandler:
         #     origin_domain_name,
         # ]
 
+
     @staticmethod
     def collections_to_dict(doc_collections):
         if doc_collections == []:
@@ -95,8 +96,10 @@ class DocumentCollectionsHandler:
         coll_dict = handler_evt.document_collection
         if not 'collection_id' in coll_dict:
             coll_dict['collection_id'] = uuid4().hex
+
         if not 'graph_schema' in coll_dict: 
             coll_dict['graph_schema'] = {}
+
         # print(f"coll_dict is {coll_dict}")
         created = datetime.now().isoformat() + 'Z' if 'created_date' \
             not in coll_dict else coll_dict['created_date']
@@ -107,7 +110,11 @@ class DocumentCollectionsHandler:
         shared_with = [] if 'shared_with' not in coll_dict else coll_dict['shared_with']
         if not 'enrichment_pipelines' in coll_dict:
             coll_dict['enrichment_pipelines'] = {}
-        # # print(f"Why is user_email not working? {handler_evt.user_email}, coll {coll_dict}")
+            
+        # Make sure the graph schema hasn't changed since our schema data here. This 
+        # can happen when working in parallel on Lambda so we want to pull the updated 
+        # graph schema from the Doc collection and merge it with the info here.
+
         dc = DocumentCollection(
             handler_evt.user_id,
             handler_evt.user_email,
@@ -185,9 +192,9 @@ class DocumentCollectionsHandler:
         # for record in records:
         #     self.vector_store_provider.delete_record(collection_id, record['_id'])
 
-    def get_doc_collection(self, owned_by_userid, collection_id, include_shared=True) -> DocumentCollection:
+    def get_doc_collection(self, owned_by_userid, collection_id, *, consistent=False, include_shared=True) -> DocumentCollection:
         # print(f"get_doc_collection received owned_by_userid {owned_by_userid}, collection_id  {collection_id}")
-        doc_collections = self.get_doc_collections(owned_by_userid, include_shared=include_shared)["response"]
+        doc_collections = self.get_doc_collections(owned_by_userid, consistent=consistent, include_shared=include_shared)["response"]
         #  coll_id = handler_evt.document_collection['collection_id']
         # print(f"Got doc collections {doc_collections}, looking for {collection_id}")
         result = None
@@ -197,31 +204,11 @@ class DocumentCollectionsHandler:
                 # print(f"Found collection {result}")
         return result
 
-    def get_doc_collections(self, user_id, *, include_shared=True, limit=20, last_eval_key='') -> [DocumentCollection]:
+    def get_doc_collections(self, user_id, *, consistent=False, include_shared=True, limit=20, last_eval_key='') -> [DocumentCollection]:
         # print(f"get_doc_collections received user_id {user_id}")
         if user_id is None:
             return None
-        
-        # print(f"get_doc_collections received user_id {user_id}")
-        # projection_expression = "#partition_key, #sort_key, #user_email," + \
-        #     " #collection_name, #description, #vector_db_type, #vector_ingestion_enabled," + \
-        #     " #collection_id, #shared_with, #created_date, #updated_date," + \
-        #     " #enrichment_pipelines, #graph_schema"
-        # expression_attr_names = {
-        #     "#partition_key": "partition_key",
-        #     "#sort_key": "sort_key", 
-        #     "#user_email": "user_email",
-        #     "#collection_name": "collection_name",
-        #     "#description": "description", 
-        #     "#vector_db_type": "vector_db_type",
-        #     "#vector_ingestion_enabled": "vector_ingestion_enabled",
-        #     "#collection_id": "collection_id", 
-        #     "#shared_with": "shared_with", 
-        #     "#created_date": "created_date", 
-        #     "#updated_date": "updated_date",
-        #     "#enrichment_pipelines": "enrichment_pipelines", 
-        #     "#graph_schema": "graph_schema"
-        # }
+
         sort_key = 'collection::'
         # print(f"Getting items starting with {sort_key} for user_id {user_id}")
         kwargs = {
@@ -240,12 +227,13 @@ class DocumentCollectionsHandler:
                     'ComparisonOperator': 'BEGINS_WITH' 
                 }
             },
+            "ConsistentRead": consistent,
             # 'ProjectionExpression': projection_expression,
             # 'ExpressionAttributeNames': expression_attr_names,
             'Limit': int(limit)
         }
         if last_eval_key != '':
-            kwargs['ExclusiveStartKey']: last_eval_key
+            kwargs['ExclusiveStartKey'] = last_eval_key
         print(f"querying ddb with kwargs {kwargs}")
         result = self.ddb.query(
             **kwargs
@@ -337,9 +325,9 @@ class DocumentCollectionsHandler:
 
     def handler(self, event, context):
         print(f"Got event {event}")
-        # print(f"Got context {context}")
+        print(f"Got context {context}")
         handler_evt = DocumentCollectionsHandlerEvent().from_lambda_event(event)
-        # print(f"converted to handler_evt {handler_evt.__dict__}")
+        print(f"converted to handler_evt {handler_evt.__dict__}")
         method = handler_evt.method
         path = handler_evt.path
 
@@ -351,7 +339,7 @@ class DocumentCollectionsHandler:
                 handler_evt.user_id = handler_evt.document_collection['user_id']
                 
         elif handler_evt.origin not in self.allowed_origins.values():
-            # print(f"Couldn't find {handler_evt.origin} in the allowed_origins.values: {self.allowed_origins.values()}")
+            print(f"Couldn't find {handler_evt.origin} in the allowed_origins.values: {self.allowed_origins.values()}")
             return utils.format_response(403, {}, None)
         
         status = 200
@@ -367,7 +355,8 @@ class DocumentCollectionsHandler:
                 # a trusted user_id, like the vector_ingestion_provider
                 # which gets the user_id from the s3 event, which is from
                 # a file written by this app with the trusted user id.
-                pass
+                print(f"Received user_id {handler_evt.user_id} from trusted source")
+                
         # if trusted user_id hasn't been sent, get it from the jwt.
         elif hasattr(handler_evt, 'auth_token') and handler_evt.auth_token != '':
             handler_evt.user_id = self.utils.get_userid_from_token(
@@ -375,6 +364,9 @@ class DocumentCollectionsHandler:
                 self.my_origin,
                 lambda_client=self.lambda_
             )
+            print(f"Got handler_evt.user_id: {handler_evt.user_id}")
+            if not handler_evt.user_id:
+                raise Exception('Failed to get user_id from JWT.')
             print(f"Got user_id from token {handler_evt.user_id}")
             print(f"Handler_evt is now {handler_evt.__dict__}")
             if hasattr(handler_evt, 'document_collection'):
@@ -421,8 +413,8 @@ class DocumentCollectionsHandler:
                 'limit' in handler_evt.path_parameters) else \
                     int(handler_evt.path_parameters['limit'])
             last_eval_key = None if not (hasattr(handler_evt, 'path_parameters') and \
-                'start_item' in handler_evt.path_parameters) else \
-                    handler_evt.path_parameters['start_item']
+                'last_eval_key' in handler_evt.path_parameters) else \
+                    handler_evt.path_parameters['last_eval_key']
             if last_eval_key not in ['', None] and not last_eval_key.startswith(collection_id):
                 last_eval_key = f"{collection_id}/{last_eval_key}"
             
@@ -455,6 +447,8 @@ class DocumentCollectionsHandler:
                         "args": {
                             "user_id": handler_evt.user_id,
                             "doc_id": collection_id,
+                            "limit": limit,
+                            "last_eval_key": last_eval_key
                         }
                     },
                     lambda_client=self.lambda_
@@ -465,7 +459,6 @@ class DocumentCollectionsHandler:
                 file_list = []
                 
                 for file_status in file_statuses:
-                    print(f"Got file_status {file_status}")
                     file_list.append({
                         'file_name': file_status['doc_id'].split('/')[-1],
                         'last_modified': datetime.now().isoformat() + 'Z' \
@@ -484,14 +477,14 @@ class DocumentCollectionsHandler:
 
         elif method == 'POST' and path == '/document_collections':
             handler_evt.document_collection['user_id'] = handler_evt.user_id
-            # print(f"creating doc collection from event {handler_evt}")
+            print(f"creating doc collection from event {handler_evt}")
             new_collection_record = self.create_doc_collection_record(handler_evt)
-            # print(f"Created new collection record {new_collection_record}")
+            print(f"Created new collection record {new_collection_record}")
             upserted_collection = self.upsert_doc_collection(new_collection_record, handler_evt)
-            # print(f"Upserted collection {upserted_collection}")
+            print(f"Upserted collection {upserted_collection}")
             if upserted_collection:
                 result = self.collections_to_dict([upserted_collection])
-                # print(f"Result from POST /document_collections {result}")
+                print(f"Result from POST /document_collections {result}")
             else:
                 result = {"Error": "Failed to create collection."}
                 status = 500        
@@ -538,16 +531,58 @@ class DocumentCollectionsHandler:
         )
 
 
-    def upsert_doc_collection(self, new_collection: DocumentCollection, handler_evt):
-        # print(f"upsert_doc_collection got new_collection {new_collection}")
-        # print(f"upsert_doc_collection got handler_evt {handler_evt.__dict__}")
-
-        new_collection_record = new_collection.to_ddb_record()
-        
-        response = self.ddb.put_item(
-            TableName=self.doc_collections_table,
-            Item=new_collection_record
+    def upsert_doc_collection(self, new_collection: DocumentCollection, handler_evt, *, attempt=1, max_attempts=3):
+        # we need to do consistent updates with highly parallel lambda functions
+        # running so we don't overwrite the graph schema results from various invocations.
+        current_collection = self.get_doc_collection(
+            new_collection.user_id, 
+            new_collection.collection_id,
+            consistent=True
         )
+        new_collection_dict = new_collection.__dict__()
+
+        if new_collection.graph_schema != current_collection.graph_schema and \
+            current_collection.graph_schema != {}:
+            merged_collection = json.loads(json.dumps(current_collection.__dict__()))
+            for key in new_collection.graph_schema:
+                if key not in merged_collection: 
+                    merged_collection[key] = new_collection_dict[key]
+                else:
+                    # merge the node properties and edge labels
+                    for node_prop in new_collection_dict[key]['node_properties']:
+                        if node_prop not in merged_collection[key]['node_properties']:
+                            merged_collection[key]['node_properties'].append(node_prop)
+                    for edge_label in new_collection_dict[key]['edge_labels']:
+                        if edge_label not in merged_collection[key]['edge_labels']:
+                            merged_collection[key]['edge_labels'].append(edge_label)
+            # now we need to do a conditional strongly consistent write, and if it fails we need to 
+            # retry this function all.
+            try: 
+                response = self.ddb.put_item(
+                    TableName=self.doc_collections_table,
+                    Item=merged_collection.to_ddb_record(),
+                    ConsistentWrite=True,
+                    ConditionExpression='graph_schema=:graph_schema',
+                    ExpressionAttributeValues={
+                        ":graph_schema": {"S": current_collection.graph_schema}
+                    }
+                )
+                print(f"Got response from put item {response}")
+
+            except ConditionalCheckFailedException:
+                # try again
+                next_attempt = attempt + 1
+                if next_attempt <= max_attempts:
+                    print(f"Graph schema changed while we were updating...retrying attempt {next_attempt}")
+                    response = self.upsert_doc_collection(new_collection, handler_evt, next_attempt, max_attempts)
+                else:
+                    raise Exception(f'Collection graph schema never stabilized in {max_attempts} attempts')
+        else: 
+            new_collection_record = new_collection.to_ddb_record()
+            response = self.ddb.put_item(
+                TableName=self.doc_collections_table,
+                Item=new_collection_record
+            )
         print(f"Got response from ddb.put_item for new_collection_record \n{new_collection_record}\n{response}")
         if 'ResponseMetadata' in response and \
             'HTTPStatusCode' in response['ResponseMetadata'] and \
@@ -557,42 +592,6 @@ class DocumentCollectionsHandler:
                 return result
         else:
             raise Exception(f"Failed to upsert collection for {new_collection.__dict__()}.")
-        
-        # # print(f"after converting to ddb_record: {new_collection_record}")
-        # doc_collections = self.get_doc_collections(handler_evt.user_id, include_shared=False)['response']
-        # # print(f"update_doc_collections got doc_collections: {doc_collections}")
-        # final_collections = []
-        # if doc_collections != []:
-        #     found = False
-        #     for coll_id in doc_collections:
-        #         coll = doc_collections[coll_id]
-        #         # print(f"Is collection owned by user_id {handler_evt.user_id}? {coll}\nType: {type(coll)}")
-        #         if coll.user_id != handler_evt.user_id:
-        #            raise Exception(f"User {handler_evt.user_email} doesn't own this document collection, so cannot update it.")
-
-        #         if coll.collection_id == new_collection.collection_id:
-        #             final_collections.append(new_collection)
-        #             found = True
-        #         else:
-        #             final_collections.append(coll)
-        #     if not found:
-        #         final_collections.append(new_collection)
-        # else:
-        #     final_collections = [new_collection]
-
-        # user_setting_data = {}
-        # for coll in final_collections:
-        #     data = coll.__dict__()
-        #     del data['user_id']
-        #     user_setting_data[coll.collection_name] = data
-        # # print(f"Sending user_setting_data {user_setting_data} to UserSettingProvider")
-        # TODO replace with call to doc collections table.
-        # result = self.user_settings_provider.set_user_setting(UserSetting(
-        #     new_collection.user_id, 
-        #     'document_collections',
-        #     user_setting_data
-        # ))
-        # return final_collections
 
 def handler(event, context):
     global doc_collections_handler

@@ -3,25 +3,25 @@
 
 import jq
 import json
-import numpy as np
 import os
 import sys
 
 from base64 import b64decode, b64encode
 from math import ceil
-from numpy.linalg import norm
 from os import getcwd, getenv, path
 from pathlib import Path
 # from queue import Queue
 # from threading import Thread
 
 from multi_tenant_full_stack_rag_application.bedrock_provider.bedrock_provider_event import BedrockProviderEvent
-from multi_tenant_full_stack_rag_application import utils  
+from multi_tenant_full_stack_rag_application.service_provider import ServiceProvider
+from multi_tenant_full_stack_rag_application.service_provider_event import ServiceProviderEvent
+from multi_tenant_full_stack_rag_application import utils
 
 """
 API
 event {
-    "operation": [embed_text, get_model_dimensions, get_model_max_tokens, get_semantic_similarity, get_token_count, invoke_model, list_models ]
+    "operation": [embed_text, get_model_dimensions, get_model_max_tokens, get_token_count, invoke_model, list_models ]
     "origin": the function name of the calling function, or the frontend_origin.,
     "args": 
         for embed_text:
@@ -38,13 +38,6 @@ event {
 
         for get_prompt:
             "prompt_id"
-
-        for get_semantic_similarity:
-            "chunk_text": str,
-            "model_id": str,
-            "search_text": str,
-            "dimensions": int=1024,
-            "input_type": "search_query"
 
         for invoke_model:
             messages: [dict],
@@ -70,28 +63,10 @@ params_path = path.join(parent_path, 'bedrock_model_params.json')
 
 with open(params_path, 'r') as params_in:
     bedrock_model_params_json = params_in.read()
-    print(f"Got bedrock_model_params before parsing: {bedrock_model_params_json}")
+    # print(f"Got bedrock_model_params before parsing: {bedrock_model_params_json}")
     bedrock_model_params = json.loads(bedrock_model_params_json)
 
-
-# class KBDocument:
-#     def __init__(self, 
-#         id: str,
-#         content: str,
-#         metadata: dict={}
-#     ):
-#         self.id = id
-#         self.content = content
-#         self.metadata = metadata
-    
-#     def __str__(self):
-#         return_str = f"ID: {self.id},"
-#         if self.metadata != {}:
-#             return_str += f" METADATA: {self.metadata},"
-#         return_str += f" CONTENT: {self.content}" 
-#         return return_str
-    
-class BedrockProvider():
+class BedrockProvider(ServiceProvider):
     def __init__(self,
         bedrock_client = None,
         bedrock_agent_client  = None,
@@ -181,23 +156,6 @@ class BedrockProvider():
         # print(f"Got response from bedrock.invoke_model: {body}")
         return body['embedding']
         
-    # @staticmethod
-    # def extract_context(results):
-    #     text = ''
-    #     for kb_id in results:
-    #         kb_results = results[kb_id]
-    #         for result in kb_results:
-    #             text += ' ' + result['content']['text']
-    #             text += '\n\n'
-    #     return text
-
-    # def get_allowed_origins(self):
-    #     if not self.allowed_origins:
-    #         self.allowed_origins = [
-    #             self.ssm_params['origin_frontend']
-    #         ]
-    #     return self.allowed_origins
-    
     def get_model_dimensions(self, model_id):
         if 'dimensions' in self.model_params[model_id].keys():
             return self.model_params[model_id]['dimensions']
@@ -211,7 +169,7 @@ class BedrockProvider():
         if model_id.startswith('ai21.') or \
             model_id.startswith('amazon.titan-image-generator') or \
             model_id.startswith('amazon.titan-embed'): 
-            token_ct = self.model_params[model_id]['maxTokens']['default']
+            token_ct = self.model_params[model_id]['maxTokens']['max']
         elif model_id.startswith('amazon.titan-text'):
             token_ct = self.model_params[model_id]['textGenerationConfig']['maxTokenCount']['max']
         elif model_id.startswith('anthropic.claude-3'):
@@ -237,19 +195,11 @@ class BedrockProvider():
             promptVersion=version
         )
 
-    # only supports cosine similarity currently
-    def get_semantic_similarity(
-        self, search_text, chunk_text, model_id, dimensions, *, input_type='search_query'
-    ):
-        s_emb = self.embed_text(search_text, model_id, input_type, dimensions=dimensions)
-        c_emb = self.embed_text(chunk_text, model_id, input_type, dimensions=dimensions)
-        return np.dot(s_emb, c_emb) / (norm(s_emb) * norm(c_emb))
-
-    def handler(self, event, context):
-        print(f"Got event {event}")
-        handler_evt = BedrockProviderEvent().from_lambda_event(event)
-        # print(f"converted to handler_evt {handler_evt.__dict__}")
-        
+    def handler(self, handler_evt: BedrockProviderEvent, context):
+        print(f"Got event {handler_evt}")
+        if not isinstance(handler_evt, BedrockProviderEvent):
+            handler_evt = BedrockProviderEvent(**handler_evt)
+        print(f"handler_evt is now {handler_evt}, {type(handler_evt)}")
         if not self.allowed_origins:
             self.allowed_origins = self.utils.get_allowed_origins()
         
@@ -261,43 +211,33 @@ class BedrockProvider():
             response = "forbidden"
         
         elif operation == 'embed_text':
-            model_id = handler_evt.model_id
-            text = handler_evt.input_text
-            dimensions = handler_evt.dimensions
+            model_id = handler_evt.args['model_id']
+            text = handler_evt.args['input_text']
+            dimensions = handler_evt.args['dimensions']
             response = self.embed_text(text, model_id, dimensions=dimensions)
         
         elif operation == 'get_model_dimensions':
-            response = self.get_model_dimensions(handler_evt.model_id)
+            response = self.get_model_dimensions(handler_evt.args['model_id'])
         
         elif operation == 'get_model_max_tokens':
-            response = self.get_model_max_tokens(handler_evt.model_id)
+            response = self.get_model_max_tokens(handler_evt.args['model_id'])
 
         elif operation == 'get_prompt':
-            response = self.get_prompt(handler_evt.prompt_id)
+            response = self.get_prompt(handler_evt.args['prompt_id'])
 
-        elif operation == 'get_semantic_similarity':
-            search_text = handler_evt.search_text
-            chunk_text = handler_evt.chunk_text
-            model_id = handler_evt.model_id
-            dimensions = handler_evt.dimension
-            response = self.get_semantic_similarity(search_text, chunk_text, model_id, dimensions)
-        
         elif operation == 'get_token_count':
-            input_text = handler_evt.input_text
+            input_text = handler_evt.args['input_text']
             response = self.get_token_count(input_text)
 
         elif operation == 'invoke_model':
-            model_id = handler_evt.model_id
-            prompt = handler_evt.prompt if hasattr(handler_evt,'prompt')  else ''
-            inference_config = handler_evt.inference_config if hasattr(handler_evt,'inference_config') else {}
-            messages = handler_evt.messages if hasattr(handler_evt,'messages') else []
+            model_id = handler_evt.args['model_id']
+            inference_config = handler_evt.args['inference_config'] or {}
+            messages = handler_evt.args['messages'] or []
             response = self.invoke_model(
                 inference_config=inference_config,
                 messages=messages,
                 model_id=model_id,
-
             )
-            # print(f"invoke_model got response {response}")   
             
         elif operation == 'list_models':
             response = self.list_models()
@@ -606,7 +546,7 @@ class BedrockProvider():
     #     return final_text
 
 
-def handler(event, context):
+def handler(event: BedrockProviderEvent, context):
     global bedrock_provider
     if not bedrock_provider:
         bedrock_provider = BedrockProvider()

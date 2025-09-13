@@ -39,7 +39,7 @@ class NeptuneStack(Construct):
         # self.graph_provider_function = lambda_.Function(self, 'GraphStoreProviderFunction',
         #     code=lambda_.Code.from_asset('src/multi_tenant_full_stack_rag_application',
         #         bundling=BundlingOptions(
-        #             image=lambda_.Runtime.PYTHON_3_11.bundling_image,
+        #             image=lambda_.Runtime.PYTHON_3_13.bundling_image,
         #             bundling_file_access=BundlingFileAccess.VOLUME_COPY,
         #             command=[
         #                 "bash", "-c", " && ".join([
@@ -50,8 +50,8 @@ class NeptuneStack(Construct):
         #         )
         #     ),
         #     memory_size=256,
-        #     runtime=lambda_.Runtime.PYTHON_3_11,
-        #     architecture=lambda_.Architecture.X86_64,
+        #     runtime=lambda_.Runtime.PYTHON_3_13,
+        #     architecture=lambda_.Architecture.ARM_64,
         #     handler='multi_tenant_full_stack_rag_application.graph_store_provider.graph_store_provider.handler',
         #     timeout=Duration.seconds(60),
         #     environment={

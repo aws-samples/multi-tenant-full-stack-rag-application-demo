@@ -1,6 +1,5 @@
 #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #  SPDX-License-Identifier: MIT-0
-
 # EntityExtraction watches for changes in the ingestion status
 # table. If a record status changes to AWAITING_ENRICHMENT, it performs
 # entity extraction and sets the entity extraction status to
@@ -50,8 +49,7 @@ class EntityExtraction(Pipeline):
         print(f"entity_extraction.process received {event}")
         for record in event['Records']:
             ddb_rec = record['dynamodb']
-            if not (record['eventName'] == 'MODIFY' and \
-                ddb_rec['NewImage']['progress_status']['S'] == 'AWAITING_ENRICHMENT'):
+            if ddb_rec['NewImage']['progress_status']['S'] != 'AWAITING_ENRICHMENT':
                 print(f"Skipping ddb_rec because it's not the right progress status: {ddb_rec}")
                 continue
             
@@ -61,15 +59,15 @@ class EntityExtraction(Pipeline):
             account_id = record['eventSourceARN'].split(':')[4]
             user_id = new_image['user_id']['S']
 
-            response = self.utils.get_document_collections(user_id, collection_id, origin=self.my_origin)
-            print(f"Got response {response}")
+            response = self.utils.get_document_collections(user_id, collection_id, consistent=True, origin=self.my_origin)
+            # print(f"Got response {response}")
             enrichment_pipelines = {}
             collection_name = list(response.keys())[0]
             collection = response[collection_name]
             if collection and 'enrichment_pipelines' in collection:
-                print(f"Got collection {collection}")
+                # print(f"Got collection {collection}")
                 enrichment_pipelines = json.loads(collection['enrichment_pipelines'])
-            print(f"enrichment pipelines is now {enrichment_pipelines}")
+            # print(f"enrichment pipelines is now {enrichment_pipelines}")
             if not ('entity_extraction' in enrichment_pipelines and enrichment_pipelines['entity_extraction']['enabled'] == True):
                 print(f"Skipping entity extraction for doc collection {collection} because it doesn't have entity extraction enabled.")
                 return None
@@ -87,36 +85,23 @@ class EntityExtraction(Pipeline):
                 query,
                 self.my_origin
             )
-            print(f"response frm vector_store_query was {response}")
+            # print(f"response frm vector_store_query was {response}")
             body = json.loads(response['body'])
-            print(f"Got chunks for for entity extraction {body}")
+            # print(f"Got chunks for for entity extraction {body}")
             doc_text = ''
             for hit in body['hits']['hits']:
                 doc_text += hit['_source']['content']
-            print(f"Got doc text\n{doc_text}")
-            # # get the document collection by collection_id
-            # doc_collection = self.utils.get_document_collections(
-            #     user_id, collection_id
-            # )
-            # print(f"Got doc_collection {doc_collection}")
-            # if not ('entity_extraction' in collection.enrichment_pipelines and \
-            #     collection.enrichment_pipelines['entity_extraction']['enabled']) :
-            #     # print(f"Skipping entity extraction for doc collection {doc_collection} because it doesn't have entity extraction enabled.")
-            #     new_image['progress_status']['S'] = 'ENRICHMENT_DISABLED_SKIPPING'
-            #     if not new_image['doc_id']['S'].startswith(collection_id):
-            #         new_image['doc_id']['S'] = f"{collection_id}/{new_image['doc_id']['S']}"
-            #     self.ingestion_status_provider.set_ingestion_status(ing_status)
-            #     return True
-
-            print(f"Entity extraction is enabled for collection {collection_id}")
-            print(f"Collection: {collection}, type {type(collection)}")
+            # print(f"Got doc text\n{doc_text}")
+            
+            # print(f"Entity extraction is enabled for collection {collection_id}")
+            # print(f"Collection: {collection}, type {type(collection)}")
             template_id = json.loads(collection['enrichment_pipelines'])["entity_extraction"]["templateIdSelected"]
             response = self.utils.get_prompt_template(
                 template_id,
                 user_id,
                 self.my_origin
             )
-            print (f"Got response {response}, type {type(response)}")
+            # print (f"Got response {response}, type {type(response)}")
             body = json.loads(response['body'])
             template = body[list(body.keys())[0]]
             print(f"Got template {template}, type ({type(template)}")
@@ -139,9 +124,9 @@ class EntityExtraction(Pipeline):
             response = self.utils.invoke_bedrock(
                 'invoke_model',
                 {
-                    "modelId": self.model_id,
+                    "model_id": self.model_id,
                     "messages": msgs,
-                    "inferenceConfig": {
+                    "inference_config": {
                         "maxTokens": 2000,
                         "temperature": 0.0,
                         "stopSequences": ["</JSON>"] if 'stop_sequences' not in template else template['stop_sequences']
@@ -150,10 +135,13 @@ class EntityExtraction(Pipeline):
                 self.my_origin
             )
             print(f"Bedrock response {response}, type {type(response)}")
-            response_str = response['response'].replace('\n', '').replace("\n", "").replace('<JSON>', '').replace('</JSON>', '').strip()
+            response_str = response['response'].replace('\n', '').replace("\n", "")
+            for stop_seq in template['stop_sequences']:
+                start_seq = stop_seq.replace('</', '<')
+                response_str = response_str.replace(start_seq, '').replace(stop_seq, '').strip()
             print(f"Before json parsing, response_str = '\n{response_str}\n'")
             response = json.loads(response_str)
-            print(f"Got node and entity results {response}")
+            # print(f"Got node and entity results {response}")
             gremlin_statements = ''
             ids_to_types = {}
             errors = False
@@ -203,7 +191,7 @@ class EntityExtraction(Pipeline):
                 gremlin_statements += merge_statement
                 # print(f"Running gremlin statement {merge_statement}") 
                 neptune_response = self.utils.neptune_statement(collection_id, merge_statement, 'gremlin', self.my_origin)
-                print(f"Neptune response {neptune_response}")
+                # print(f"Neptune response {neptune_response}")
                 if not neptune_response:
                     errors = True
                     break
@@ -227,7 +215,7 @@ class EntityExtraction(Pipeline):
                 gremlin_statements += merge_statement
                 # print(f"Running gremlin statement {merge_statement}")
                 neptune_response = self.utils.neptune_statement(collection_id, merge_statement, 'gremlin', self.my_origin)
-                print(f"Neptune response {neptune_response}")
+                # print(f"Neptune response {neptune_response}")
                 if not neptune_response:
                     errors = True
                     break
@@ -281,38 +269,38 @@ class EntityExtraction(Pipeline):
             if schema_response: 
                 if isinstance(schema_response, str):
                     schema_response = json.loads(schema_response)
-                print(f"Got neptune node_types response {schema_response}")
+                # print(f"Got neptune node_types response {schema_response}")
                 body = json.loads(schema_response['body'])
                 schema_data = body["response"]["result"]["data"]["@value"]
                 schema = {}
                 for row in schema_data:
-                    print(f"schema response row {row}")
+                    # print(f"schema response row {row}")
                     node_label = row['@value'][0]
                     if node_label not in schema:
                         schema[node_label] = {}
                     node_values = row['@value'][1]['@value']
-                    print(f"{node_label} has node_values {node_values}")
+                    # print(f"{node_label} has node_values {node_values}")
                     last_value_name = ''
                     for i in range(len(node_values)):
                         node_item = node_values[i]
-                        print(f"{node_label} has node_item {node_item}")
+                        # print(f"{node_label} has node_item {node_item}")
                         for val in node_item['@value']:
-                            print(f"Got @value {val}")
+                            # print(f"Got @value {val}")
                             if isinstance(val, str):
                                 last_value_name = val
-                                print(f"Set last_value_name to {last_value_name}")
+                                # print(f"Set last_value_name to {last_value_name}")
                                 if last_value_name not in schema[node_label]:
                                     schema[node_label][last_value_name] = []
                             else:
                                 for subval in val['@value']:
-                                    print(f"Got @value {subval}")
-                                    print(f"schema is now {schema}")
+                                    # print(f"Got @value {subval}")
+                                    # print(f"schema is now {schema}")
                                     if subval not in schema[node_label][last_value_name]:
                                         schema[node_label][last_value_name].append(subval)
-                print(f"Got schema: {schema}")
+                # print(f"Got schema: {schema}")
                 collection['graph_schema'] = schema
                 collection['user_id'] = user_id
-                print(f"updating doc collection with schema: {collection}")
+                # print(f"updating doc collection with schema: {collection}")
                 collection_save_result = self.utils.upsert_doc_collection(collection, self.my_origin)
                 print(f"Updated collections result {collection_save_result}")
 

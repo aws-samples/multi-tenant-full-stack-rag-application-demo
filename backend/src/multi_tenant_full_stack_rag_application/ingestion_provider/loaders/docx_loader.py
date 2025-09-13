@@ -13,7 +13,7 @@ from multi_tenant_full_stack_rag_application.vector_store_provider.vector_store_
 from multi_tenant_full_stack_rag_application import utils
 from .loader import Loader
 from .text_loader import TextLoader
-from .xlsx_loader import XlsxLoader
+# from .xlsx_loader import XlsxLoader
 
 
 class DocxLoader(Loader):
@@ -52,17 +52,11 @@ class DocxLoader(Loader):
                 text += "\n<attachment>\n"
                 text += f"<filename>{emb_path}</filename>\n<content>"
                 
-                if emb_path.endswith('.xlsx'):
-                    jsonl_splitter = JsonlSplitter(self.emb_provider)
-                    docs = XlsxLoader(self.emb_provider, jsonl_splitter).load_and_split_text(emb_path, emb_path, one_doc_per_line=False)
-                elif doc.endswith('.docx'):
+                if doc.endswith('.docx'):
                     docs = DocxLoader().load(emb_path)
                 else:
                     # default to the text loader
-                    docs = TextLoader(
-                        emb_provider=self.emb_provider, 
-                        splitter=self.splitter
-                    ).load_and_split_text(emb_path, emb_path)
+                    docs = TextLoader().load_and_split_text(emb_path, emb_path)
 
                 docs_txt = ''
                 for doc in docs:

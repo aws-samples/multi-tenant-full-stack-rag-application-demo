@@ -31,7 +31,7 @@ class VectorStoreDocument:
 
     def to_dict(self):
         return {
-            'id': self.doc_id,
+            'doc_id': self.doc_id,
             'content': self.content,
             'metadata': self.metadata,
             'vector': self.vector,
@@ -47,7 +47,7 @@ class VectorStoreDocument:
        
     def to_json(self):
         tmp = {
-            'id': self.doc_id,
+            'doc_id': self.doc_id,
             'content': self.content,
             'metadata': self.metadata,
             'vector': self.vector,
