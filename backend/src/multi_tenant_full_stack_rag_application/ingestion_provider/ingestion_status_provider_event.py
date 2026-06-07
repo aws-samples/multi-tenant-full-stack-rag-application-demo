@@ -16,6 +16,8 @@ class IngestionStatusProviderEvent:
     progress_status: str=''
     origin: str=''
     delete_from_s3: bool = False
+    limit: int = 100
+    last_eval_key: str = None
 
     def from_lambda_event(self, event):
         print(f"IngestionStatusProviderEvent.from_lambda_event: {event}")
@@ -33,6 +35,13 @@ class IngestionStatusProviderEvent:
             self.delete_from_s3 = event['args']['delete_from_s3']
         else:
             self.delete_from_s3 = False
+        
+        # Extract pagination parameters
+        if 'limit' in event['args']:
+            self.limit = int(event['args']['limit'])
+        if 'last_eval_key' in event['args']:
+            self.last_eval_key = event['args']['last_eval_key']
+            
         print(f"self.delete_from_s3 = {self.delete_from_s3}")
         return self
 

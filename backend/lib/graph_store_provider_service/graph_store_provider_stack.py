@@ -38,11 +38,11 @@ class GraphStoreProviderStack(Stack):
         bundling_cmds = []
 
         bundling_cmds += [
+            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/graph_store_provider",
             "cp /asset-input/graph_store_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/graph_store_provider/",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
-            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output"
         ]
 
         self.graph_store_provider = lambda_.Function(self, 'GraphStoreProviderFunction',

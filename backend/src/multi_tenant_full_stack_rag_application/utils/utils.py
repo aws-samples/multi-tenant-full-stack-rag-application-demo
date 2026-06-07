@@ -68,7 +68,7 @@ def upsert_doc_collection(collection, origin, *, account_id=None, lambda_client=
     )
     print(f"responses = {response}")
     if "errorMessage" in response:
-        raise Exception(f"Error invoking lambda function {doc_collections_fn_name}: {json.dumps(response.__dict__())}")
+        raise Exception(f"Error invoking lambda function {doc_collections_fn_name}: {response}")
     return response
 
 
@@ -168,23 +168,6 @@ def get_bedrock_runtime_client():
     return bedrock_runtime_client_singleton
 
 
-# def get_creds_from_token(user_id, auth_token, lambda_client=None):
-#     global lambda_client_singleton
-#     if not lambda_client:
-#         if not lambda_client_singleton:
-#             lambda_client_singleton = BotoClientProvider.get_client('lambda')
-#         lambda_client = lambda_client_singleton
-#     auth_provider_fn = get_ssm_params('auth_provider_function_name')
-#     payload = {
-#         "auth_token": auth_token,
-#         "operation": 'get_creds_from_token',
-#         "user_id": user_id,
-#     }
-#     response = invoke_lambda(auth_provider_fn, payload, lambda_client=lambda_client)
-#     # print(f"get_creds_from_token got response {response}")
-#     body = json.loads(response['body'])
-#     return body['creds']
-
 def get_document_collections(user_id, collection_id=None, *, account_id=None, consistent=False, lambda_client=None, origin=None):
     if not user_id:
         raise Exception("Must send user ID with request to get document collections.")
@@ -245,6 +228,77 @@ def get_document_collections(user_id, collection_id=None, *, account_id=None, co
 
     return dcs
         
+
+def get_graph_schema(user_id, collection_name, *, account_id=None, lambda_client=None, origin=None): 
+    if not user_id:
+        raise Exception("Must send user ID with request to get_graph_schema.")
+    print(f"Called utils.get_graph_schema with user_id {user_id} and collection_name {collection_name}")
+    if not account_id:
+        account_id = os.getenv('AWS_ACCOUNT_ID')
+    doc_collections_fn_name = get_ssm_params('document_collections_handler_function_name')
+    route_key = f'GET /document_collections/graph_schema/{user_id}/{collection_name}'
+
+    response = invoke_lambda(
+        doc_collections_fn_name,
+        {
+            "requestContext": {
+                "accountId": account_id,
+            },
+            "headers": {
+                "origin": origin
+            },
+            "routeKey": route_key,
+            "pathParameters": {
+                "collection_name": collection_name,
+                "user_id": user_id
+            },
+            "body": {
+                "user_id": user_id
+            }
+        },
+        lambda_client=lambda_client
+    )
+    
+    print(f"get_graph_schema got response {response}")
+    graph_schema = response['body']# )['response']
+    print(f"Got body {graph_schema}, type {type(graph_schema)}")
+    return graph_schema
+    # dcs = {}
+    # result = None
+    # if body:
+    #     try:
+    #         response = json.loads(body)
+    #         if 'response' in response:
+    #             dcs = response['response']
+    #             print(f"Got dcs {dcs}, type {type(dcs)}")
+    #             if isinstance(dcs, str):
+    #                 dcs = json.loads(dcs)
+
+    #             if collection_id:
+    #                 for dc_name in list(dcs.keys()):
+    #                     collection = dcs[dc_name]
+    #                     print()
+    #                     if collection['collection_id'] == collection_id:
+    #                         result = collection
+    #                         break
+    #     except Exception as e:
+    #         raise Exception(f"Error: failed to retrieve doc collections: {e}")
+
+    # return dcs
+
+    return invoke_lambda(
+        get_ssm_params('document_collections_handler_function_name'),
+        {
+            "operation": "get_graph_schema",
+            "origin": origin,
+            "args": {
+                "user_id": user_id,
+                "collection_name": collection_name
+            }
+
+        }
+    )
+
 
 def get_identity_pool_id():
     return get_ssm_params('identity_pool_id')
@@ -372,9 +426,10 @@ def get_ssm_params(param=None,*, ssm_client=None):
         elif len(return_vals.keys()) == 1:
             return return_vals[list(return_vals.keys())[0]]
         else:
+            print(f"get_ssm_params got {return_vals}")
             return return_vals
     else:
-        # print(f"Returning all params")
+        print(f"Returning all params {ssm_params}")
         return ssm_params
 
 
@@ -587,8 +642,52 @@ def set_ingestion_status(user_id, doc_id, etag, lines_processed, progress_status
         }
     )
 
+def upsert_graph_schema(user_id, collection_name, graph_schema, *, account_id=None, origin=None): 
+    if not user_id:
+        raise Exception("Must send user ID with request to get_graph_schema.")
+    print(f"Called utils.get_graph_schema with user_id {user_id} and collection_name {collection_name}")
+    if not account_id:
+        account_id = os.getenv('AWS_ACCOUNT_ID')
+    doc_collections_fn_name = get_ssm_params('document_collections_handler_function_name')
+    route_key = 'POST /document_collections/graph_schema'
+    response = invoke_lambda(
+        doc_collections_fn_name,
+        {
+            "requestContext": {
+                "accountId": account_id,
+            },
+            "headers": {
+                "origin": origin
+            },
+            "routeKey": route_key,
+            "body": {
+                "user_id": user_id,
+                "collection_name": collection_name,
+                "graph_schema": graph_schema
+            }
+        }
+    )
+    
+    print(f"get_graph_schema got response {response}")
+    graph_schema = response['body']# )['response']
+    print(f"Got body {graph_schema}, type {type(graph_schema)}")
+    return graph_schema
+    
+    return invoke_lambda(
+        get_ssm_params('document_collections_handler_function_name'),
+        {
+            "operation": "upsert_graph_schema",
+            "origin": origin,
+            "args": {
+                "user_id": user_id,
+                "collection_name": collection_name,
+                "graph_schema": graph_schema
+            }
 
-def vector_store_query(collection_id, query, origin, *, lambda_client=None):
+        }
+    )
+
+def vector_store_query(collection_id, query, origin, *, max_results=10000, scroll='1m', lambda_client=None):
     response = invoke_lambda(
         get_ssm_params('vector_store_provider_function_name'),
         {
@@ -596,7 +695,9 @@ def vector_store_query(collection_id, query, origin, *, lambda_client=None):
             "origin": origin,
             "args": {
                 "collection_id": collection_id,
-                "query": query
+                "max_results": max_results,
+                "query": query,
+                "scroll": scroll
             }
         },
         lambda_client=lambda_client

@@ -39,7 +39,6 @@ ingestion_status_table = None
 class IngestionStatusProvider:
     def __init__(self, 
         ddb_client: boto3.client,
-        ingestion_bucket: str,
         ingestion_status_table: str,
         s3_client: boto3.client
     ):
@@ -118,8 +117,12 @@ class IngestionStatusProvider:
             'ExpressionAttributeNames': expression_attr_names,
             'Limit': limit
         }
-        if last_eval_key: 
-            kwargs['ExclusiveStartKey'] = last_eval_key
+        if last_eval_key:
+            # Convert the filename string to proper DynamoDB key structure
+            kwargs['ExclusiveStartKey'] = {
+                'user_id': {'S': user_id},
+                'doc_id': {'S': last_eval_key}
+            }
 
         result = self.ddb.query(
             **kwargs
@@ -152,7 +155,9 @@ class IngestionStatusProvider:
         elif handler_evt.operation == 'get_ingestion_status':
             response = self.get_ingestion_status(
                 handler_evt.user_id, 
-                handler_evt.doc_id, 
+                handler_evt.doc_id,
+                limit=handler_evt.limit,
+                last_eval_key=handler_evt.last_eval_key
             )
             result = self.statuses_to_list(response)
             print(f"get_ingestion_status response = {result}")
@@ -216,8 +221,6 @@ def handler(event, context):
     if not ingestion_status_provider:
         ddb_client = boto3.client('dynamodb')
         s3_client = utils.get_s3_client()
-        ingestion_bucket = os.getenv('INGESTION_BUCKET')
         ingestion_status_table = os.getenv('INGESTION_STATUS_TABLE')
-        ingestion_status_provider = IngestionStatusProvider(ddb_client, ingestion_bucket, ingestion_status_table, s3_client)
+        ingestion_status_provider = IngestionStatusProvider(ddb_client, ingestion_status_table, s3_client)
     return ingestion_status_provider.handler(event, context)
-    

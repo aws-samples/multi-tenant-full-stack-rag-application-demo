@@ -7,9 +7,7 @@ frontend/src/multi_tenant_full_stack_rag_application/ui/.vite
 *.PRIVATE
 frontend/backend_outputs.json
 test*.json
-yarn.lock
 node_modules
-package-lock.json
 __pycache__
 .venv
 .lxml-venv

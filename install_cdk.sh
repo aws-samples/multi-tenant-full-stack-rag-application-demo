@@ -44,8 +44,8 @@ if [ ! -f .venv/bin/activate ]; then
 fi
 
 source .venv/bin/activate
-pip3 install --upgrade --no-cache -r backend/requirements.txt
-pip3 install --upgrade --no-cache -r frontend/requirements.txt
+# pip3 install --upgrade --no-cache -r backend/requirements.txt
+# pip3 install --upgrade --no-cache -r frontend/requirements.txt
 
 SERVICE_LINKED_ROLE=`aws iam get-role --role-name AWSServiceRoleForAmazonOpenSearchService --query Role.RoleName`
 if [ "$SERVICE_LINKED_ROLE" != "\"AWSServiceRoleForAmazonOpenSearchService\"" ]; then
@@ -58,7 +58,7 @@ if [ $b -eq 1 ]; then
   echo
   echo "Installing backend stack. Please wait. It takes a while the first time through."
   echo
-  cdk deploy --all --outputs-file ../frontend/backend_outputs.json $n $y $h 
+  cdk deploy --all --asset-parallelism true --concurrency 50 --outputs-file ../frontend/backend_outputs.json $n $y $h 
   if [ $? -ne 0 ]; then
     echo "cdk deploy failed. Exiting."
     exit

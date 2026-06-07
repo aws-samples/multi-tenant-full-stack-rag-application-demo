@@ -100,16 +100,11 @@ def test_create_get_doc_collections(doc_collections_handler):
         })
     }
 
-    # monkeypatch.setattr(
-    #     doc_collections_handler.utils, 
-    #     "get_userid_from_token",
-    #     value=lambda x, y: patch(x, y)
-    # )
     result = doc_collections_handler.handler(event, {})
     # print(f'test_create_get_doc_collections got create result {result}')
     doc_coll = json.loads(result['body'])[collection_name]
     
-    assert result['statusCode'] == '200'
+    assert result['statusCode'] == 200
     # there's a filter to never send the user_id in a response. The user_id
     # in question is the Cognito Identity Pool Id, which is otherwise never
     # sent to the client, so it's good to use it for server-side
@@ -149,7 +144,7 @@ def test_create_get_doc_collections(doc_collections_handler):
     }
     result = doc_collections_handler.handler(event, {})
     # print(f'test_create_get_doc_collections got get result {result}')
-    assert result['statusCode'] == '200'
+    assert result['statusCode'] == 200
     body = json.loads(result['body'])
     # print(f'got body {body}')
     rec = body['response'][collection_name]

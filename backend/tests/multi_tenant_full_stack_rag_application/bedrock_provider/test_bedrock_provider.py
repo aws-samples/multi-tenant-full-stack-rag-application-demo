@@ -154,11 +154,13 @@ def test_handler_embed_text(bedrock_provider):
     """Test embed_text operation through handler"""
     event = BedrockProviderEvent(
         operation="embed_text",
-        origin="test-bedrock-function",
-        model_id=emb_model_id,
-        input_text="This is a test sentence",
-        dimensions=1024,
-        input_type="search_query"
+        origin="http://localhost:5173",
+        args={
+            "model_id": emb_model_id,
+            "input_text": "This is a test sentence",
+            "dimensions": 1024,
+            "input_type": "search_query"
+        }
     )
     
     result = bedrock_provider.handler(event, {})
@@ -172,7 +174,9 @@ def test_handler_get_model_dimensions(bedrock_provider):
     event = BedrockProviderEvent(
         operation="get_model_dimensions",
         origin="test-bedrock-function",
-        model_id=emb_model_id
+        args={
+            "model_id": emb_model_id
+        }
     )
     
     result = bedrock_provider.handler(event, {})
@@ -186,7 +190,9 @@ def test_handler_get_model_max_tokens(bedrock_provider):
     event = BedrockProviderEvent(
         operation="get_model_max_tokens",
         origin="test-bedrock-function",
-        model_id=emb_model_id
+        args={
+            "model_id": emb_model_id
+        }
     )
     
     result = bedrock_provider.handler(event, {})
@@ -199,7 +205,8 @@ def test_handler_list_models(bedrock_provider):
     """Test list_models operation through handler"""
     event = BedrockProviderEvent(
         operation="list_models",
-        origin="test-bedrock-function"
+        origin="test-bedrock-function",
+        args={}
     )
     
     result = bedrock_provider.handler(event, {})
@@ -213,7 +220,9 @@ def test_handler_get_prompt(bedrock_provider):
     event = BedrockProviderEvent(
         operation="get_prompt",
         origin="test-bedrock-function",
-        prompt_id="test-prompt-id"
+        args={
+            "prompt_id": "test-prompt-id"
+        }
     )
     
     result = bedrock_provider.handler(event, {})
@@ -227,14 +236,16 @@ def test_handler_invoke_model(bedrock_provider):
     event = BedrockProviderEvent(
         operation="invoke_model",
         origin="test-bedrock-function",
-        model_id=claude_model_id,
-        messages=[
-            {
-                "role": "user",
-                "content": [{"type": "text", "text": "Hello, how are you?"}]
-            }
-        ],
-        inference_config={"maxTokens": 100, "temperature": 0.7}
+        args={
+            "model_id": claude_model_id,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": "Hello, how are you?"}]
+                }
+            ],
+            "inference_config": {"maxTokens": 100, "temperature": 0.7}
+        }
     )
     
     result = bedrock_provider.handler(event, {})
@@ -249,9 +260,11 @@ def test_handler_forbidden_origin(bedrock_provider):
     event = BedrockProviderEvent(
         operation="embed_text",
         origin="unauthorized-origin",
-        model_id=emb_model_id,
-        input_text="test text",
-        dimensions=1024
+        args={  
+            "model_id": emb_model_id,
+            "input_text": "test text",
+            "dimensions": 1024
+        }
     )
     
     result = bedrock_provider.handler(event, {})
@@ -263,7 +276,8 @@ def test_handler_unknown_operation(bedrock_provider):
     """Test handler with unknown operation"""
     event = BedrockProviderEvent(
         operation="unknown_operation",
-        origin="test-bedrock-function"
+        origin="test-bedrock-function",
+        args={}
     )
     
     with pytest.raises(Exception) as exc_info:

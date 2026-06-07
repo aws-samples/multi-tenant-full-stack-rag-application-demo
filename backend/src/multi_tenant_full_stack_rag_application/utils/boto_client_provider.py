@@ -18,7 +18,7 @@ class BotoClientProvider:
         global boto_config
         if not boto_config:
             from botocore.config import Config
-            boto_config = Config(retries={"max_attempts": 10, "mode": "adaptive"})
+            boto_config = Config(retries={"max_attempts": 20, "mode": "adaptive"})
         # print(f"Getting client for service {service_name}")
         return boto3.client(service_name, region_name=region, config=boto_config)
 

@@ -487,11 +487,11 @@ WantedBy=default.target
         build_cmds = [
             "pip3 install -t /asset-output requests",
             'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/',
-            "cp /asset-input/tools_provider/tools/*.py /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/",
-            "cp /asset-input/tools_provider/tools/code_sandbox/*.py /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/",
-            'pip3 install -t /asset-output -r /asset-input/utils/utils_requirements.txt',
             'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils/',
             'pip3 install -t /asset-output -r /asset-input/tools_provider/tools/code_sandbox/requirements_code_sandbox_tool.txt',
+            'pip3 install -t /asset-output -r /asset-input/utils/utils_requirements.txt',
+            "cp /asset-input/tools_provider/tools/*.py /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/",
+            "cp /asset-input/tools_provider/tools/code_sandbox/*.py /asset-output/multi_tenant_full_stack_rag_application/tools_provider/tools/code_sandbox/",
             "cp -r /asset-input/utils/* /asset-output/multi_tenant_full_stack_rag_application/utils/",
         ]
         

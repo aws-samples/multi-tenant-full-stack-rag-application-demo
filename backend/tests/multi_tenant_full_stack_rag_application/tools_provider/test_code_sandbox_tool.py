@@ -19,6 +19,6 @@ def test_create_code_sandbox_tool(code_sandbox_tool):
     assert isinstance(code_sandbox_tool, CodeSandboxTool)
 
     # code_sandbox_tool
-    # assert result['statusCode'] == '200'
+    # assert result['statusCode'] == 200
     # body = result['body']
     # assert len(body.keys()) == 5

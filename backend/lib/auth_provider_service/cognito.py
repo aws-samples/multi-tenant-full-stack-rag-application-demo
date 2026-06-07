@@ -190,12 +190,12 @@ class CognitoStack(NestedStack):
                     command=[
                         "bash", "-c", " && ".join([
                             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/auth_provider",
-                            "cp /asset-input/auth_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/auth_provider",
-                            'pip3 install -r /asset-input/auth_provider/cognito_auth_requirements.txt -t /asset-output',
-                            "cp /asset-input/service_provider*.py /asset-output/multi_tenant_full_stack_rag_application",
                             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
+                            'pip3 install -r /asset-input/auth_provider/cognito_auth_requirements.txt -t /asset-output',
+                            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output/",
+                            "cp /asset-input/auth_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/auth_provider",
+                            "cp /asset-input/service_provider*.py /asset-output/multi_tenant_full_stack_rag_application",
                             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils",
-                            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output/"
                         ])
                     ]
                 )

@@ -1,4 +1,4 @@
-aws-cdk-lib==2.178.1
+aws-cdk-lib
 constructs
 aws-cdk.aws-cognito-identitypool-alpha
 aws-cdk.aws-neptune-alpha

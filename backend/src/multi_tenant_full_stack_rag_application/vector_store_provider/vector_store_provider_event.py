@@ -12,6 +12,7 @@ class VectorStoreProviderEvent:
         origin='',
         query='',
         search_recommendations={},
+        scroll='1m',
         top_k=''
     ):
         self.collection_id = collection_id
@@ -20,6 +21,7 @@ class VectorStoreProviderEvent:
         self.operation = operation
         self.origin = origin
         self.query = query
+        self.scroll = scroll
         self.search_recommendations = search_recommendations
         self.top_k = top_k
 
@@ -36,10 +38,16 @@ class VectorStoreProviderEvent:
             print(f"VectorStoreProviderEvent loaded self.documents {self.documents}")
         if 'query' in self.args:
             self.query = self.args['query']
+        if 'scroll' in self.args: 
+            self.scroll = self.args['scroll']
+        else: 
+            self.scroll = '1m'
         if 'search_recommendations' in self.args:
             self.search_recommendations = self.args['search_recommendations']
         if 'top_k' in self.args:
             self.top_k = self.args['top_k']
+        else: 
+            self.top_k = 10
         return self
 
     def __str__(self):

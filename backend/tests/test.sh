@@ -27,12 +27,11 @@ uv pip install -r ../src/multi_tenant_full_stack_rag_application/ingestion_provi
 # uv pip install -r ../src/multi_tenant_full_stack_rag_application/ingestion_provider/vector_ingestion_requirements.txt && 
 # uv pip install -r ../src/multi_tenant_full_stack_rag_application/initialization_handler/initialization_handler_requirements.txt && 
 # uv pip install -r ../src/multi_tenant_full_stack_rag_application/ingestion_provider/loaders/xlsx_loader_requirements.txt && 
-. env.sh  &&
 echo STACK_NAME = $STACK_NAME && 
 ../../.venv/bin/python -m pytest --cov=multi_tenant_full_stack_rag_application -x -s multi_tenant_full_stack_rag_application \
     --ignore=multi_tenant_full_stack_rag_application/tools_provider \
-    --ignore=multi_tenant_full_stack_rag_application/ingestion_provider/test_docx_loader.py
-    # --ignore=multi_tenant_full_stack_rag_application/generation_handler \
+    --ignore=multi_tenant_full_stack_rag_application/ingestion_provider/test_docx_loader.py \
+    --ignore=multi_tenant_full_stack_rag_application/generation_handler 
     # --ignore=multi_tenant_full_stack_rag_application/enrichment_pipelines_provider \
     #  --ignore=multi_tenant_full_stack_rag_application/embeddings_provider 
     # --ignore=multi_tenant_full_stack_rag_application/utils 

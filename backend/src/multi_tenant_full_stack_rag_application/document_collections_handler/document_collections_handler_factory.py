@@ -1,11 +1,9 @@
 #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #  SPDX-License-Identifier: MIT-0
 
-import boto3
-import json
 import os
 from importlib import import_module
-
+from typing import List
 from multi_tenant_full_stack_rag_application.utils import BotoClientProvider
 from .document_collections_handler import DocumentCollectionsHandler
 
@@ -14,7 +12,7 @@ class DocumentCollectionsHandlerFactory:
     @staticmethod
     def get_document_collections_handler(
         py_path: str='',
-        args: [str]=[],
+        args: List[str]=[],
     ) -> DocumentCollectionsHandler:
         if py_path == '':
             py_path = os.getenv(

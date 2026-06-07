@@ -1,4 +1,5 @@
 from aws_cdk import (
+    Duration,
     NestedStack,
     aws_dynamodb as ddb,
     aws_iam as iam,
@@ -22,22 +23,20 @@ class FinalScriptsStack(NestedStack):
         doc_collections_handler_function: lambda_.IFunction,
         domain: aos.Domain,
         embeddings_provider_function: lambda_.IFunction,
+        enrichment_stream_processor_function: lambda_.IFunction,
         extraction_function: lambda_.IFunction,
-        generation_handler_function: lambda_.IFunction,
         graph_store_provider_function: lambda_.IFunction,
-        inference_principal: iam.IPrincipal,
-        ingestion_bucket: s3.IBucket,
         ingestion_function: lambda_.IFunction,
-        # ingestion_principal: iam.IPrincipal,
-        ingestion_queue: sqs.IQueue,
         ingestion_status_provider_function: lambda_.IFunction,
         ingestion_status_table: ddb.ITable,
         prompt_templates_handler_function: lambda_.IFunction,
+        stream_processor_function: lambda_.IFunction,
         vector_store_provider_function: lambda_.IFunction,
         **kwargs
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
-
+        
+        enrichment_stream_processor_principal = enrichment_stream_processor_function.grant_principal
         extraction_principal = extraction_function.grant_principal
         ingestion_principal = ingestion_function.grant_principal
         vector_store_principal = vector_store_provider_function.grant_principal
@@ -51,21 +50,21 @@ class FinalScriptsStack(NestedStack):
             index_write_access=True
         )
 
+        # Add DynamoDB stream event source to stream processor
         enrichment_dlq = sqs.Queue(self, "deadLetterQueue")
-        enrichment_evt_source = lambda_event_sources.DynamoEventSource(
-            ingestion_status_table,
-            starting_position=lambda_.StartingPosition.LATEST,
-            batch_size=20,
-            parallelization_factor=10,
-            retry_attempts=2,
-            bisect_batch_on_error=True,
-            on_failure=lambda_event_sources.SqsDlq(enrichment_dlq),
-            filters=[
-                lambda_.FilterCriteria.filter({"eventName": ["INSERT", "MODIFY"]})
-            ]
+        stream_processor_function.add_event_source(
+            lambda_event_sources.DynamoEventSource(
+                ingestion_status_table,
+                starting_position=lambda_.StartingPosition.TRIM_HORIZON,
+                batch_size=20,
+                parallelization_factor=10,
+                bisect_batch_on_error=True,
+                max_batching_window=Duration.seconds(5),
+                retry_attempts=3,
+                on_failure=lambda_event_sources.SqsDlq(enrichment_dlq),
+            )
         )
-
-        extraction_function.add_event_source(enrichment_evt_source)
+        ingestion_status_table.grant_read_write_data(enrichment_stream_processor_function.role)
         ingestion_status_table.grant_read_write_data(extraction_function.role)
         
         # self.bucket_to_queue_trigger = BucketToQueueNotification(self, 'IngestionBucketNotifications',
@@ -80,47 +79,47 @@ class FinalScriptsStack(NestedStack):
         #     resource_name='IngestionQueueToFunctionTrigger'
         # )
         
-        OpenSearchAccessPolicy(self, "OpenSearchInferenceAccessPolicy",
-            domain=domain,
-            grantee_principal=inference_principal,
-            domain_read_access=False,
-            domain_write_access=False,
-            index_read_access=True,
-            index_write_access=False
-        )
+        # OpenSearchAccessPolicy(self, "OpenSearchInferenceAccessPolicy",
+        #     domain=domain,
+        #     grantee_principal=inference_principal,
+        #     domain_read_access=False,
+        #     domain_write_access=False,
+        #     index_read_access=True,
+        #     index_write_access=False
+        # )
         
         bedrock_provider_function.grant_invoke(embeddings_provider_function.grant_principal)
 
         # ingestion_bucket.grant_read(doc_collections_handler_function.grant_principal)
         # ingestion_bucket.grant_read_write(generation_handler_function.grant_principal)
-        generation_handler_function.add_to_role_policy(iam.PolicyStatement(
-            effect=iam.Effect.ALLOW,
-            actions=[
-                "s3:PutObject",
-                "s3:GetObject",
-            ],  
-            resources=[
-                f"{ingestion_bucket.bucket_arn}/private/{'${cognito-identity.amazonaws.com:sub}'}/*",
-            ]
-        ))
+        # generation_handler_function.add_to_role_policy(iam.PolicyStatement(
+        #     effect=iam.Effect.ALLOW,
+        #     actions=[
+        #         "s3:PutObject",
+        #         "s3:GetObject",
+        #     ],  
+        #     resources=[
+        #         f"{ingestion_bucket.bucket_arn}/private/{'${cognito-identity.amazonaws.com:sub}'}/*",
+        #     ]
+        # ))
 
-        generation_handler_function.add_to_role_policy(iam.PolicyStatement(
-            effect=iam.Effect.ALLOW,
-            actions=[
-                's3:ListBucket'
-            ],
-            resources=[
-                f"{ingestion_bucket.bucket_arn}"
-            ],
-            conditions={
-                "StringLike": {
-                    "s3:prefix": [
-                        "private/${cognito-identity.amazonaws.com:sub}/",
-                        "private/${cognito-identity.amazonaws.com:sub}/*"
-                    ]
-                }
-            }
-        ))
+        # generation_handler_function.add_to_role_policy(iam.PolicyStatement(
+        #     effect=iam.Effect.ALLOW,
+        #     actions=[
+        #         's3:ListBucket'
+        #     ],
+        #     resources=[
+        #         f"{ingestion_bucket.bucket_arn}"
+        #     ],
+        #     conditions={
+        #         "StringLike": {
+        #             "s3:prefix": [
+        #                 "private/${cognito-identity.amazonaws.com:sub}/",
+        #                 "private/${cognito-identity.amazonaws.com:sub}/*"
+        #             ]
+        #         }
+        #     }
+        # ))
 
         # doc_collections_handler_function.add_to_role_policy(iam.PolicyStatement(
         #     effect=iam.Effect.ALLOW,
@@ -182,6 +181,10 @@ class FinalScriptsStack(NestedStack):
         # doc_collections_handler_function.grant_invoke(tools_provider_function.grant_principal)
         # ingestion_bucket.grant_read_write(tools_provider_function.grant_principal)
         
+        doc_collections_handler_function.grant_invoke(enrichment_stream_processor_principal)
+        ingestion_status_provider_function.grant_invoke(enrichment_stream_processor_principal)
+        vector_store_provider_function.grant_invoke(enrichment_stream_processor_principal)
+
         bedrock_provider_function.grant_invoke(extraction_principal)
         doc_collections_handler_function.grant_invoke(extraction_principal)
         graph_store_provider_function.grant_invoke(extraction_principal)
@@ -189,12 +192,13 @@ class FinalScriptsStack(NestedStack):
         prompt_templates_handler_function.grant_invoke(extraction_principal)
         vector_store_provider_function.grant_invoke(extraction_principal)
 
-        bedrock_provider_function.grant_invoke(inference_principal)
-        doc_collections_handler_function.grant_invoke(inference_principal)
-        embeddings_provider_function.grant_invoke(inference_principal)
-        ingestion_status_provider_function.grant_invoke(inference_principal)
-        prompt_templates_handler_function.grant_invoke(inference_principal)
-        vector_store_provider_function.grant_invoke(inference_principal)
+
+        # bedrock_provider_function.grant_invoke(inference_principal)
+        # doc_collections_handler_function.grant_invoke(inference_principal)
+        # embeddings_provider_function.grant_invoke(inference_principal)
+        # ingestion_status_provider_function.grant_invoke(inference_principal)
+        # prompt_templates_handler_function.grant_invoke(inference_principal)
+        # vector_store_provider_function.grant_invoke(inference_principal)
 
         bedrock_provider_function.grant_invoke(ingestion_principal)
         doc_collections_handler_function.grant_invoke(ingestion_principal)

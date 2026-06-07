@@ -31,7 +31,7 @@ from multi_tenant_full_stack_rag_application import utils
 vector_store_provider = None
 
 
-class OpenSearchVectorStoreProvider(VectorStoreProvider):
+class OpenSearchVectorStoreProvider(VectorStoreProvider): 
     def __init__(self, 
         vector_store_endpoint: str,
         port=443,
@@ -75,7 +75,7 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
         }
         try: 
             print(f"Checking if collection id {collection_id} exists")
-            if not os_vector_db.indices.exists(collection_id):
+            if not os_vector_db.indices.exists(index=collection_id):
                 os_vector_db.indices.create(
                     index=collection_id, 
                     body=index_body
@@ -125,7 +125,9 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
             )
            
             print(f"Checking if collection id {collection_id} exists")
-            if not self.vector_db_client.indices.exists(collection_id):
+            if not self.vector_db_client.indices.exists(
+                index=collection_id
+            ):
                 print(f"Creating vector index {collection_id}")
                 self.create_index(collection_id)
     
@@ -154,7 +156,7 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
 
         elif handler_evt.operation == 'query':
             print(f"Got collection_id {handler_evt.args['collection_id']}, query {handler_evt.args['query']}")
-            result = self.query(handler_evt.args['collection_id'], handler_evt.args['query'])
+            result = self.query(handler_evt.args['collection_id'], handler_evt.args['query'], handler_evt.top_k, handler_evt.scroll)
 
         elif handler_evt.operation == 'save':
             result = self.save(handler_evt.args['documents'], handler_evt.args['collection_id'])
@@ -168,11 +170,15 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
         print(f"OpenSearchVectorStoreProvider returning {result}")
         return self.utils.format_response(status, result, self.my_origin)
     
-    def query(self, collection_id, query):
+    def query(self, collection_id, query, top_k=10, scroll='1m'):
         os_vector_db = self.get_vector_store(collection_id)
+        if 'size' not in query:
+            query['size'] = top_k
+            
         return os_vector_db.search(
             body=query,
-            index=collection_id
+            index=collection_id,
+            scroll=scroll
         )
         
     def save(self, doc_chunks: [VectorStoreDocument], collection_id, *, return_docs=False, return_vectors=False): 
@@ -194,6 +200,9 @@ class OpenSearchVectorStoreProvider(VectorStoreProvider):
                 del doc['doc_id']
             # delattr(doc, 'id')
             doc['vector'] = self.utils.embed_text(doc['content'], self.my_origin)
+            if isinstance(doc['vector'], str):
+                doc['vector'] = json.loads(doc['vector'])
+            print(f"doc['vector'] is of type {type(doc['vector'])}")
             payload += '{"index": { "_index": "' + collection_id + '", "_id": "' + doc_id + '"}}\n' + json.dumps(doc) + "\n"
         
         print(f"Saving payload {payload}")

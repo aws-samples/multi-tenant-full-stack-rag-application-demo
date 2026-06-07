@@ -65,7 +65,7 @@ class DocumentCollection:
         file_storage_tool_enabled = False if 'file_storage_tool_enabled' not in rec else rec['file_storage_tool_enabled']['BOOL']
         return DocumentCollection(
             rec['partition_key']['S'],
-            rec['user_email']['S'],
+            '' if not 'user_email' in rec else rec['user_email']['S'],
             rec['collection_name']['S'],
             rec['description']['S'],
             rec['vector_db_type']['S'],

@@ -36,13 +36,14 @@ class SageMakerEmbeddingsProvider(EmbeddingsProvider):
         if self.use_embedding_type:
             # this should be embedding_type.name to get the text of the ENUM, not embedding_type.value.
             input_text = embedding_type.name + ': ' + input_text
+        print(f'Generating embeddings of dimensions: {self.dimensions}')
         response = self.sm_client.invoke_endpoint(
             EndpointName=self.endpoint,
-            Body=json.dumps({"inputs": input_text}).encode('utf-8'),
+            Body=json.dumps({"inputs": input_text, "dimensions": self.dimensions}).encode('utf-8'),
             ContentType="application/json",
             Accept="*/*"
         )
-        return json.loads(response['Body'].read())
+        return json.loads(response['Body'].read())[0]
 
     def get_model_dimensions(self, model_id=None) -> int:
         return self.dimensions

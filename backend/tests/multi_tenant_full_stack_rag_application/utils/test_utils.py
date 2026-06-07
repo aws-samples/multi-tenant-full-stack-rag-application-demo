@@ -10,7 +10,7 @@ from multi_tenant_full_stack_rag_application import utils
 
 def test_format_response():
     expected = {
-        'statusCode': '200', 
+        'statusCode': 200, 
         'headers': {
             'Access-Control-Allow-Headers': 'Authorization, Content-Type, x-csrf-token, X-Api-Key, *', 
             'Access-Control-Allow-Credentials': 'true', 
@@ -46,11 +46,20 @@ def test_invoke_lambda():
             "origin": utils.get_ssm_params('ingestion_provider_function_name'),
             "args": {
                 "model_id": "anthropic.claude-3-haiku-20240307-v1:0",
-                "prompt": "What's your name?"
+                "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "text": "What's your name?"
+                        }
+                    ]
+                }
+            ]
             }
         }
     )
-    # print(f"test_invoke_lambda got response {response}")
+    print(f"test_invoke_lambda got response {response}")
     assert int(response["statusCode"]) == 200
 
     

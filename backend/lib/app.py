@@ -78,12 +78,10 @@ class MultiTenantRagStack(Stack):
             auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
             auth_role=auth_provider_stack.cognito_stack.authenticated_role,
             parent_stack_name=self.stack_name,
-            user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
-            user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
             vpc=vpc_stack.vpc
         )
 
-        vector_store_provider_stack = VectorStoreProviderStack(self, 'VectorStoreProviderStack',
+        vector_store_provider_stack = VectorStoreProviderStack(self, 'VectorStoreProviderStack2',
             app_security_group=vpc_stack.app_security_group,
             auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
             auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
@@ -129,23 +127,20 @@ class MultiTenantRagStack(Stack):
 
         enrichment_pipelines_handler_stack = EnrichmentPipelinesHandlerStack(self, "EnrichmentPipelinesHandlerStack",
             app_security_group=vpc_stack.app_security_group,
-            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
             parent_stack_name=self.stack_name,
-            user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
-            user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
             vpc=vpc_stack.vpc
         )
         
-        generation_handler_stack = GenerationHandlerStack(self, 'GenerationHandlerApiStack',
-            app_security_group=vpc_stack.app_security_group,
-            auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
-            auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
-            graph_handler_fn_arn=graph_store_provider_stack.graph_store_provider.function_arn,
-            parent_stack_name=self.stack_name,
-            user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
-            user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
-            vpc=vpc_stack.vpc
-        )
+        # generation_handler_stack = GenerationHandlerStack(self, 'GenerationHandlerApiStack',
+        #     app_security_group=vpc_stack.app_security_group,
+        #     auth_fn=auth_provider_stack.cognito_stack.cognito_auth_provider_function,
+        #     auth_role_arn=auth_provider_stack.cognito_stack.authenticated_role_arn,
+        #     graph_handler_fn_arn=graph_store_provider_stack.graph_store_provider.function_arn,
+        #     parent_stack_name=self.stack_name,
+        #     user_pool_client_id=auth_provider_stack.cognito_stack.user_pool_client.user_pool_client_id,
+        #     user_pool_id=auth_provider_stack.cognito_stack.user_pool.user_pool_id,
+        #     vpc=vpc_stack.vpc
+        # )
 
         # tools_provider_stack = ToolsProviderStack(self, 'Tools-Provider-Stack',
         #     app_security_group=vpc_stack.app_security_group,
@@ -159,19 +154,14 @@ class MultiTenantRagStack(Stack):
             doc_collections_handler_function=doc_collections_stack.doc_collections_function,
             domain=vector_store_provider_stack.vector_store_stack.domain,
             embeddings_provider_function=embeddings_provider_stack.embeddings_provider_function,
-            # enrichment_pipelines_handler_stack.entity_extraction_function.entity_extraction_function.grant_principal,
+            enrichment_stream_processor_function=enrichment_pipelines_handler_stack.stream_processor_function,
             extraction_function=enrichment_pipelines_handler_stack.entity_extraction_function.entity_extraction_function,
-            generation_handler_function=generation_handler_stack.generation_handler_function,
             graph_store_provider_function=graph_store_provider_stack.graph_store_provider,
-            inference_principal=generation_handler_stack.generation_handler_function.grant_principal,
-            ingestion_bucket=ingestion_provider_stack.ingestion_bucket.bucket,
             ingestion_function=ingestion_provider_stack.ingestion_function,
-            # ingestion_principal=ingestion_provider_stack.ingestion_function.grant_principal,
-            ingestion_queue=ingestion_provider_stack.ingestion_queue.queue,
             ingestion_status_provider_function=ingestion_provider_stack.ingestion_status_function,
             ingestion_status_table=ingestion_provider_stack.ingestion_status_table.table,
             prompt_templates_handler_function=prompt_templates_handler_stack.prompt_template_handler_function,
-            # tools_provider_function=tools_provider_stack.tools_provider_function,
+            stream_processor_function=enrichment_pipelines_handler_stack.stream_processor_function,
             vector_store_provider_function=vector_store_provider_stack.vector_store_stack.vector_store_provider,
         )
         

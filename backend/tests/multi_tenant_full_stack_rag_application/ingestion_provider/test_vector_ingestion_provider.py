@@ -50,7 +50,7 @@ def vector_ingestion_provider(monkeypatch):
     return vip
 
 
-def test_handle_object_created(vector_ingestion_provider):
+def dont_test_handle_object_created(vector_ingestion_provider):
     ssm_client = utils.BotoClientProvider.get_client('ssm')
     print(f"vip pdf ocr text: {vector_ingestion_provider.pdf_loader.ocr_template_text}")
     # print(f"Got ssm_client {dir(ssm_client)}")

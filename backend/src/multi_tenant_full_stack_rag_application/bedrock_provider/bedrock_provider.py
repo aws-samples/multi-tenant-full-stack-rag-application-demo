@@ -231,8 +231,8 @@ class BedrockProvider(ServiceProvider):
 
         elif operation == 'invoke_model':
             model_id = handler_evt.args['model_id']
-            inference_config = handler_evt.args['inference_config'] or {}
-            messages = handler_evt.args['messages'] or []
+            inference_config = {} if not 'inference_config' in handler_evt.args else handler_evt.args['inference_config']
+            messages = [] if not 'messages' in handler_evt.args else handler_evt.args['messages']
             response = self.invoke_model(
                 inference_config=inference_config,
                 messages=messages,

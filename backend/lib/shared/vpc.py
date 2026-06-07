@@ -19,16 +19,12 @@ class VpcStack(Stack):
         self.vpc = ec2.Vpc(self, "Vpc", 
             enable_dns_hostnames=True,
             enable_dns_support=True,
+            availability_zones=[
+                f"{self.region}a",
+                f"{self.region}b",
+                f"{self.region}c"
+            ],
             subnet_configuration=[
-                # Comment out the entire next block if you don't want
-                # public subnets, and then search the code under
-                # backend/lib for CHANGE_PUBLIC_SUBNET_TO_ISOLATED,
-                # and change the other ones to ec2.SubnetType.PRIVATE_ISOLATED
-                # PRIVATE_WITH_EGRESS is needed to host the auth provider service,
-                # since it needs to call cognito and cognito doesn't support 
-                # privatelink VPC connectivity. Don't comment out PRIVATE_WITH_EGRESS
-                # unless you're going to provide a different AuthProvider implementation
-                # and not use CognitoAuthProvider.
                 {
                     "cidrMask": 21,
                     "name": 'ingress',

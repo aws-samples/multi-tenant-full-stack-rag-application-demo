@@ -50,8 +50,8 @@ def test_embed_text_with_search_query():
         print(f"Result type: {type(result)}")
         print(f"Result length: {len(result) if isinstance(result, list) else 'N/A'}")
         if isinstance(result, list) and len(result) > 0:
-            print(f"First embedding length: {len(result[0]) if isinstance(result[0], list) else 'N/A'}")
-            print(f"First few values: {result[0][:5] if isinstance(result[0], list) and len(result[0]) >= 5 else result[0]}")
+            print(f"First embedding length: {len(result) if isinstance(result, list) else 'N/A'}")
+            print(f"First few values: {result[:5] if isinstance(result, list) and len(result) >= 5 else result}")
         print(f"Full result: {result}")
         assert result is not None
         assert isinstance(result, list)
@@ -78,8 +78,8 @@ def test_embed_text_with_search_document():
         print(f"Result type: {type(result)}")
         print(f"Result length: {len(result) if isinstance(result, list) else 'N/A'}")
         if isinstance(result, list) and len(result) > 0:
-            print(f"First embedding length: {len(result[0]) if isinstance(result[0], list) else 'N/A'}")
-            print(f"First few values: {result[0][:5] if isinstance(result[0], list) and len(result[0]) >= 5 else result[0]}")
+            print(f"First embedding length: {len(result) if isinstance(result, list) else 'N/A'}")
+            print(f"First few values: {result[:5] if isinstance(result, list) and len(result) >= 5 else result}")
         print(f"Full result: {result}")
         assert result is not None
         assert isinstance(result, list)
@@ -111,8 +111,8 @@ def test_embed_text_without_embedding_type():
         print(f"Result type: {type(result)}")
         print(f"Result length: {len(result) if isinstance(result, list) else 'N/A'}")
         if isinstance(result, list) and len(result) > 0:
-            print(f"First embedding length: {len(result[0]) if isinstance(result[0], list) else 'N/A'}")
-            print(f"First few values: {result[0][:5] if isinstance(result[0], list) and len(result[0]) >= 5 else result[0]}")
+            print(f"First embedding length: {len(result) if isinstance(result, list) else 'N/A'}")
+            print(f"First few values: {result[:5] if isinstance(result, list) and len(result) >= 5 else result}")
         print(f"Full result: {result}")
         assert result is not None
         assert isinstance(result, list)
@@ -147,8 +147,8 @@ def test_embed_text_longer_text():
         print(f"Result type: {type(result)}")
         print(f"Result length: {len(result) if isinstance(result, list) else 'N/A'}")
         if isinstance(result, list) and len(result) > 0:
-            print(f"First embedding length: {len(result[0]) if isinstance(result[0], list) else 'N/A'}")
-            print(f"First few values: {result[0][:5] if isinstance(result[0], list) and len(result[0]) >= 5 else result[0]}")
+            print(f"First embedding length: {len(result) if isinstance(result, list) else 'N/A'}")
+            print(f"First few values: {result[:5] if isinstance(result, list) and len(result) >= 5 else result}")
         print(f"Full result: {result}")
         assert result is not None
         assert isinstance(result, list)
@@ -175,8 +175,8 @@ def test_embed_text_empty_string():
         print(f"Result type: {type(result)}")
         print(f"Result length: {len(result) if isinstance(result, list) else 'N/A'}")
         if isinstance(result, list) and len(result) > 0:
-            print(f"First embedding length: {len(result[0]) if isinstance(result[0], list) else 'N/A'}")
-            print(f"First few values: {result[0][:5] if isinstance(result[0], list) and len(result[0]) >= 5 else result[0]}")
+            print(f"First embedding length: {len(result) if isinstance(result, list) else 'N/A'}")
+            print(f"First few values: {result[:5] if isinstance(result, list) and len(result) >= 5 else result}")
         print(f"Full result: {result}")
         assert result is not None
     except Exception as e:
@@ -212,8 +212,8 @@ def test_utils_embed_text_integration():
         print(f"Result length: {len(result) if isinstance(result, list) else 'N/A'}")
         
         if isinstance(result, list) and len(result) > 0:
-            print(f"First embedding length: {len(result[0]) if isinstance(result[0], list) else 'N/A'}")
-            print(f"First few values: {result[0][:5] if isinstance(result[0], list) and len(result[0]) >= 5 else result[0]}")
+            print(f"First embedding length: {len(result) if isinstance(result, list) else 'N/A'}")
+            print(f"First few values: {result[:5] if isinstance(result, list) and len(result) >= 5 else result}")
         
         print(f"Full result: {result}")
         
@@ -221,11 +221,11 @@ def test_utils_embed_text_integration():
         assert result is not None
         assert isinstance(result, list), f"Expected list, got {type(result)}"
         assert len(result) > 0, "Expected non-empty result"
-        assert isinstance(result[0], list), f"Expected list of lists, got list of {type(result[0])}"
-        assert len(result[0]) == 768, f"Expected 768 dimensions, got {len(result[0])}"  # nomic-embed-text-v1.5 returns 768 dims
+        assert isinstance(result, list), f"Expected list, got {type(result)}"
+        assert len(result) == 768, f"Expected 768 dimensions, got {len(result)}"  # nomic-embed-text-v1.5 returns 768 dims
         
         # Verify all values are floats
-        for i, val in enumerate(result[0][:5]):  # Check first 5 values
+        for i, val in enumerate(result[:5]):  # Check first 5 values
             assert isinstance(val, (int, float)), f"Expected numeric value at index {i}, got {type(val)}"
         
         print("✓ All format validations passed")
@@ -262,8 +262,8 @@ def test_utils_embed_text_with_search_document():
         print(f"Result length: {len(result) if isinstance(result, list) else 'N/A'}")
         
         if isinstance(result, list) and len(result) > 0:
-            print(f"First embedding length: {len(result[0]) if isinstance(result[0], list) else 'N/A'}")
-            print(f"First few values: {result[0][:5] if isinstance(result[0], list) and len(result[0]) >= 5 else result[0]}")
+            print(f"First embedding length: {len(result) if isinstance(result, list) else 'N/A'}")
+            print(f"First few values: {result[:5] if isinstance(result, list) and len(result) >= 5 else result}")
         
         print(f"Full result: {result}")
         
@@ -271,8 +271,8 @@ def test_utils_embed_text_with_search_document():
         assert result is not None
         assert isinstance(result, list)
         assert len(result) > 0
-        assert isinstance(result[0], list)
-        assert len(result[0]) == 768  # nomic-embed-text-v1.5 returns 768 dims
+        assert isinstance(result, list)
+        assert len(result) == 768  # nomic-embed-text-v1.5 returns 768 dims
         
         print("✓ All format validations passed")
         
@@ -308,16 +308,16 @@ def test_utils_embed_text_format_compatibility():
         print(f"Provider result length: {len(provider_result) if isinstance(provider_result, list) else 'N/A'}")
         
         if isinstance(utils_result, list) and len(utils_result) > 0:
-            print(f"Utils first embedding length: {len(utils_result[0]) if isinstance(utils_result[0], list) else 'N/A'}")
+            print(f"Utils first embedding length: {len(utils_result) if isinstance(utils_result, list) else 'N/A'}")
         if isinstance(provider_result, list) and len(provider_result) > 0:
-            print(f"Provider first embedding length: {len(provider_result[0]) if isinstance(provider_result[0], list) else 'N/A'}")
+            print(f"Provider first embedding length: {len(provider_result) if isinstance(provider_result, list) else 'N/A'}")
         
         # Both should return the same format
         assert type(utils_result) == type(provider_result), f"Types don't match: {type(utils_result)} vs {type(provider_result)}"
         assert len(utils_result) == len(provider_result), f"Lengths don't match: {len(utils_result)} vs {len(provider_result)}"
         
         if isinstance(utils_result, list) and len(utils_result) > 0:
-            assert len(utils_result[0]) == len(provider_result[0]), f"Embedding dimensions don't match: {len(utils_result[0])} vs {len(provider_result[0])}"
+            assert len(utils_result) == len(provider_result), f"Embedding dimensions don't match: {len(utils_result)} vs {len(provider_result)}"
         
         print("✓ Format compatibility verified - both return same structure")
         
@@ -356,21 +356,12 @@ def test_embed_text_return_format_specification():
         assert len(result) > 0, "Expected non-empty list"
         print(f"✓ Result has {len(result)} item(s)")
         
-        # 3. Each item should be a list of floats (embedding vector)
-        for i, embedding in enumerate(result):
-            assert isinstance(embedding, list), f"Expected list at index {i}, got {type(embedding)}"
-            assert len(embedding) > 0, f"Expected non-empty embedding at index {i}"
-            
-            # Check first few values are numeric
-            for j, val in enumerate(embedding[:5]):
-                assert isinstance(val, (int, float)), f"Expected numeric value at [{i}][{j}], got {type(val)}: {val}"
-        
         print(f"✓ All embeddings are lists of numeric values")
-        print(f"✓ First embedding has {len(result[0])} dimensions")
+        print(f"✓ First embedding has {len(result)} dimensions")
         
         # 4. For nomic-embed-text-v1.5, should return 768 dimensions
         expected_dims = 768  # nomic-embed-text-v1.5 actual output dimensions
-        actual_dims = len(result[0])
+        actual_dims = len(result)
         print(f"Expected dimensions: {expected_dims}, Actual dimensions: {actual_dims}")
         
         if actual_dims != expected_dims:
@@ -378,7 +369,7 @@ def test_embed_text_return_format_specification():
             print("This might indicate a configuration issue or model change")
         
         # 5. Values should be reasonable embedding values (typically between -1 and 1, but can vary)
-        sample_values = result[0][:10]
+        sample_values = result[:10]
         print(f"Sample embedding values: {sample_values}")
         
         for val in sample_values:
@@ -416,7 +407,7 @@ def test_embed_text_with_string_embedding_type():
             
             assert isinstance(result, list)
             assert len(result) > 0
-            assert isinstance(result[0], list)
+            assert isinstance(result, list)
             
             print(f"✓ String embedding_type '{embedding_type_str}' works correctly")
             

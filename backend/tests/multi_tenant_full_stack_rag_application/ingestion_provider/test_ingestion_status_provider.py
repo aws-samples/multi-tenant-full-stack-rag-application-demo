@@ -39,7 +39,7 @@ def test_create_ingestion_status(ingestion_status_provider):
         evt, {}
     )
     print(f"test_create_ingestion_status got result: {result}")
-    assert result['statusCode'] == '200'
+    assert result['statusCode'] == 200
 
 def test_get_ingestion_status(ingestion_status_provider):
     evt = {
@@ -54,7 +54,7 @@ def test_get_ingestion_status(ingestion_status_provider):
         evt, {}
     )
     # print(f"test_get_ingestion_status got result: {result}")
-    assert result['statusCode'] == '200'
+    assert result['statusCode'] == 200
     status = json.loads(result['body'])[0]
     assert status['user_id'] == user_id and \
         status['doc_id'] == doc_id and \
@@ -77,4 +77,4 @@ def test_delete_ingestion_status(ingestion_status_provider):
         evt, {}
     )
     print(f"test_delete_ingestion_status got result: {result}")
-    assert result['statusCode'] == '200'
+    assert result['statusCode'] == 200

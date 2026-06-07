@@ -51,10 +51,10 @@ class DocumentCollectionsHandlerStack(Stack):
         build_cmds += [
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/document_collections_handler",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
+            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
             "cp /asset-input/document_collections_handler/*.py /asset-output/multi_tenant_full_stack_rag_application/document_collections_handler/",
             "cp /asset-input/service_provider* /asset-output/multi_tenant_full_stack_rag_application/",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
-            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output"
         ]
         # must be one of "DESTROY", "RETAIN", "RETAIN_ON_UPDATE_OR_DELETE", or "SNAPSHOT"
         removal_policy = self.node.get_context('removal_policy')

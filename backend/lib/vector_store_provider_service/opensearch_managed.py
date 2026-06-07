@@ -63,7 +63,7 @@ class OpenSearchManagedStack(NestedStack):
         ))
 
         self.domain = aos.Domain(self, 'OsDomain', 
-            version=aos.EngineVersion.OPENSEARCH_2_7,
+            version=aos.EngineVersion.OPENSEARCH_2_19,
             capacity={
                 "data_node_instance_type": os_data_instance_type,
                 "data_nodes": os_data_instance_ct,
@@ -96,7 +96,7 @@ class OpenSearchManagedStack(NestedStack):
             }],
             zone_awareness={
                 "enabled": True,
-                "availability_zone_count": 2,
+                "availability_zone_count": 3,
             }
         )
         
@@ -115,12 +115,12 @@ class OpenSearchManagedStack(NestedStack):
                     bundling_file_access=BundlingFileAccess.VOLUME_COPY,
                     command=[
                         "bash", "-c", " && ".join([
+                            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
+                            "pip3 install -r /asset-input/vector_store_provider/opensearch_requirements.txt -t /asset-output",
                             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/vector_store_provider",
                             "cp /asset-input/vector_store_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/vector_store_provider",
                             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
                             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils",
-                            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
-                            "pip3 install -r /asset-input/vector_store_provider/opensearch_requirements.txt -t /asset-output"
                         ])
                     ]
                 )
@@ -176,19 +176,19 @@ class OpenSearchManagedStack(NestedStack):
             self.domain,
             cognito_auth_role.grant_principal,
             True, True, True, True
-        )
+        ) 
 
-        vs_fn_name = ssm.StringParameter(self, 'VectorStoreProviderFunctionName',
-            parameter_name=f'/{parent_stack_name}/vector_store_provider_function_name',
-            string_value=self.vector_store_provider.function_name
-        )
+        # vs_fn_name = ssm.StringParameter(self, 'VectorStoreProviderFunctionName',
+        #     parameter_name=f'/{parent_stack_name}/vector_store_provider_function_name',
+        #     string_value=self.vector_store_provider.function_name
+        # )
 
-        vs_fn_name.apply_removal_policy(RemovalPolicy.DESTROY)
+        # vs_fn_name.apply_removal_policy(RemovalPolicy.DESTROY)
         
-        vs_origin_param = ssm.StringParameter(self, 'VectorStoreProviderOrigin',
-            parameter_name=f'/{parent_stack_name}/origin_vector_store_provider',
-            string_value=self.vector_store_provider.function_name
-        )
+        # vs_origin_param = ssm.StringParameter(self, 'VectorStoreProviderOrigin',
+        #     parameter_name=f'/{parent_stack_name}/origin_vector_store_provider',
+        #     string_value=self.vector_store_provider.function_name
+        # )
 
-        vs_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
+        # vs_origin_param.apply_removal_policy(RemovalPolicy.DESTROY)
 

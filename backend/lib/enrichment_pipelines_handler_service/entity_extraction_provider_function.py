@@ -20,6 +20,8 @@ from aws_cdk import (
     aws_ssm as ssm
 )
 from constructs import Construct
+from lib.shared.queue import Queue
+from lib.shared.queue_to_function_event_trigger import QueueToFunctionTrigger
 # from lib.shared.utils_permissions import UtilsPermissions
 
 
@@ -27,6 +29,7 @@ class EntityExtractionProviderFunction(Construct):
     def __init__(self, scope: Construct, construct_id: str, 
         account: str,
         app_security_group: ec2.ISecurityGroup,
+        entity_extraction_queue: Queue,
         extraction_model_id: str,
         parent_stack_name: str,
         region: str,
@@ -47,13 +50,13 @@ class EntityExtractionProviderFunction(Construct):
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_provider/entity_extraction",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/ingestion_provider",
+            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
             "cp /asset-input/enrichment_pipelines_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_provider",
             "cp /asset-input/enrichment_pipelines_provider/entity_extraction/*.py /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_provider/entity_extraction/",
             "cp /asset-input/enrichment_pipelines_provider/entity_extraction/*.txt /asset-output/multi_tenant_full_stack_rag_application/enrichment_pipelines_provider/entity_extraction/",
             "cp /asset-input/service_provider*.py /asset-output/multi_tenant_full_stack_rag_application/",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
             "cp /asset-input/ingestion_provider/ingestion_status.py /asset-output/multi_tenant_full_stack_rag_application/ingestion_provider/",
-            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output"
         ]
 
         self.entity_extraction_function = lambda_.Function(self, 'EntityExtractionFunction',
@@ -76,15 +79,24 @@ class EntityExtractionProviderFunction(Construct):
                 "EXTRACTION_MODEL_ID": extraction_model_id,
                 'SERVICE_REGION': region,
                 "STACK_NAME": parent_stack_name,
+                "ENTITY_EXTRACTION_BATCH_SIZE": "10",  # Default batch size for processing chunks
             },
-            # TODO_IN_PROGRESS replace this with a ddb stream
-            # events=[self.evt_source],
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PRIVATE_ISOLATED,
             ),
             security_groups=[app_security_group]
         )
+
+        # Set up queue-to-function trigger
+        self.queue_to_function_trigger = QueueToFunctionTrigger(self, 'EntityExtractionQueueToFunctionTrigger',
+            function=self.entity_extraction_function,
+            queue_arn=entity_extraction_queue.queue.queue_arn,
+            resource_name='EntityExtractionQueueToFunctionTrigger'
+        )
+
+        # Grant queue permissions to the function
+        entity_extraction_queue.queue.grant_consume_messages(self.entity_extraction_function.grant_principal)
 
         ent_extraction_origin_param = ssm.StringParameter(self, 'EntityExtractionProviderOrigin',
             parameter_name=f'/{parent_stack_name}/origin_entity_extraction',
@@ -99,6 +111,3 @@ class EntityExtractionProviderFunction(Construct):
                 f"arn:aws:ssm:{region}:{account}:parameter/{parent_stack_name}*"
             ]
         ))
-
-
-        

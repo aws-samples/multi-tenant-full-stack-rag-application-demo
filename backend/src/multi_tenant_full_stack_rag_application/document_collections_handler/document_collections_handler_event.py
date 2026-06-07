@@ -12,7 +12,8 @@ class DocumentCollectionsHandlerEvent:
         path='',
         user_email='',
         user_id='',
-        origin=''
+        origin='',
+        graph_schema={}
     ):
         # print(f"dch evt received user_id '{user_id}' (may be uninitialized and populated later)")
         self.account_id = account_id
@@ -23,6 +24,9 @@ class DocumentCollectionsHandlerEvent:
         self.user_email = user_email
         self.user_id = user_id
         self.origin = origin
+        self.document_collection = {}
+        self.graph_schema=graph_schema
+
 
     def from_lambda_event(self, event):
         print(f"dch evt.from_lambda_event received event {event}")
@@ -49,18 +53,20 @@ class DocumentCollectionsHandlerEvent:
                     
             elif 'collection_id' in body:
                 self.collection_id = body['collection_id']
-                self.document_collection = {
-                    "collection_id": self.collection_id,
-                }
-                if 'collection_name' in body:
-                    self.collection_name = body['collection_name']
-                    self.document_collection['collection_name'] = self.collection_name
-                if 'user_id' in body:
-                    self.document_collection['user_id'] = body['user_id']
-                    self.user_id = body['user_id']
-                elif 'user_email' in body:
-                    self.document_collection['user_email'] = body['user_email']
-                    self.user_email = body['user_email']
+                self.document_collection['collection_id'] =  self.collection_id
+    
+            if 'collection_name' in body:
+                self.collection_name = body['collection_name']
+                self.document_collection['collection_name'] = self.collection_name
+            if 'graph_schema' in body:
+                self.graph_schema = body['graph_schema'] if isinstance(body['graph_schema'], dict) else json.loads(body['graph_schema'])
+                self.document_collection['graph_schema'] = self.graph_schema
+            if 'user_id' in body:
+                self.document_collection['user_id'] = body['user_id']
+                self.user_id = body['user_id']
+            elif 'user_email' in body:
+                self.document_collection['user_email'] = body['user_email']
+                self.user_email = body['user_email']
             
             if not hasattr(self, 'user_id') and \
                 'user_id' in event:
@@ -86,7 +92,8 @@ class DocumentCollectionsHandlerEvent:
                 self.limit = self.path_parameters['limit']
             if 'user_id' in self.path_parameters:
                 self.user_id = self.path_parameters['user_id']
-                self.document_collection['user_id'] = self.user_id
+                if hasattr(self, 'document_collection'):
+                    self.document_collection['user_id'] = self.user_id
 
         if hasattr(self, 'document_collection') and \
             'user_email' in self.document_collection and \

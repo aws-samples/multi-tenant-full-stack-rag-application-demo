@@ -25,6 +25,6 @@ def test_create_web_search_tool(web_search_tool):
     }
     result = web_search_tool.handler(evt)
     print(f"test_web_search_tool got result: {result}")
-    assert result['statusCode'] == '200'
+    assert result['statusCode'] == 200
     body = result['body']
     assert len(body.keys()) == 5

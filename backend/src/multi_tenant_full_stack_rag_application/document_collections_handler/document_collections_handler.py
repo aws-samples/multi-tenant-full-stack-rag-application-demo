@@ -3,12 +3,14 @@
 
 import boto3
 import json
+import time
 from datetime import datetime
 from os import getenv
 from uuid import uuid4
 from .document_collection import DocumentCollection
 from .document_collections_handler_event import DocumentCollectionsHandlerEvent
 from .document_collection_share import DocumentCollectionShare
+from .document_collection_graph_schema import DocumentCollectionGraphSchema
 from multi_tenant_full_stack_rag_application import utils
 from urllib.parse import quote_plus
 
@@ -90,8 +92,7 @@ class DocumentCollectionsHandler:
         # print(f"collections_to_dict returning {final_dict}")
         return final_dict
 
-    @staticmethod
-    def create_doc_collection_record(handler_evt):
+    def create_doc_collection_record(self, handler_evt):
         # print(f"Create doc collection record got evt {handler_evt.__dict__}")    
         coll_dict = handler_evt.document_collection
         if not 'collection_id' in coll_dict:
@@ -111,9 +112,29 @@ class DocumentCollectionsHandler:
         if not 'enrichment_pipelines' in coll_dict:
             coll_dict['enrichment_pipelines'] = {}
             
-        # Make sure the graph schema hasn't changed since our schema data here. This 
-        # can happen when working in parallel on Lambda so we want to pull the updated 
-        # graph schema from the Doc collection and merge it with the info here.
+        current_graph_schema = self.get_latest_graph_schema(coll_dict['user_id'], coll_dict['collection_name'])
+        if isinstance(current_graph_schema, str):
+            current_graph_schema = json.loads(current_graph_schema)
+        new_graph_schema = coll_dict['graph_schema']
+        if isinstance(new_graph_schema, str):
+            new_graph_schema = json.loads(new_graph_schema)
+            
+        print(f"New graph schema is {new_graph_schema}")
+        
+        if new_graph_schema != current_graph_schema:
+            for key in new_graph_schema:
+                if not key in current_graph_schema:
+                    current_graph_schema[key] = new_graph_schema[key]
+                else:
+                    for node_prop in new_graph_schema[key]['node_properties']:
+                        if node_prop not in current_graph_schema[key]['node_properties']:
+                            current_graph_schema[key]['node_properties'].append(node_prop)
+                    for edge_label in new_graph_schema[key]['edge_labels']:
+                        if edge_label not in current_graph_schema[key]['edge_labels']:
+                            current_graph_schema[key]['edge_labels'].append(edge_label)
+        
+        result = self.upsert_graph_schema(handler_evt.user_id, coll_dict['collection_name'], current_graph_schema)
+        print(f'Result from upsert_graph_schema: {result}')
 
         dc = DocumentCollection(
             handler_evt.user_id,
@@ -121,15 +142,15 @@ class DocumentCollectionsHandler:
             coll_dict['collection_name'],
             coll_dict['description'],
             coll_dict['vector_db_type'],
-            coll_dict['vector_ingestion_enabled'],
-            coll_dict['file_storage_tool_enabled'],
+            True if not 'vector_ingestion_enabled' in coll_dict else coll_dict['vector_ingestion_enabled'],
+            False if not 'file_storage_tool_enabled' in coll_dict else coll_dict['file_storage_tool_enabled'],
             coll_dict['collection_id'],
             shared_with,
             created,
             updated,
-            enrichment_pipelines=coll_dict['enrichment_pipelines'],
-            graph_schema=coll_dict['graph_schema']
+            enrichment_pipelines=coll_dict['enrichment_pipelines']
         )
+        
         # print(f"Created doc collection record {dc.__dict__()}")
         return dc
     
@@ -241,10 +262,15 @@ class DocumentCollectionsHandler:
         items = []
         print(f"result from querying ddb: {result}")
         if "Items" in result.keys():
-            for item in result["Items"]:        
+            for item in result["Items"]: 
+                print(f"Got item from document_collections table: {item}")       
                 if len(list(item.keys())) > 0:
+                    print(f"Got sort key {item['sort_key']['S']}")
+                    if 'graph_schema' in item['sort_key']['S']:
+                        continue
                     # print(f"About to call DocumentCollection.from_ddb_record for item {item}")
                     doc_collection =  DocumentCollection.from_ddb_record(item)
+                    doc_collection.graph_schema = self.get_latest_graph_schema(user_id, doc_collection.collection_name)
                     items.append(doc_collection)
         result = {
             "response": items,
@@ -323,6 +349,94 @@ class DocumentCollectionsHandler:
         # print(f"get_shared_doc_collections returning {shared_collections} ")          
         return shared_collections
 
+    def upsert_graph_schema(self, user_id: str, collection_name: str, graph_schema: dict) -> DocumentCollectionGraphSchema:
+        """
+        Create a new graph schema record for a document collection.
+        This eliminates contention by always creating a new record with a unique timestamp.
+        """
+        print(f"Upserting graph schema for user {user_id}, collection {collection_name}")
+        
+        schema_record = DocumentCollectionGraphSchema(
+            user_id=user_id,
+            collection_name=collection_name,
+            graph_schema=graph_schema
+        )
+        
+        response = self.ddb.put_item(
+            TableName=self.doc_collections_table,
+            Item=schema_record.to_ddb_record()
+        )
+        
+        print(f"Graph schema upsert response: {response}")
+        
+        if 'ResponseMetadata' in response and \
+           'HTTPStatusCode' in response['ResponseMetadata'] and \
+           response['ResponseMetadata']['HTTPStatusCode'] == 200:
+            print(f"Successfully upserted graph schema: {schema_record}")
+            return schema_record
+        else:
+            raise Exception(f"Failed to upsert graph schema for collection {collection_name}")
+
+    def get_latest_graph_schema(self, user_id: str, collection_name: str) -> dict:
+        """
+        Retrieve the latest graph schema for a document collection.
+        Uses query with descending sort to get the most recent schema.
+        """
+        print(f"Getting latest graph schema for user {user_id}, collection {collection_name}")
+        
+        sk_prefix = f"graph_schema::{collection_name}::"
+        
+        response = self.ddb.query(
+            TableName=self.doc_collections_table,
+            KeyConditionExpression='partition_key = :pk AND begins_with(sort_key, :sk_prefix)',
+            ExpressionAttributeValues={
+                ':pk': {'S': user_id},
+                ':sk_prefix': {'S': sk_prefix}
+            },
+            ScanIndexForward=False,  # Descending order (newest first)
+            Limit=1
+        )
+        
+        print(f"Graph schema query response: {response}")
+        
+        if response['Items']:
+            schema_record = DocumentCollectionGraphSchema.from_ddb_record(response['Items'][0])
+            print(f"Found latest graph schema: {schema_record}")
+            return schema_record.graph_schema
+        
+        print(f"No graph schema found for collection {collection_name}")
+        return {}
+
+    def get_graph_schema_history(self, user_id: str, collection_name: str, limit: int = 10) -> [DocumentCollectionGraphSchema]:
+        """
+        Retrieve the history of graph schemas for a document collection.
+        Returns schemas in descending order (newest first).
+        """
+        print(f"Getting graph schema history for user {user_id}, collection {collection_name}, limit {limit}")
+        
+        sk_prefix = f"graph_schema::{collection_name}::"
+        
+        response = self.ddb.query(
+            TableName=self.doc_collections_table,
+            KeyConditionExpression='partition_key = :pk AND begins_with(sort_key, :sk_prefix)',
+            ExpressionAttributeValues={
+                ':pk': {'S': user_id},
+                ':sk_prefix': {'S': sk_prefix}
+            },
+            ScanIndexForward=False,  # Descending order (newest first)
+            Limit=limit
+        )
+        
+        print(f"Graph schema history query response: {response}")
+        
+        schemas = []
+        for item in response['Items']:
+            schema_record = DocumentCollectionGraphSchema.from_ddb_record(item)
+            schemas.append(schema_record)
+        
+        print(f"Found {len(schemas)} graph schema records")
+        return schemas
+
     def handler(self, event, context):
         print(f"Got event {event}")
         print(f"Got context {context}")
@@ -330,10 +444,18 @@ class DocumentCollectionsHandler:
         print(f"converted to handler_evt {handler_evt.__dict__}")
         method = handler_evt.method
         path = handler_evt.path
+        untrusted_origins = []
+        if 'origin_frontend' in self.allowed_origins:
+            untrusted_origins.append(self.allowed_origins['origin_frontend'])
+        if 'origin_frontend_localdev' in self.allowed_origins:
+            untrusted_origins.append(self.allowed_origins['origin_frontend_localdev'])
 
-        if handler_evt.origin in self.allowed_origins.values() and \
-            handler_evt.origin not in [self.allowed_origins['origin_frontend'], self.allowed_origins['origin_frontend_localdev']] and \
-                'user_id' in handler_evt.document_collection:
+        print(f"checking to see if {handler_evt.origin} is in {self.allowed_origins.values()} or in untrusted origins {untrusted_origins}")
+
+        if  handler_evt.origin in self.allowed_origins.values() and \
+            handler_evt.origin not in untrusted_origins and \
+            hasattr(handler_evt, 'document_collection') and \
+            'user_id' in handler_evt.document_collection:
                 # user_id sent in from trusted source that doesn't
                 # have access to the user's JWT, like vector_ingestion_provider
                 handler_evt.user_id = handler_evt.document_collection['user_id']
@@ -343,11 +465,10 @@ class DocumentCollectionsHandler:
             return utils.format_response(403, {}, None)
         
         status = 200
-        user_email = None
        
         # first check if user_id was sent by a trusted source and use it from there.
         if handler_evt.origin in self.allowed_origins.values() and \
-            handler_evt.origin not in [self.allowed_origins['origin_frontend'], self.allowed_origins['origin_frontend_localdev']] and \
+            handler_evt.origin not in untrusted_origins and \
                 handler_evt.user_id is not None:
                 # this means the user_id has been sent
                 # by a trusted service that's not receiving
@@ -373,13 +494,6 @@ class DocumentCollectionsHandler:
                 handler_evt.document_collection['user_id'] = handler_evt.user_id
             if not handler_evt.user_id or handler_evt.user_id == '':
                 raise Exception("Failed to parse auth token")
-
-            # handler_evt.creds = self.utils.get_creds_from_token(
-            #     handler_evt.user_id, 
-            #     handler_evt.auth_token, 
-            #     self.lambda_
-            # )
-            # print(f"Handler_evt is now {handler_evt.__dict__}") 
         
         print(f"handler_evt is now {handler_evt.__dict__}")
         if method == 'OPTIONS': 
@@ -400,7 +514,22 @@ class DocumentCollectionsHandler:
             if len(doc_collections_response["response"]) > 0:
                 result["response"] = self.collections_to_dict(doc_collections_response["response"])
             print(f"GET /document_collections returning {result}") 
+        elif method == 'GET' and path.startswith('/document_collections/graph_schema'):
+            if not hasattr(handler_evt, 'path_parameters') or \
+                'collection_name' not in handler_evt.path_parameters or \
+                   not handler_evt.path_parameters['collection_name'] or \
+                'user_id' not in handler_evt.path_parameters or \
+                    not handler_evt.path_parameters['user_id']:
+                return utils.format_response(404, {"Error": "Missing collection_name or user_id parameters."}, handler_evt.origin)
+            
+            collection_name = handler_evt.path_parameters['collection_name']
+            user_id = handler_evt.path_parameters['user_id']
+            graph_schema = self.get_latest_graph_schema(user_id, collection_name)
 
+            result = { 
+                "graph_schema": graph_schema,
+            }
+        
         elif method == 'GET' and path.startswith('/document_collections/'):
             if not hasattr(handler_evt, 'path_parameters') or \
                 'collection_id' not in handler_evt.path_parameters or \
@@ -475,6 +604,13 @@ class DocumentCollectionsHandler:
                     "files": json.dumps(file_list)
                 }
 
+        elif method == 'POST' and path == '/document_collections/graph_schema':
+            result = self.upsert_graph_schema(
+                handler_evt.user_id, 
+                handler_evt.collection_name, 
+                handler_evt.graph_schema
+            ).__dict__()
+
         elif method == 'POST' and path == '/document_collections':
             handler_evt.document_collection['user_id'] = handler_evt.user_id
             print(f"creating doc collection from event {handler_evt}")
@@ -539,59 +675,79 @@ class DocumentCollectionsHandler:
             new_collection.collection_id,
             consistent=True
         )
-        new_collection_dict = new_collection.__dict__()
+        print(f"Got current collection {current_collection}, type {type(current_collection)}")
 
-        if new_collection.graph_schema != current_collection.graph_schema and \
-            current_collection.graph_schema != {}:
-            merged_collection = json.loads(json.dumps(current_collection.__dict__()))
-            for key in new_collection.graph_schema:
-                if key not in merged_collection: 
-                    merged_collection[key] = new_collection_dict[key]
-                else:
-                    # merge the node properties and edge labels
-                    for node_prop in new_collection_dict[key]['node_properties']:
-                        if node_prop not in merged_collection[key]['node_properties']:
-                            merged_collection[key]['node_properties'].append(node_prop)
-                    for edge_label in new_collection_dict[key]['edge_labels']:
-                        if edge_label not in merged_collection[key]['edge_labels']:
-                            merged_collection[key]['edge_labels'].append(edge_label)
-            # now we need to do a conditional strongly consistent write, and if it fails we need to 
-            # retry this function all.
-            try: 
+        if current_collection:
+            current_schema = current_collection.graph_schema if isinstance(current_collection.graph_schema, dict) else json.loads(current_collection.graph_schema)
+            new_schema = new_collection.graph_schema if isinstance(new_collection.graph_schema, dict) else json.loads(new_collection.graph_schema)
+            if new_schema != current_schema and \
+                current_schema != {}:
+                merged_collection = json.loads(json.dumps(current_collection.__dict__()))
+                # deep copy the current schema to the merged, then add the new schema items as needed.
+                merged_schema = json.loads(json.dumps(current_schema))
+                for key in new_schema:
+                    if key not in merged_schema: 
+                        merged_schema[key] = new_schema[key]
+                    else:
+                        # merge the node properties and edge labels
+                        for node_prop in new_schema[key]['node_properties']:
+                            if node_prop not in merged_schema[key]['node_properties']:
+                                merged_schema[key]['node_properties'].append(node_prop)
+                        for edge_label in new_schema[key]['edge_labels']:
+                            if edge_label not in merged_schema[key]['edge_labels']:
+                                merged_schema[key]['edge_labels'].append(edge_label)
+                # now we need to do a conditional strongly consistent write, and if it fails we need to 
+                # retry this function all.
+                new_collection.graph_schema = json.dumps(merged_schema)
+                try: 
+                    response = self.ddb.put_item(
+                        TableName=self.doc_collections_table,
+                        Item=new_collection.to_ddb_record(),
+                        ConditionExpression='graph_schema=:graph_schema',
+                        ExpressionAttributeValues={
+                            ":graph_schema": {"S": json.dumps(current_schema)}
+                        }
+                    )
+                    print(f"Got response from put item {response}")
+                    if 'ResponseMetadata' in response and \
+                    'HTTPStatusCode' in response['ResponseMetadata'] and \
+                        response['ResponseMetadata']['HTTPStatusCode'] == 200:
+                        print(f"returning DocumentCollection {new_collection}")
+                        return new_collection
+                    
+                except Exception as e:
+                    print(f"ERROR upserting document collection: {e.args[0]}")
+                    raise e
+            else: 
+                new_collection_record = new_collection.to_ddb_record()
                 response = self.ddb.put_item(
                     TableName=self.doc_collections_table,
-                    Item=merged_collection.to_ddb_record(),
-                    ConsistentWrite=True,
-                    ConditionExpression='graph_schema=:graph_schema',
-                    ExpressionAttributeValues={
-                        ":graph_schema": {"S": current_collection.graph_schema}
-                    }
+                    Item=new_collection_record
                 )
-                print(f"Got response from put item {response}")
+                print(f"Got response from ddb.put_item for new_collection_record \n{new_collection}\n{response}")
 
-            except ConditionalCheckFailedException:
-                # try again
-                next_attempt = attempt + 1
-                if next_attempt <= max_attempts:
-                    print(f"Graph schema changed while we were updating...retrying attempt {next_attempt}")
-                    response = self.upsert_doc_collection(new_collection, handler_evt, next_attempt, max_attempts)
-                else:
-                    raise Exception(f'Collection graph schema never stabilized in {max_attempts} attempts')
+                if 'ResponseMetadata' in response and \
+                    'HTTPStatusCode' in response['ResponseMetadata'] and \
+                        response['ResponseMetadata']['HTTPStatusCode'] == 200:
+                        result = DocumentCollection.from_ddb_record(new_collection_record)
+                        print(f"returning DocumentCollection {result}")
+                        return result
         else: 
             new_collection_record = new_collection.to_ddb_record()
             response = self.ddb.put_item(
                 TableName=self.doc_collections_table,
                 Item=new_collection_record
             )
-        print(f"Got response from ddb.put_item for new_collection_record \n{new_collection_record}\n{response}")
-        if 'ResponseMetadata' in response and \
-            'HTTPStatusCode' in response['ResponseMetadata'] and \
-                response['ResponseMetadata']['HTTPStatusCode'] == 200:
-                result = DocumentCollection.from_ddb_record(new_collection_record)
-                print(f"returning DocumentCollection {result}")
-                return result
-        else:
-            raise Exception(f"Failed to upsert collection for {new_collection.__dict__()}.")
+            print(f"Got response from ddb.put_item for new_collection_record \n{new_collection}\n{response}")
+
+            if 'ResponseMetadata' in response and \
+                'HTTPStatusCode' in response['ResponseMetadata'] and \
+                    response['ResponseMetadata']['HTTPStatusCode'] == 200:
+                    result = DocumentCollection.from_ddb_record(new_collection_record)
+                    print(f"returning DocumentCollection {result}")
+                    return result
+            else:
+                raise Exception(f"Failed to upsert collection for {new_collection.__dict__()}.")
 
 def handler(event, context):
     global doc_collections_handler

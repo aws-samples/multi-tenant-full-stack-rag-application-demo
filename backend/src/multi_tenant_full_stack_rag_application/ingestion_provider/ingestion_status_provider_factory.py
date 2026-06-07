@@ -30,12 +30,10 @@ class IngestionStatusProviderFactory:
         if ingestion_status_table == '':
             raise Exception("You must set STACK_NAME in the environment variables so it can look up ingestion_status_table from Parameter Store.")
         
-        ingestion_bucket = os.getenv('INGESTION_BUCKET')
 
         if args == []:
             args = [
                 ddb_client,
-                ingestion_bucket,
                 ingestion_status_table,
                 s3_client
             ]

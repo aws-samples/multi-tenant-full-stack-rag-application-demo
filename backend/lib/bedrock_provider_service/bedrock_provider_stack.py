@@ -28,13 +28,13 @@ class BedrockProviderStack(Stack):
         super().__init__(scope, construct_id) #  **kwargs)        
         
         build_cmds = [
-            "pip3 install -t /asset-output/ -r /asset-input/bedrock_provider/bedrock_provider_requirements.txt",
             'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/bedrock_provider',
+            "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
+            'pip3 install -t /asset-output -r /asset-input/utils/utils_requirements.txt',
+            "pip3 install -t /asset-output/ -r /asset-input/bedrock_provider/bedrock_provider_requirements.txt",
             "cp -r /asset-input/bedrock_provider/* /asset-output/multi_tenant_full_stack_rag_application/bedrock_provider",
             "cp /asset-input/service_provider* /asset-output/multi_tenant_full_stack_rag_application",
-            "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils",
-            'pip3 install -t /asset-output -r /asset-input/utils/utils_requirements.txt'
         ]
 
         self.bedrock_provider_function = lambda_.Function(self, 'BedrockProviderFunction',

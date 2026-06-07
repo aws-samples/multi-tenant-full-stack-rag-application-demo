@@ -309,10 +309,10 @@ function DocumentCollectionUploadedDocumentsTable() {
       files[i].key = `uploaded_file ${i}`
     }
     setFilesVal(files);
-    reloadTable()
+    // Remove reloadTable() call - let the upload useEffect handle the reload after upload completes
     // // console.log("filesVal is now");
     // // console.dir(files)
-    // setIsLoading(false)
+    // Keep isLoading true - it will be set to false after upload and table reload complete
   }
 
   // async function uploadFiles() {

@@ -57,7 +57,7 @@ class JsonLoader(Loader):
             self.splitter = splitter
         
     def create_ingestion_id(self, json_record, filename, collection_id):
-        print(f"create_ingestion_id got {json_record}, {filename}, {collection_id}")
+        # print(f"create_ingestion_id got {json_record}, {filename}, {collection_id}")
         if isinstance(json_record, str):
             json_record = json.loads(json_record)
         for id_field in self.json_id_fields_order:
@@ -85,18 +85,18 @@ class JsonLoader(Loader):
         doc_id = None
         title = None
         json_obj = json.loads(jsonline)
-        print(f"Got line to extract: {json_obj}")
+        # print(f"Got line to extract: {json_obj}")
         meta = deepcopy(json_obj)
         keys = list(json_obj.keys())
-        print(f"extract_line got source {source}")
+        # print(f"extract_line got source {source}")
         collection_id = source.split('/')[-2]
         filename = source.split('/')[-1]
         doc_id = self.create_ingestion_id(json_obj, filename, collection_id)
-        print(f"Created ingestion id {doc_id}")
+        # print(f"Created ingestion id {doc_id}")
         title = self.create_title(json_obj)
-        print(f"Created title {title}")
+        # print(f"Created title {title}")
         content = self.create_content(json_obj)
-        print(f"Created content {content}")
+        # print(f"Created content {content}")
 
         if not title:
             title = doc_id
@@ -109,11 +109,11 @@ class JsonLoader(Loader):
         meta['etag'] = etag
 
 
-
         if not (content and doc_id and title):
-            raise Exception(f"Couldn't find at least one of content ({content}), doc_id ({doc_id}), and title ({title})")
+            print(f"Couldn't find at least one of content ({content}), doc_id ({doc_id}), and title ({title}), skipping.")
+            return None
         else:
-            print(f"Found doc_id {doc_id}, title {title}, content\n{content}\n\n")
+            # print(f"Found doc_id {doc_id}, title {title}, content\n{content}\n\n")
 
             doc = VectorStoreDocument.from_dict({
                 "id": doc_id,
@@ -121,7 +121,7 @@ class JsonLoader(Loader):
                 "metadata": meta,
                 "vector": self.utils.embed_text(content, self.my_origin, 'search_document')
             })
-            print(f"vector_ingestion_provider.ingest_file saving doc {doc}")
+            # print(f"vector_ingestion_provider.ingest_file saving doc {doc}")
             self.utils.save_vector_docs([doc],  collection_id, self.my_origin)
         return doc
 
@@ -131,7 +131,7 @@ class JsonLoader(Loader):
             return None
         if not source:
             source = path
-        print(f"Loading path {path}, json_lines={json_lines}, source={source}, user_id {user_id}")
+        # print(f"Loading path {path}, json_lines={json_lines}, source={source}, user_id {user_id}")
         # docs: [VectorStoreDocument] = []
         filename = path.split('/')[-1]
         with open(path, 'r') as f:
@@ -143,10 +143,6 @@ class JsonLoader(Loader):
                 line = f.readline()
                 while line:
                     yield self.extract_line(line.strip(), source, user_id)
-                    # if new_doc:
-                    #   new_doc.id = f"{filename}:{new_doc.id}:L{line_ctr}"
-                    # print(f"Loaded doc {new_doc.to_json()}")
-                    # docs.append(new_doc)
                     line = f.readline()
 
     
@@ -155,7 +151,7 @@ class JsonLoader(Loader):
         if not source:
             source = path
         parts = source.split('/')
-        print(f"source split to parts {parts}")
+        # print(f"source split to parts {parts}")
         collection_id = parts[-2]
         filename = parts[-1]
         try: 
@@ -163,7 +159,9 @@ class JsonLoader(Loader):
             docs_processed = 0
             print(f"load_and_split received path {path}, source {source}, collection_id {collection_id}, json_lines {json_lines}")
             for doc in self.load(path, user_id, json_lines, source):
-                print(f"self.load yielded doc {doc.to_json()}")
+                if not doc:
+                    continue
+                # print(f"self.load yielded doc {doc.to_json()}")
                 if return_dicts:
                     doc = doc.to_dict()
                 final_docs.append(doc)

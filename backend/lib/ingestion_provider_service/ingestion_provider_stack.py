@@ -30,8 +30,6 @@ class IngestionProviderStack(Stack):
         auth_fn: lambda_.IFunction,
         auth_role: iam.IRole,
         parent_stack_name: str,
-        user_pool_client_id: str,
-        user_pool_id: str,
         vpc: ec2.IVpc,
         # vpc_endpoint_apigw: ec2.InterfaceVpcEndpointAwsService,
         **kwargs,
@@ -60,8 +58,8 @@ class IngestionProviderStack(Stack):
 
         build_cmds = [
             'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/ingestion_provider/',
-            "cp -r /asset-input/ingestion_provider/ingestion*.py /asset-output/multi_tenant_full_stack_rag_application/ingestion_provider",
             'pip3 install -t /asset-output -r /asset-input/utils/utils_requirements.txt',
+            "cp -r /asset-input/ingestion_provider/ingestion*.py /asset-output/multi_tenant_full_stack_rag_application/ingestion_provider",
             'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils/',
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/"
         ]

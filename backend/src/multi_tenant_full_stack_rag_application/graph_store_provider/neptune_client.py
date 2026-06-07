@@ -13,7 +13,7 @@
 
 # See: https://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html
 import sys, datetime, hashlib, hmac
-import requests  # pip3 install requests
+import requests 
 import urllib
 import os
 import json

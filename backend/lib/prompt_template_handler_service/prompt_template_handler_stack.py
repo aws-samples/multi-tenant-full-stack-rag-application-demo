@@ -49,12 +49,12 @@ class PromptTemplateHandlerStack(Stack):
         )
 
         build_cmds = [
+            'pip3 install -t /asset-output -r /asset-input/utils/utils_requirements.txt',
             'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/bedrock_provider',
             'cp /asset-input/bedrock_provider/bedrock_model_params.json /asset-output/multi_tenant_full_stack_rag_application/bedrock_provider/',
             'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/prompt_template_handler/prompt_templates',
             "cp -r /asset-input/prompt_template_handler/*.py /asset-output/multi_tenant_full_stack_rag_application/prompt_template_handler",
             "cp -r /asset-input/prompt_template_handler/prompt_templates/*.txt /asset-output/multi_tenant_full_stack_rag_application/prompt_template_handler/prompt_templates",
-            'pip3 install -t /asset-output -r /asset-input/utils/utils_requirements.txt',
             'mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils/',
             "cp -r /asset-input/utils/* /asset-output/multi_tenant_full_stack_rag_application/utils/",
         ]

@@ -2,6 +2,7 @@
 #  SPDX-License-Identifier: MIT-0
 
 from .document_collection import DocumentCollection
+from .document_collection_graph_schema import DocumentCollectionGraphSchema
 from .document_collections_handler import DocumentCollectionsHandler
 from .document_collections_handler_factory import DocumentCollectionsHandlerFactory
 from .document_collections_handler_event import DocumentCollectionsHandlerEvent

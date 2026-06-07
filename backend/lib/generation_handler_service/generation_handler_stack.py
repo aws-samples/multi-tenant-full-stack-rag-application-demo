@@ -43,10 +43,10 @@ class GenerationHandlerStack(Stack):
         bundling_cmds = [
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/generation_handler",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
+            "pip3 install -r /asset-input/generation_handler/generation_handler_requirements.txt -t /asset-output",
+            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
             "cp /asset-input/generation_handler/*.{py,txt} /asset-output/multi_tenant_full_stack_rag_application/generation_handler/",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
-            "pip3 install -r /asset-input/generation_handler/generation_handler_requirements.txt -t /asset-output",
-            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output"
         ]
 
         self.generation_handler_function = lambda_.Function(self, 'GenerationHandlerFunction',

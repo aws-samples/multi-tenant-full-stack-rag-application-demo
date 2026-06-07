@@ -47,11 +47,11 @@ class EmbeddingsProviderStack(Stack):
         build_cmds += [
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/embeddings_provider",
             "mkdir -p /asset-output/multi_tenant_full_stack_rag_application/utils",
-            "cp /asset-input/embeddings_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/embeddings_provider/",
+            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
+            "pip3 install -r /asset-input/embeddings_provider/bedrock_embeddings_provider_requirements.txt -t /asset-output",            "cp /asset-input/embeddings_provider/*.py /asset-output/multi_tenant_full_stack_rag_application/embeddings_provider/",
             "cp /asset-input/service_provider* /asset-output/multi_tenant_full_stack_rag_application/",
             "cp /asset-input/utils/*.py /asset-output/multi_tenant_full_stack_rag_application/utils/",
-            "pip3 install -r /asset-input/utils/utils_requirements.txt -t /asset-output",
-            "pip3 install -r /asset-input/embeddings_provider/bedrock_embeddings_provider_requirements.txt -t /asset-output"
+
         ]
 
         embeddings_model_id = self.node.get_context('embeddings_model_id')
