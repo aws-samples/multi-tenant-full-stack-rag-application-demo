@@ -176,7 +176,7 @@ def make_signed_request(host, method, query_type, query):
 
         # print('++++ BEGIN GET REQUEST +++++')
         # print('Request URL = ' + request_url)
-        r = requests.get(request_url, headers=request.headers, verify=False, params=params, timeout=60)
+        r = requests.get(request_url, headers=request.headers, params=params, timeout=60)
 
     elif (method == 'POST'):
 
@@ -184,7 +184,7 @@ def make_signed_request(host, method, query_type, query):
         # print('Request URL = ' + request_url)
         if (query_type == "loader"):
             request.headers['Content-type'] = 'application/json'
-        r = requests.post(request_url, headers=request.headers, verify=False, data=data, timeout=60)
+        r = requests.post(request_url, headers=request.headers, data=data, timeout=60)
 
     # else:
     #     print('Request method is neither "GET" nor "POST", something is wrong here.')
