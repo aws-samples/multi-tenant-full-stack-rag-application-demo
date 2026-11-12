@@ -1,6 +1,0 @@
-aws-cdk-lib
-constructs
-aws-cdk.aws-cognito-identitypool-alpha
-aws-cdk.aws-neptune-alpha
-pyyaml
-jq

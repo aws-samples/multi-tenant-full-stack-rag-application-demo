@@ -1,3 +1,0 @@
-pytest>=9.0.3
-coverage
-cdk-bootstrapless-synthesizer

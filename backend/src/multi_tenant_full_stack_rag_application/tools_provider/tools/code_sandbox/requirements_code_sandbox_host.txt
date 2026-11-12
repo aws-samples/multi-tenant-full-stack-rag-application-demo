@@ -1,6 +1,0 @@
-requests
-boto3
-fastapi[standard]
-pydantic
-certbot 
-certbot-dns-route53
